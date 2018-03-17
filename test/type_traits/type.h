@@ -48,3 +48,39 @@ typedef char (*(*X3[3])())[5];
 typedef char (*(*X4())[5])();
 typedef int (*(*X5)(const void *))[3];
 typedef char (*(*X6())[5])();
+
+struct S {
+    double operator()(char, int&);
+    float operator()(int) { return 1.0;}
+};
+ 
+template<class T>
+typename ala::result_of<T(int)>::type f(T& t)
+{
+    std::cout << "overload of f for callable T\n";
+    return t(0);
+}
+ 
+template<class T, class U>
+int f(U u)
+{
+    std::cout << "overload of f for non-callable T\n";
+    return u;
+}
+
+class CC {
+	void pp() {}
+	public:
+	double v;
+	int x(int y){
+		return y;
+	}
+	float y(int x) {
+		return x;
+	}
+	float z(float x) {
+		return x;
+	}
+};
+
+

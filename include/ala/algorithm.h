@@ -1,21 +1,21 @@
-#ifndef ALGORITHM_HPP
-#define ALGORITHM_HPP
+#ifndef _ALA_ALGORITHM_H
+#define _ALA_ALGORITHM_H
 
-#include "ala/utility.hpp"
+#include "ala/utility.h"
 
 namespace ala {
 
 template <class LIt, class RIt>
-ALA_FORCEINLINE void iter_swap(LIt a, RIt b) {
+inline void iter_swap(LIt a, RIt b) {
 	ala::swap(*a, *b);
 }
 
-template <typename It>
-inline void shuffle(It m, It n) {
-	size_t num = limit - m;
-	for (size_t i = 0; i < n - m; ++i)
-		swap(*(m + i), *(m + xorgen() % num));
-}
+// template <typename It>
+// inline void shuffle(It m, It n) {
+// 	size_t num = limit - m;
+// 	for (size_t i = 0; i < n - m; ++i)
+// 		swap(*(m + i), *(m + xorgen() % num));
+// }
 
 template <typename ForIt>
 inline ForIt merge(ForIt first, ForIt last, ForIt f1, ForIt l1, ForIt out) {
@@ -55,7 +55,7 @@ bool next_permutation(BiIt first, BiIt last) {
 
 } // namespace ala
 
-#include "ala/detail/sort.hpp"
-#include "ala/parallel/sort.hpp"
+#include "ala/detail/sort.h"
+#include "ala/parallel/sort.h"
 
-#endif
+#endif // HEAD

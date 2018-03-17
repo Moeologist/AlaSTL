@@ -1,5 +1,5 @@
-#ifndef MEMORY_HPP
-#define MEMORY_HPP
+#ifndef _ALA_MEMORY_H
+#define _ALA_MEMORY_H
 
 // template <class _T>
 // constexpr _T *addressof(_T &arg) noexcept {
@@ -17,4 +17,4 @@ const _T *addressof(const _T &&) = delete;
 
 std::addressof
 
-#endif
+#endif // HEAD

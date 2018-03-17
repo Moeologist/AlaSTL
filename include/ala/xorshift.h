@@ -1,7 +1,7 @@
 #ifndef XORSHIFT_HPP
 #define XORSHIFT_HPP
 
-#include <ala/config.hpp>
+#include <ala/config.h>
 
 #ifdef __clang__
 #pragma clang diagnostic push

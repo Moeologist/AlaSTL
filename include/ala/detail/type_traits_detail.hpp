@@ -15,11 +15,9 @@ struct _is_destructible_impl {
 
 template <typename T, bool = _or_<is_void<T>, _is_array_unknown_bounds<T>, is_function<T>>::value,
           bool = _or_<is_reference<T>, is_scalar<T>>::value>
-struct _is_destructible_helper;
+struct _is_destructible_helper : false_type {};
 template <typename T>
 struct _is_destructible_helper<T, false, false> : _is_destructible_impl<remove_all_extents_t<T>>::type {};
-template <typename T>
-struct _is_destructible_helper<T, true, false> : false_type {};
 template <typename T>
 struct _is_destructible_helper<T, false, true> : true_type {};
 
@@ -29,28 +27,19 @@ struct is_destructible : _is_destructible_helper<T> {};
 template <typename T>
 struct is_trivially_destructible : _and_<is_destructible<T>, bool_constant<__has_trivial_destructor(T)>> {};
 
-template <typename T>
-struct _is_nt_destructible_impl {
-	template <typename T1>
-	static bool_constant<noexcept(declval<T1 &>().~T1())> _test(int);
-	template <typename>
-	static false_type _test(...);
-	typedef decltype(_test<T>(0)) type;
-};
+template <class _Tp, bool = is_destructible_v<_Tp>>
+struct _is_nt_destructible_helper  : false_type {};
+template <class _Tp>
+struct _is_nt_destructible_helper<_Tp, true> : bool_constant<noexcept(declval<_Tp>().~_Tp())> {};
 
-template <typename T, bool = _or_<is_void<T>, _is_array_unknown_bounds<T>, is_function<T>>::value,
-          bool = _or_<is_reference<T>, is_scalar<T>>::value>
-template <typename T, bool = is_void_v<T> || _is_array_unknown_bounds<T>::value || is_function_v<T>,
-          bool = is_reference_v<T> || is_scalar_v<T>>
-struct _is_nt_destructible_helper;
-template <typename T>
-struct _is_nt_destructible_helper<T, false, false> : _is_nt_destructible_impl<remove_all_extents_t<T>>::type {};
-template <typename T>
-struct _is_nt_destructible_helper<T, true, false> : false_type {};
-template <typename T>
-struct _is_nt_destructible_helper<T, false, true> : true_type {};
-template <typename T>
-struct is_nothrow_destructible  : _is_nt_destructible_helper<T> {};
+template <class _Tp>
+struct is_nothrow_destructible : _is_nt_destructible_helper<_Tp> {};
+template <class _Tp, size_t _Ns>
+struct is_nothrow_destructible<_Tp[_Ns]> : is_nothrow_destructible<_Tp> {};
+template <class _Tp>
+struct is_nothrow_destructible<_Tp &> : true_type {};
+template <class _Tp>
+struct is_nothrow_destructible<_Tp &&> : true_type {};
 
 template <typename T>
 struct _is_default_constructible_impl {
@@ -74,14 +63,15 @@ template <typename T>
 struct is_default_constructible : _is_default_constructible_helper<T> {};
 
 template <typename T, bool = is_array_v<T>>
-struct _is_nt_default_constructible_impl : false_type {};
+struct _is_nt_default_constructible_helper;
 template <typename T>
-struct _is_nt_default_constructible_impl<T, true> : _and_<_is_array_known_bounds<T>,
+struct _is_nt_default_constructible_helper<T, true> : _and_<_is_array_known_bounds<T>,
 bool_constant<noexcept(remove_all_extents_t<T>())>> {};
 template <typename T>
-struct _is_nt_default_constructible_impl<T, false> : bool_constant<noexcept(T())> {};
+struct _is_nt_default_constructible_helper<T, false> : bool_constant<noexcept(T())> {};
+
 template <typename T>
-struct is_nothrow_default_constructible : _and_<is_default_constructible<T>, _is_nt_default_constructible_impl<T>> {};
+struct is_nothrow_default_constructible : _and_<is_default_constructible<T>, _is_nt_default_constructible_helper<T>> {};
 
 template <typename From, typename To>
 struct _is_static_castable_impl {
@@ -143,8 +133,8 @@ _and_<_is_static_castable<_Arg, T>, _not_<_or_<_is_baseTo_derived_ref<_Arg, T>, 
 
 template <typename T, typename _Arg>
 struct _is_direct_constructible : conditional_t<
-is_reference_v<T>,_is_direct_constructible_ref_cast<T, _Arg>,
-                	_is_direct_constructible_helper<T, _Arg>> {};
+is_reference_v<T>, _is_direct_constructible_ref_cast<T, _Arg>,
+                   _is_direct_constructible_helper<T, _Arg>> {};
 
 template <typename T, typename... Args>
 struct _is_nary_constructible_impl {
@@ -177,14 +167,14 @@ struct is_trivially_constructible : _and_<is_constructible<T, _Args...>,
 bool_constant<__is_trivially_constructible(remove_extent_t<T>, _Args...)>> {}; // Add remove_extent in bif to avoid crash
 
 template <typename T, typename... _Args>
-struct _is_nothrow_constructible_impl : bool_constant<noexcept(T(declval<_Args>()...))> {};
+struct _is_nothrow_constructible_helper : bool_constant<noexcept(T(declval<_Args>()...))> {};
 template <typename T, typename _Arg>
-struct _is_nothrow_constructible_impl<T, _Arg> : bool_constant<noexcept(static_cast<T>(declval<_Arg>()))> {};
+struct _is_nothrow_constructible_helper<T, _Arg> : bool_constant<noexcept(static_cast<T>(declval<_Arg>()))> {};
 template <typename T>
-struct _is_nothrow_constructible_impl<T> : is_nothrow_default_constructible<T> {};
+struct _is_nothrow_constructible_helper<T> : is_nothrow_default_constructible<T> {};
 
 template <typename T, typename... _Args>
-struct is_nothrow_constructible : _and_<is_constructible<T, _Args...>, _is_nothrow_constructible_impl<T, _Args...>> {};
+struct is_nothrow_constructible : _and_<is_constructible<T, _Args...>, _is_nothrow_constructible_helper<T, _Args...>> {};
 
 template <typename T, typename U>
 struct _is_assignable_impl {
@@ -208,9 +198,31 @@ template<typename T, typename U>
 struct is_trivially_assignable : _and_<is_assignable<T, U>, bool_constant<__is_trivially_assignable(T, U)>>  {};
 
 template <typename T, typename U, bool = is_assignable_v<T, U>>
-struct _is_nt_assignable_impl : false_type {};
+struct _is_nt_assignable_helper : false_type {};
 template <typename T, typename U>
-struct _is_nt_assignable_impl<T, U, true> : bool_constant<noexcept(declval<T>() = declval<U>())> {};
+struct _is_nt_assignable_helper<T, U, true> : bool_constant<noexcept(declval<T>() = declval<U>())> {};
 
 template <typename T, typename U>
-struct is_nothrow_assignable : _and_<is_assignable<T, U>, _is_nt_assignable_impl<T, U>> {};
+struct is_nothrow_assignable : _is_nt_assignable_helper<T, U> {};
+
+template <typename From, typename To>
+struct _is_convertible_impl {
+	template <typename To1>
+	static void _test_aux(To1);
+	template <typename From1, typename To1,
+	          typename = decltype(_test_aux<To1>(declval<From1>()))>
+	static true_type _test(int);
+	template <typename, typename>
+	static false_type _test(...);
+	typedef decltype(_test<From, To>(0)) type;
+};
+
+template <typename From, typename To, 
+		  bool = _or_<is_void<From>, is_function<To>, is_array<To>>::value>
+struct _is_convertible_helper : is_void<To> {};
+
+template <typename From, typename To>
+struct _is_convertible_helper<From, To, false> : _is_convertible_impl<From, To> {};
+
+template <typename From, typename To>
+struct is_convertible : _is_convertible_helper<From, To>::type {};

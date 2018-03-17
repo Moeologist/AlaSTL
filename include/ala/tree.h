@@ -1,4 +1,4 @@
-#include "ala/utility.hpp"
+#include "ala/utility.h"
 
 template <class T>
 struct treenode {

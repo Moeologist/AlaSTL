@@ -1,8 +1,8 @@
 // left-closed right-open interval, first: left iterator, last: tright iterator
 // ForIt: forward iterator, BiIt: bidirectional iterator, RanIt: random access iterator
 
-#ifndef DETAIL_SORT_HPP
-#define DETAIL_SORT_HPP
+#ifndef DETAIL_SORT_H
+#define DETAIL_SORT_H
 
 namespace ala {
 
@@ -35,12 +35,15 @@ void insertion_sort(BiIt first, BiIt last) {
 	}
 }
 
-//  void gen_shell_sequence() {
+// void gen_shell_sequence() {
 // 	unsigned long long seq[128];
-// 	for (int i = 0, last = 0; i < 64; i++) {
-// 		seq[last++] = 9 * pow(4, i) - 9 * pow(2, i) + 1;
-// 		seq[last++] = pow(2, i + 2) * (pow(2, i + 2) - 3) + 1;
+// 	for (int i = 0; i < 64; ++i) {
+// 		seq[i * 2] = 9 * pow(4, i) - 9 * pow(2, i) + 1;
+// 		seq[i * 2 + 1] = pow(2, i + 2) * (pow(2, i + 2) - 3) + 1;
 // 	}
+// 	for (int i = 0; i < 128; ++i)
+// 		printf("%d", seq[i]);
+// }
 template <typename RanIt>
 void shell_sort(RanIt first, RanIt last) {
 	typedef typename iterator_traits<RanIt>::value_type T;

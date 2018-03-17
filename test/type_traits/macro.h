@@ -52,17 +52,17 @@ TEST_ALL(OP, long double)\
 TEST_ALL(OP, wchar_t)\
 TEST_ALL(OP, char16_t)\
 TEST_ALL(OP, char32_t)\
-TEST_ALL(OP, int8_t)\
-TEST_ALL(OP, uint8_t)\
-TEST_ALL(OP, int16_t)\
-TEST_ALL(OP, uint16_t)\
-TEST_ALL(OP, int32_t)\
-TEST_ALL(OP, uint32_t)\
-TEST_ALL(OP, int64_t)\
-TEST_ALL(OP, uint64_t)\
-TEST_ALL(OP, size_t)\
-TEST_ALL(OP, ptrdiff_t)\
-TEST_ALL(OP, intptr_t)\
+TEST_ALL(OP, ala::int8_t)\
+TEST_ALL(OP, ala::uint8_t)\
+TEST_ALL(OP, ala::int16_t)\
+TEST_ALL(OP, ala::uint16_t)\
+TEST_ALL(OP, ala::int32_t)\
+TEST_ALL(OP, ala::uint32_t)\
+TEST_ALL(OP, ala::int64_t)\
+TEST_ALL(OP, ala::uint64_t)\
+TEST_ALL(OP, ala::size_t)\
+TEST_ALL(OP, ala::ptrdiff_t)\
+TEST_ALL(OP, ala::intptr_t)\
 TEST_NOEXT(OP, C0)\
 TEST_NOEXT(OP, C1)\
 TEST_NOEXT(OP, C2)\
@@ -143,3 +143,90 @@ TEST_2_SUB(OP, X3)\
 TEST_2_SUB(OP, X4)\
 TEST_2_SUB(OP, X5)\
 TEST_2_SUB(OP, X6)
+
+
+#define TYPETEST_CV(OP, TP) \
+static_assert(std::is_same<ala:: OP ## _t< TP >                   , std:: OP < TP >::type>::value,"");\
+static_assert(std::is_same<ala:: OP ## _t< TP const>              , std:: OP < TP const>::type>::value,"");\
+static_assert(std::is_same<ala:: OP ## _t< TP volatile>           , std:: OP < TP volatile>::type>::value,"");\
+static_assert(std::is_same<ala:: OP ## _t< TP const volatile>     , std:: OP < TP const volatile>::type>::value,"");
+
+#define TYPETEST_STAR(OP, TP) \
+static_assert(std::is_same<ala:: OP ## _t< TP *>                  , std:: OP < TP *>::type>::value,"");\
+static_assert(std::is_same<ala:: OP ## _t< TP const*>             , std:: OP < TP const*>::type>::value,"");\
+static_assert(std::is_same<ala:: OP ## _t< TP volatile*>          , std:: OP < TP volatile*>::type>::value,"");\
+static_assert(std::is_same<ala:: OP ## _t< TP const volatile*>    , std:: OP < TP const volatile*>::type>::value,"");
+
+#define TYPETEST_REF(OP, TP) \
+static_assert(std::is_same<ala:: OP ## _t< TP &>                  , std:: OP < TP &>::type>::value,"");\
+static_assert(std::is_same<ala:: OP ## _t< TP const&>             , std:: OP < TP const&>::type>::value,"");\
+static_assert(std::is_same<ala:: OP ## _t< TP volatile&>          , std:: OP < TP volatile&>::type>::value,"");\
+static_assert(std::is_same<ala:: OP ## _t< TP const volatile&>    , std:: OP < TP const volatile&>::type>::value,"");
+
+#define TYPETEST_RREF(OP, TP) \
+static_assert(std::is_same<ala:: OP ## _t< TP &&>                 , std:: OP < TP &&>::type>::value,"");\
+static_assert(std::is_same<ala:: OP ## _t< TP const&&>            , std:: OP < TP const&&>::type>::value,"");\
+static_assert(std::is_same<ala:: OP ## _t< TP volatile&&>         , std:: OP < TP volatile&&>::type>::value,"");\
+static_assert(std::is_same<ala:: OP ## _t< TP const volatile&&>   , std:: OP < TP const volatile&&>::type>::value,"");
+
+#define TYPETEST_EXT(OP, TP) \
+static_assert(std::is_same<ala:: OP ## _t< TP [8]>                , std:: OP < TP [8]>::type>::value,"");\
+static_assert(std::is_same<ala:: OP ## _t< TP const [8]>          , std:: OP < TP const [8]>::type>::value,"");\
+static_assert(std::is_same<ala:: OP ## _t< TP volatile [8]>       , std:: OP < TP volatile [8]>::type>::value,"");\
+static_assert(std::is_same<ala:: OP ## _t< TP const volatile [8]> , std:: OP < TP const volatile [8]>::type>::value,"");
+
+#define TYPETEST_ALL(OP, TP) \
+TYPETEST_CV(OP, TP)\
+TYPETEST_STAR(OP, TP)\
+TYPETEST_REF(OP, TP)\
+TYPETEST_RREF(OP, TP)\
+TYPETEST_EXT(OP, TP)
+
+#define TYPETEST_NOEXT(OP, TP) \
+TYPETEST_CV(OP, TP)\
+TYPETEST_STAR(OP, TP)\
+TYPETEST_REF(OP, TP)\
+TYPETEST_RREF(OP, TP)
+
+#define TYPETEST_NOVOID(OP) \
+TYPETEST_ALL(OP, char)\
+TYPETEST_ALL(OP, int)\
+TYPETEST_ALL(OP, long )\
+TYPETEST_ALL(OP, long long)\
+TYPETEST_ALL(OP, float)\
+TYPETEST_ALL(OP, double)\
+TYPETEST_ALL(OP, long double)\
+TYPETEST_ALL(OP, wchar_t)\
+TYPETEST_ALL(OP, char16_t)\
+TYPETEST_ALL(OP, char32_t)\
+TYPETEST_ALL(OP, ala::int8_t)\
+TYPETEST_ALL(OP, ala::uint8_t)\
+TYPETEST_ALL(OP, ala::int16_t)\
+TYPETEST_ALL(OP, ala::uint16_t)\
+TYPETEST_ALL(OP, ala::int32_t)\
+TYPETEST_ALL(OP, ala::uint32_t)\
+TYPETEST_ALL(OP, ala::int64_t)\
+TYPETEST_ALL(OP, ala::uint64_t)\
+TYPETEST_ALL(OP, ala::size_t)\
+TYPETEST_ALL(OP, ala::ptrdiff_t)\
+TYPETEST_ALL(OP, ala::intptr_t)\
+TYPETEST_NOEXT(OP, C0)\
+TYPETEST_NOEXT(OP, C1)\
+TYPETEST_NOEXT(OP, C2)\
+TYPETEST_NOEXT(OP, S0)\
+TYPETEST_NOEXT(OP, S1)\
+TYPETEST_NOEXT(OP, S2)\
+TYPETEST_NOEXT(OP, E)\
+TYPETEST_NOEXT(OP, U)\
+TYPETEST_NOEXT(OP, X0)\
+TYPETEST_NOEXT(OP, X1)\
+TYPETEST_NOEXT(OP, X2)\
+TYPETEST_NOEXT(OP, X3)\
+TYPETEST_NOEXT(OP, X4)\
+TYPETEST_NOEXT(OP, X5)\
+TYPETEST_NOEXT(OP, X6)
+
+#define TYPETEST(OP) \
+TYPETEST_CV(OP, void)\
+TYPETEST_STAR(OP, void)\
+TYPETEST_NOVOID(OP)

@@ -1,12 +1,19 @@
-#include "ala/type_traits.hpp"
+#include "ala/type_traits.h"
 #include <type_traits>
 #include <vector>
 #include <list>
 #include <iostream>
-#include "traits_macro.h"
-#include "traits_type.h"
+#include "macro.h"
+#include "type.h"
+#include <map>
+#include <utility>
+
+float x(int y,int z){
+	return y+z;
+}
 
 int main() {
+	// std::cout << std::is_same_v< _result_of_other_impl<decltype(x), int, float*>::type, float>;
 	TEST(is_void)
 	TEST(is_null_pointer)
 	TEST(is_integral)
@@ -77,15 +84,48 @@ int main() {
 	TEST_NOVOID(is_move_assignable)
 	TEST_NOVOID(is_trivially_move_assignable)
 	TEST_NOVOID(is_nothrow_move_assignable)
-	
-	// TEST(is_swappable_with)
-	// TEST(is_swappable)
-	// TEST(is_nothrow_swappable_with)
-	// TEST(is_nothrow_swappable)
 
-	// TEST(has_virtual_destructor)
+	TEST_2(is_swappable_with)
+	TEST(is_swappable)
+	TEST_2(is_nothrow_swappable_with)
+	TEST(is_nothrow_swappable)
+	
+
+	TEST(has_virtual_destructor)
 	// TEST(is_aggregate)
 	// TEST(has_unique_object_representations)
 
+
+
+	// TYPETEST(remove_const)
+	// TYPETEST(remove_volatile)
+	// TYPETEST(remove_cv)
+	// TYPETEST(add_const)
+	// TYPETEST(add_volatile)
+	// TYPETEST(add_cv)
+	// TYPETEST(remove_reference)
+	// TYPETEST(add_lvalue_reference)
+	// TYPETEST(add_rvalue_reference)
+	// // TYPETEST_CV(make_signed, int)
+	// // TYPETEST_CV(make_unsigned, int)
+	// TYPETEST(remove_extent)
+	// TYPETEST(remove_all_extents)
+	// TYPETEST(remove_pointer)
+	// TYPETEST(add_pointer)
+	// TYPETEST(decay)
+	// // TYPETEST(remove_cvref)
+	// // TYPETEST(enable_if)
+	// // TYPETEST(conditional)
+	// TYPETEST(common_type)
+	// TYPETEST(underlying_type)
+	// TYPETEST(invoke_result)
+	typedef int (CC::* pmf)(int);
+	// std::cout<<typeid(decltype(&CC::x)).name();
+	// std::cout<<typeid(pmf).name();
+	static_assert(ala::is_same_v<ala::invoke_result_t<pmf,CC,float>,int>);
+	static_assert(ala::is_same_v<ala::invoke_result_t<decltype(&CC::v),CC>, double&&>);
+
+	std::cout<<typeid(ala::invoke_result_t<decltype(&CC::v),CC>).name();
+	// static_assert(ala::is_same_v<ala::invoke_result_t<decltype(&CC::pp),CC>,void>);
 	return 0;
 }

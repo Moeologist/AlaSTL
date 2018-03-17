@@ -1,8 +1,8 @@
-#ifndef CONFIG_STDDEF_HPP
-#define CONFIG_STDDEF_HPP
+#ifndef _ALA_CONFIG_STDDEF_H
+#define _ALA_CONFIG_STDDEF_H
 
-#ifndef CONFIG_HPP
-#error "Never use head in ala/config directly; include config.hpp instead."
+#ifndef _ALA_CONFIG_H
+	#error "Never use head in ala/config directly; include config.hpp instead."
 #endif
 
 namespace ala {
@@ -57,4 +57,4 @@ typedef int intptr_t;
 
 } // namespace ala
 
-#endif // STDDEF_HPP
+#endif // HEAD

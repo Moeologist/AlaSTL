@@ -1,20 +1,48 @@
 #include <iostream>
 #include <algorithm>
 #include <vector>
+#include <utility>
 
-#include "ala/xorshift.hpp"
-#include "ala/timer.hpp"
-#include "ala/utility.hpp"
-#include "ala/algorithm.hpp"
+#include "ala/xorshift.h"
+#include "ala/timer.h"
+#include "ala/utility.h"
+#include "ala/algorithm.h"
 
 // #include <EASTL/sort.h>
-#include <tbb/parallel_sort.h>
+// #include <tbb/parallel_sort.h>
 
 #ifdef _MSC_VER
 #include <ppl.h>
 #endif
 
 using namespace ala;
+
+template <typename _It>
+struct iterator_traits { using value_type = typename _It::value_type; };
+
+template <typename _It>
+struct iterator_traits<const _It> { using value_type = typename _It::value_type; };
+
+template <typename _It>
+struct iterator_traits<_It *> { using value_type = _It; };
+
+template <typename _It>
+struct iterator_traits<const _It *> { using value_type = _It; };
+
+template <typename _F>
+struct function_traits {};
+
+template <typename _Ret, typename _Arg>
+struct function_traits<_Ret (*)(_Arg)> {
+	typedef _Ret result_type;
+	typedef _Arg params_type;
+};
+
+template <typename _Ret, typename _Arg>
+struct function_traits<_Ret (*)(_Arg, _Arg)> {
+	typedef _Ret result_type;
+	typedef _Arg params_type;
+};
 
 struct C {
 	int a;
@@ -150,13 +178,13 @@ struct C {
 };
 
 template <class function, class T = int>
-int test_vector(function f, int N) { //编译器推导T
+auto test_vector(function f, int N) { //编译器推导T
 	std::vector<int> v(N, 0);
 
 	auto gen = xoroshiro128plus(4564);
 	std::generate(v.begin(), v.end(), gen);
 
-	int dTime = timer(f, v.begin(), v.end());
+	auto dTime = timer(f, v.begin(), v.end());
 
 	if (!std::all_of(v.begin(), v.end() - 1, [](T &x) { return x <= *(&x + 1); }))
 		std::cout << "buggy sort vec!\n";
@@ -165,7 +193,7 @@ int test_vector(function f, int N) { //编译器推导T
 }
 
 template <class function>
-int test_c_array(function f, int N) { //编译器推导T
+auto test_c_array(function f, int N) { //编译器推导T
 	typedef typename remove_cv<typename remove_reference<typename function_traits<function>::params_type>::type>::type It;
 	typedef typename iterator_traits<It>::value_type T;
 
@@ -181,7 +209,7 @@ int test_c_array(function f, int N) { //编译器推导T
 
 	std::sort(ar_ptr, ar_ptr + N);
 
-	int dTime = timer(f, a, b);
+	auto dTime = timer(f, a, b);
 
 	for (It i = a, bound = a, ir = ar; bound != b; ++i, ++ir) {
 		if (!(*i == *ir)) {
@@ -205,20 +233,20 @@ int test_c_array(function f, int N) { //编译器推导T
 	return dTime;
 }
 
-template <class It>
-int test_c_array_tbb(int N) { //编译器推导T
-	typedef typename iterator_traits<It>::value_type T;
+// template <class It>
+// auto test_c_array_tbb(int N) { //编译器推导T
+// 	typedef typename iterator_traits<It>::value_type T;
 
-	T *a_ptr = new T[N];
-	It a = a_ptr, b = a_ptr + N;
-	auto gen = xoroshiro128plus(4564);
-	std::generate(a, b, [&]() { return gen(); });
+// 	T *a_ptr = new T[N];
+// 	It a = a_ptr, b = a_ptr + N;
+// 	auto gen = xoroshiro128plus(4564);
+// 	std::generate(a, b, [&]() { return gen(); });
 
-	int dTime = timer([=](){tbb::parallel_sort(a, b);});
+// 	auto dTime = timer([=](){tbb::parallel_sort(a, b);});
 
-	delete[] a_ptr;
-	return dTime;
-}
+// 	delete[] a_ptr;
+// 	return dTime;
+// }
 
 int main() {
 	// std::cout << "Select:" << test_c_array(select_sort<C::iterator_type>, 10000) << std::endl;
@@ -235,10 +263,10 @@ int main() {
 	// std::cout << "stdsort:" << test_c_array(std::sort<C *>, 10000000) << std::endl;
 	// std::cout << "eastlsort:" << test_c_array(eastl::sort<C *>, 10000000) << std::endl;
 
-	std::cout << "ParallelSort:" << test_c_array(parallel_sort<C *>, 10000000) << std::endl;
+	std::cout << "ParallelSort:" << test_c_array(parallel_sort<C *>, 100000000) << std::endl;
 	std::cout << "ParallelQSort:" << test_c_array(parallel_quick_sort<C *>, 10000000) << std::endl;
 
-	std::cout << "TBBSort:" << test_c_array_tbb<C *>(10000000) << std::endl;
+	// std::cout << "TBBSort:" << test_c_array_tbb<C *>(10000000) << std::endl;
 #ifdef _MSC_VER
 	std::cout << "pplsort:" << test_c_array(concurrency::parallel_sort<C *>, 10000000) << std::endl;
 #endif

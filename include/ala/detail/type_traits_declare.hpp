@@ -1,5 +1,5 @@
-#ifndef DETAIL_TYPE_TRAITS_DECLARE_HPP
-#define DETAIL_TYPE_TRAITS_DECLARE_HPP
+#ifndef DETAIL_TYPE_TRAITS_DECLARE_H
+#define DETAIL_TYPE_TRAITS_DECLARE_H
 
 namespace ala {
 
@@ -143,9 +143,10 @@ template <bool, class T> struct enable_if;
 template <bool, class T, class F> struct conditional;
 template <class... T> struct common_type;
 template <class T> struct underlying_type;
-template <class> class result_of;
-template <class F, class... ArgTypes> class result_of<F(ArgTypes...)>;
-template <class F, class... ArgTypes> class invoke_result;
+#if __cpluscplus < 201703L
+template <typename> struct result_of;
+#endif
+template <class F, class... ArgTypes> struct invoke_result;
 template <size_t Len, size_t Align = alignof(double)> using aligned_storage_t = typename aligned_storage<Len, Align>::type;
 template <size_t Len, class... Types> using aligned_union_t = typename aligned_union<Len, Types...>::type;
 template <class T> using decay_t = typename decay<T>::type;
@@ -158,7 +159,7 @@ template <class T> using result_of_t = typename result_of<T>::type;
 template <class F, class... ArgTypes> using invoke_result_t = typename invoke_result<F, ArgTypes...>::type;
 
 #if __cpluscplus < 201703L
-template<typename... Ts> struct _void_t_impl { typedef void type; };
+template<typename... Ts> struct _void_t_impl;
 template<typename... Ts> using void_t = typename _void_t_impl<Ts...>::type;
 #else
 template <class...> using void_t = void;
@@ -255,8 +256,8 @@ template <class T> ALA_VARIABLE_INLINE constexpr bool is_aggregate_v = is_aggreg
 template <class T> ALA_VARIABLE_INLINE constexpr bool has_unique_object_representations_v = has_unique_object_representations<T>::value;
 
 #elif defined _MSC_VER
-template <typename _Tp> struct has_unique_object_representations : bool_constant<
-__has_unique_object_representations(_Tp)> {};
+template <typename T> struct has_unique_object_representations : bool_constant<
+__has_unique_object_representations(T)> {};
 #define ALA_HAS_NO_IS_AGGREGATE
 
 #endif
@@ -283,4 +284,4 @@ template<class B> ALA_VARIABLE_INLINE constexpr bool negation_v = negation<B>::v
 
 } // namespace ala
 
-#endif // TYPE_TRAITS_HPP
+#endif // TYPE_TRAITS_DECLARE_H

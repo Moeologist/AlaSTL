@@ -1,6 +1,6 @@
 #ifndef PARALLEL_SORT_HPP
 #define PARALLEL_SORT_HPP
-#include "ala/detail/sort.hpp"
+#include "ala/detail/sort.h"
 #include <thread>
 #include <vector>
 

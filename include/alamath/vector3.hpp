@@ -1,7 +1,7 @@
 #ifndef VECTOR_HPP
 #define VECTOR_HPP
 
-#include <ala/config.hpp>
+#include <ala/config.h>
 
 namespace alam {
 

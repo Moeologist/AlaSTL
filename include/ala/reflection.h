@@ -1,5 +1,5 @@
-#ifndef REFLECTION_DATA_HPP
-#define REFLECTION_DATA_HPP
+#ifndef _ALA_REFLECTION_H
+#define _ALA_REFLECTION_H
 
 #include <string>
 #include <map>
@@ -27,4 +27,4 @@ static _reflection_registor_##name _reflection_registor_##name##_instance;
 
 } // reflector
 
-#endif
+#endif // HEAD

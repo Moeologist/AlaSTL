@@ -1,21 +1,21 @@
-#ifndef CONFIG_EXTERNAL_HPP
-#define CONFIG_EXTERNAL_HPP
+#ifndef _ALA_CONFIG_EXTERNAL_H
+#define _ALA_CONFIG_EXTERNAL_H
 
-#ifndef CONFIG_HPP
+#ifndef _ALA_CONFIG_H
 #error "Never use this head directly; include config.hpp instead."
 #endif
 
 #include <cstdlib>
 #include <cassert>
 
-#include <initializer_list>
+// #include <initializer_list>
 
 #if ALA_ENABLE_RTTI
-#include <typeinfo>
+	// #include <typeinfo>
 #endif
 
 #if ALA_ENABLE_EXCEPTIONS
-#include <exception>
+	// #include <exception>
 #endif
 
-#endif // CONFIG_EXTERNAL_HPP
+#endif // HEAD
