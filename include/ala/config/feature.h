@@ -1,10 +1,6 @@
 #ifndef _ALA_CONFIG_FEATURE_H
 #define _ALA_CONFIG_FEATURE_H
 
-#ifndef _ALA_CONFIG_H
-	#error "Never use this head directly; include config.hpp instead."
-#endif
-
 #ifndef ALA_ENABLE_RTTI
 	#define ALA_ENABLE_RTTI 0
 #endif
@@ -14,10 +10,10 @@
 #endif
 
 #ifndef ALA_ENABLE_TYPE_TRAITS_BIF
-	#ifdef ALA_GCC
-		#define ALA_ENABLE_TYPE_TRAITS_BIF 0
-	#else
+	#ifdef _ALA_MSVC
 		#define ALA_ENABLE_TYPE_TRAITS_BIF 1
+	#else
+		#define ALA_ENABLE_TYPE_TRAITS_BIF 0
 	#endif
 #else
 	#if defined(ALA_GCC) && ALA_ENABLE_TYPE_TRAITS_BIF

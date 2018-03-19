@@ -1,8 +1,8 @@
 // left-closed right-open interval, first: left iterator, last: tright iterator
 // ForIt: forward iterator, BiIt: bidirectional iterator, RanIt: random access iterator
 
-#ifndef DETAIL_SORT_H
-#define DETAIL_SORT_H
+#ifndef _ALA_DETAIL_SORT_H
+#define _ALA_DETAIL_SORT_H
 
 namespace ala {
 
