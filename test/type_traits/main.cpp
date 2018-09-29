@@ -1,3 +1,4 @@
+#define ALA_ENABLE_TYPE_TRAITS_BIF 0
 #include "ala/type_traits.h"
 #include <type_traits>
 #include <vector>
@@ -8,12 +9,11 @@
 #include <map>
 #include <utility>
 
-float x(int y,int z){
-	return y+z;
+float x(int y, int z) {
+	return y + z;
 }
 
 int main() {
-	// std::cout << std::is_same_v< _result_of_other_impl<decltype(x), int, float*>::type, float>;
 	TEST(is_void)
 	TEST(is_null_pointer)
 	TEST(is_integral)
@@ -54,7 +54,7 @@ int main() {
 	TEST(is_nothrow_constructible)
 
 	TEST_CONS(is_constructible)
-	TEST_CONS(is_trivially_constructible)
+	// TEST_CONS(is_trivially_constructible)
 	TEST_CONS(is_nothrow_constructible)
 
 	TEST(is_default_constructible)
@@ -89,13 +89,10 @@ int main() {
 	TEST(is_swappable)
 	TEST_2(is_nothrow_swappable_with)
 	TEST(is_nothrow_swappable)
-	
 
 	TEST(has_virtual_destructor)
 	// TEST(is_aggregate)
 	// TEST(has_unique_object_representations)
-
-
 
 	// TYPETEST(remove_const)
 	// TYPETEST(remove_volatile)
@@ -119,13 +116,14 @@ int main() {
 	// TYPETEST(common_type)
 	// TYPETEST(underlying_type)
 	// TYPETEST(invoke_result)
-	typedef int (CC::* pmf)(int);
+
+	typedef int (CC::*pmf)(int);
 	// std::cout<<typeid(decltype(&CC::x)).name();
 	// std::cout<<typeid(pmf).name();
-	static_assert(ala::is_same_v<ala::invoke_result_t<pmf,CC,float>,int>);
-	static_assert(ala::is_same_v<ala::invoke_result_t<decltype(&CC::v),CC>, double&&>);
+	static_assert(ala::is_same<ala::invoke_result_t<pmf, CC, float>, int>::value, "");
+	static_assert(ala::is_same<ala::invoke_result_t<decltype(&CC::v), CC>, double &&>::value, "");
 
-	std::cout<<typeid(ala::invoke_result_t<decltype(&CC::v),CC>).name();
+	std::cout << typeid(ala::invoke_result_t<decltype(&CC::v), CC>).name();
 	// static_assert(ala::is_same_v<ala::invoke_result_t<decltype(&CC::pp),CC>,void>);
 	return 0;
 }

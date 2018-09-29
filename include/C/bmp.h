@@ -27,7 +27,7 @@ typedef struct {
 
 #pragma pack(pop)
 
-int write_bmp(const void *buffer, int width, int height, const char *filename, int withalpha) {
+int write_bmp(const void *buffer, const char *filename, int width, int height, int withalpha) {
 	if (width < 1 || height < 1 || !buffer || !filename)
 		return -1;
 	unsigned channels = 3;
@@ -52,7 +52,7 @@ int write_bmp(const void *buffer, int width, int height, const char *filename, i
 	return 1;
 }
 
-int read_bmp(const void *buffer, int *width, int *height, const char *filename, int *withalpha) {
+int read_bmp(const void *buffer, const char *filename, int *width, int *height, int *withalpha) {
 	if (!width || !height || !buffer || !filename)
 		return 0;
 	FILE *f = fopen(filename, "rb");
@@ -82,5 +82,5 @@ int read_bmp(const void *buffer, int *width, int *height, const char *filename, 
 	return 1;
 }
 
-#define write_bmp(buffer, width, height, filename) write_bmp(buffer, width, height, filename, 0)
+#define write_bmp(buffer, width, height, filename) write_bmp(buffer, width, height, filename, NULL)
 #define read_bmp(buffer, width, height, filename) read_bmp(buffer, width, height, filename, NULL)

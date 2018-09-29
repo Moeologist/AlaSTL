@@ -9,9 +9,10 @@ namespace ala {
 namespace detail {
 
 enum COLOR {
+	LEFT_NIL = -2,
+	RIGHT_NIL = -1,
 	BLACK = 0,
-	RED = 1,
-	NIL = 2
+	RED = 1
 };
 
 template <class Data>
@@ -31,8 +32,8 @@ struct rb_node {
 	rb_node *_left, *_right, *_parent;
 };
 
-#define is_nil(node) (node == nullptr || node->_color == NIL)
-#define is_black(node) (node == nullptr || node->_color == NIL || node->_color == BLACK)
+#define is_nil(node) (node == nullptr || node->_color < 0)
+#define is_black(node) (node == nullptr || node->_color < 0 || node->_color == BLACK)
 #define is_red(node) (node != nullptr && node->_color == RED)
 #undef is_nil
 #undef is_black
@@ -40,12 +41,12 @@ struct rb_node {
 
 template <class Data>
 _ALA_FORCEINLINE bool const is_nil(rb_node<Data> *node) {
-	return (node == nullptr || node->_color == NIL);
+	return (node == nullptr || node->_color < 0);
 }
 
 template <class Data>
 _ALA_FORCEINLINE bool const is_black(rb_node<Data> *node) {
-	return (node == nullptr || node->_color == NIL || node->_color == BLACK);
+	return (node == nullptr || node->_color < 0 || node->_color == BLACK);
 }
 
 template <class Data>
@@ -54,7 +55,17 @@ _ALA_FORCEINLINE bool const is_red(rb_node<Data> *node) {
 }
 
 template <class Data>
-_ALA_FORCEINLINE rb_node<Data> *const leftmost(rb_node<Data> *node) {
+_ALA_FORCEINLINE bool const is_left_nil(rb_node<Data> *node) {
+	return (node != nullptr && node->_color == LEFT_NIL);
+}
+
+template <class Data>
+_ALA_FORCEINLINE bool const is_right_nil(rb_node<Data> *node) {
+	return (node != nullptr && node->_color == RIGHT_NIL);
+}
+
+template <class Data>
+_ALA_FORCEINLINE rb_node<Data> *leftmost(rb_node<Data> *node) {
 	if (is_nil(node))
 		return nullptr;
 	while (!is_nil(node->_left))
@@ -63,12 +74,17 @@ _ALA_FORCEINLINE rb_node<Data> *const leftmost(rb_node<Data> *node) {
 }
 
 template <class Data>
-_ALA_FORCEINLINE rb_node<Data> *const rightmost(rb_node<Data> *node) {
+_ALA_FORCEINLINE rb_node<Data> *rightmost(rb_node<Data> *node) {
 	if (is_nil(node))
 		return nullptr;
 	while (!is_nil(node->_right))
 		node = node->_right;
 	return node;
+}
+
+template <class Data>
+    _ALA_FORCEINLINE void dealloc_tree(rb_node<Data> *root) {
+	if (_root->left != nullptr)
 }
 
 template <class Data, class Compare>
@@ -140,8 +156,8 @@ struct rb_tree {
 	rb_tree() : _root(nullptr), _cmp() {
 		_left_nil = new node_type(Data(), NIL, nullptr, nullptr, nullptr);
 		_right_nil = new node_type(Data(), NIL, nullptr, nullptr, nullptr);
-		_left_nil->_parent = _left_nil->_right = _right_nil;
-		_right_nil->_parent = _right_nil->_left = _left_nil;
+		_left_nil->_parent = _right_nil;
+		_right_nil->_parent = _left_nil;
 	}
 
 	iterator begin() {
@@ -164,7 +180,7 @@ struct rb_tree {
 	_ALA_FORCEINLINE node_type *rotate_left(node_type *x) {
 		node_type *y = x->_right;
 
-		if (!is_nil(x->_right = y->_left))
+		if ((x->_right = y->_left) != nullptr) // b can't be equal to NIL,so using is_nil is correct,too
 			y->_left->_parent = x;
 		y->_left = x;
 
@@ -181,7 +197,7 @@ struct rb_tree {
 	_ALA_FORCEINLINE node_type *rotate_right(node_type *y) {
 		node_type *x = y->_left;
 
-		if (!is_nil(y->_left = x->_right))
+		if ((y->_left = x->_right) != nullptr)
 			x->_right->_parent = y;
 		x->_right = y;
 
@@ -196,31 +212,31 @@ struct rb_tree {
 	}
 
 	node_type *search(Key key) {
-		node_type *node = _root;
-		while (!is_nil(node))
-			if (_cmp(pair<Key, Val>(key, 0), node->_data))
-				node = node->_left;
-			else if (_cmp(node->_data, pair<Key, Val>(key, 0)))
-				node = node->_right;
+		node_type *current = _root;
+		while (!is_nil(current))
+			if (_cmp(pair<Key, Val>(key, 0), current->_data))
+				current = current->_left;
+			else if (_cmp(current->_data, pair<Key, Val>(key, 0)))
+				current = current->_right;
 			else
-				return node;
+				return current;
 		return nullptr;
 	}
 
-	void rebalance_for_insert(node_type *node) {
+	void rebalance_for_insert(node_type *current) {
 		node_type *parent, *grandp, *uncle;
-		while (is_red(parent = node->_parent)) {
+		while (is_red(parent = current->_parent)) {
 			grandp = parent->_parent;
 			if (parent == grandp->_left) {
 				uncle = grandp->_right;
 				if (is_red(uncle)) {
 					parent->_color = uncle->_color = BLACK;
 					grandp->_color = RED;
-					node = grandp;
+					current = grandp;
 				}
 				else {
-					if (parent->_right == node)
-						rotate_left(node = parent);
+					if (parent->_right == current)
+						rotate_left(current = parent);
 					parent->_color = BLACK;
 					grandp->_color = RED;
 					rotate_right(grandp);
@@ -231,11 +247,11 @@ struct rb_tree {
 				if (is_red(uncle)) {
 					parent->_color = uncle->_color = BLACK;
 					grandp->_color = RED;
-					node = grandp;
+					current = grandp;
 				}
 				else {
-					if (parent->_left == node)
-						rotate_right(node = parent);
+					if (parent->_left == current)
+						rotate_right(current = parent);
 					parent->_color = BLACK;
 					grandp->_color = RED;
 					rotate_left(grandp);
@@ -246,32 +262,44 @@ struct rb_tree {
 	}
 
 	node_type *insert(Data data, bool overwrite = false) {
-		node_type *node = _root, *parent = nullptr;
-		while (!is_nil(node)) {
-			parent = node;
-			if (_cmp(data, node->_data))
-				node = node->_left;
-			else if (_cmp(node->_data, data))
-				node = node->_right;
+		node_type *current = _root, *parent = nullptr, temp = nullptr;
+		while (!is_nil(current)) {
+			parent = current;
+			if (_cmp(data, current->_data))
+				current = current->_left;
+			else if (_cmp(current->_data, data))
+				current = current->_right;
 			else {
 				if (overwrite)
-					// node->_val = val;
+					// current->_val = val;
 					;
-				return node;
+				return current;
 			}
 		}
-
-		node = new node_type(data, RED, nullptr, nullptr, nullptr);
-		node->_parent = parent;
-		if (parent == nullptr)
-			_root = node;
-		else if (_cmp(data, node->_data))
-			parent->_left = node;
+		temp == current;
+		current = new node_type(data, RED, nullptr, nullptr, nullptr);
+		current->_parent = parent;
+		if (is_left_nil(temp->_color)) {
+			temp->_parent = current;
+			current->_left = temp;
+		}
+		else if (is_right_nil(_temp->_color)) {
+			temp->_parent = current;
+			current->_right = temp;
+		}
+		if (parent == nullptr) { // empty tree
+			_root = current;
+			current->_left = _left_nil;
+			current->_right = _right_nil;
+			_left_nil->_parent = _right_nil->_parent = current;
+		}
+		else if (_cmp(data, current->_data))
+			parent->_left = current;
 		else
-			parent->_right = node;
+			parent->_right = current;
 
-		rebalance_for_insert(node);
-		return node;
+		rebalance_for_insert(current);
+		return current;
 	}
 
 	void transplant(node_type *u, node_type *v) {
@@ -282,14 +310,14 @@ struct rb_tree {
 			uparent->_left = v;
 		else
 			uparent->_right = v;
-		if (!is_nil(v))
+		if (v != nullptr)
 			v->_parent = uparent;
 	}
 
-	void rebalance_for_erase(node_type *node, node_type *parent) {
+	void rebalance_for_erase(node_type *current, node_type *parent) {
 		node_type *brother;
-		while (node != _root && is_black(node)) {
-			if (parent->_left == node) {
+		while (current != _root && is_black(current)) {
+			if (parent->_left == current) {
 				brother = parent->_right;
 				if (brother->_color == RED) {
 					brother->_color = BLACK;
@@ -299,8 +327,8 @@ struct rb_tree {
 				}
 				if (is_black(brother->_left) && is_black(brother->_right)) {
 					brother->_color = RED;
-					node = parent;
-					parent = node->_parent;
+					current = parent;
+					parent = current->_parent;
 				}
 				else {
 					if (is_black(brother->_right)) {
@@ -315,7 +343,7 @@ struct rb_tree {
 					if (!is_nil(brother->_right))
 						brother->_right->_color = BLACK;
 					rotate_left(parent);
-					node = _root;
+					current = _root;
 					break;
 				}
 			}
@@ -329,8 +357,8 @@ struct rb_tree {
 				}
 				if (is_black(brother->_left) && is_black(brother->_right)) {
 					brother->_color = RED;
-					node = parent;
-					parent = node->_parent;
+					current = parent;
+					parent = current->_parent;
 				}
 				else {
 					if (is_black(brother->_left)) {
@@ -345,49 +373,68 @@ struct rb_tree {
 					if (!is_nil(brother->_left))
 						brother->_left->_color = BLACK;
 					rotate_right(parent);
-					node = _root;
+					current = _root;
 					break;
 				}
 			}
 		}
-		if (!is_nil(node))
-			node->_color = BLACK;
+		if (!is_nil(current))
+			current->_color = BLACK;
 	}
 
 	void erase(Key key) {
-		node_type *node, *child, *parent, *temp;
+		node_type *current, *child, *parent, *temp;
 		COLOR color;
-		if ((temp = node = search(key)) == nullptr)
+		if ((temp = current = search(key)) == nullptr)
 			return;
-		if (is_nil(node->_left)) {
-			color = node->_color;
-			child = node->_right;
-			parent = node->_parent;
-			transplant(node, child);
+		if (is_nil(current->_left)) {
+			color = current->_color;
+			child = current->_right;
+			parent = current->_parent;
+			transplant(current, child);
+			if (is_left_nil(current->_left)) {
+				if (is_right_nil(child))
+					child->_parent == _left_nil;
+				else if (child == nullptr)
+					left_leaf = parent;
+				else
+					left_leaf = left_most(child);
+				left_leaf->_left = _left_nil;
+				left_nil->_parent = left_leaf;
+			}
 		}
-		else if (is_nil(node->_right)) {
-			color = node->_color;
-			child = node->_left;
-			parent = node->_parent;
-			transplant(node, child);
+		else if (is_nil(current->_right)) {
+			color = current->_color;
+			child = current->_left;
+			parent = current->_parent;
+			transplant(current, child);
+			if (is_right_nil(current->_right)) {
+				if (is_nil(child))
+					right_leaf = parent;
+				else
+					right_leaf = right_most(child);
+				right_leaf = _right_nil;
+				right_nil->_parent = right_leaf;
+			}
 		}
 		else {
-			node = leftmost(node->_right);
-			color = node->_color;
-			child = node->_right;
-			parent = node->_parent;
-			if (node->_parent == temp)
-				parent = node;
+			current = leftmost(current->_right);
+			color = current->_color;
+			child = current->_right;
+			parent = current->_parent;
+			if (current->_parent == temp)
+				parent = current;
 			else {
-				transplant(node, child);
-				node->_right = temp->_right;
-				node->_right->_parent = node;
+				transplant(current, child);
+				current->_right = temp->_right;
+				current->_right->_parent = current;
 			}
-			transplant(temp, node);
-			node->_left = temp->_left;
-			node->_left->_parent = node;
-			node->_color = temp->_color;
+			transplant(temp, current);
+			current->_left = temp->_left;
+			current->_left->_parent = current;
+			current->_color = temp->_color;
 		}
+
 		temp->_left = temp->_right = nullptr;
 		delete temp;
 		if (color == BLACK)

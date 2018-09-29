@@ -22,7 +22,7 @@ class xoroshiro128plus {
 
   public:
 	xoroshiro128plus(const uint64_t seed) { s[0] = seed; }
-	ALA_FORCEINLINE uint64_t operator()() {
+	_ALA_FORCEINLINE uint64_t operator()() {
 		const uint64_t s0 = s[0];
 		uint64_t s1 = s[1];
 		s1 ^= s0;
@@ -38,7 +38,7 @@ class xorshift1024star {
 
   public:
 	xorshift1024star(const uint64_t seed) { s[0] = seed; }
-	ALA_FORCEINLINE uint64_t operator()() {
+	_ALA_FORCEINLINE uint64_t operator()() {
 		const uint64_t s0 = s[p];
 		uint64_t s1 = s[p = (p + 1) & 15];
 		s1 ^= s1 << 31;
@@ -47,12 +47,12 @@ class xorshift1024star {
 	}
 };
 
-ALA_FORCEINLINE double rand_double(uint64_t s) {
+_ALA_FORCEINLINE double rand_double(uint64_t s) {
 	s = s & (1ull << 52) - 1 | (1ull << 10) - 1 << 52;
 	return *(double *)(&s) - 1.0;
 };
 
-ALA_FORCEINLINE float rand_float(uint32_t s) {
+_ALA_FORCEINLINE float rand_float(uint32_t s) {
 	s = s & (1 << 23) - 1 | (1 << 7) - 1 << 23;
 	return *(float *)(&s) - 1.0f;
 }

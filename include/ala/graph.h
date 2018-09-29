@@ -1,121 +1,92 @@
 #include <list>
+#include <forward_list>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 
-template <class T, class MatrixType = short>
-struct amgraph {
-	int N;
-	T *V;
-	MatrixType **E;
+template <class T>
+struct graph {
+	typedef T value_type;
+	typedef size_t index_type;
+	typedef int weight_type;
+	typedef std::forward_list<index_type> edges_type;
+	typedef std::forward_list<weight_type> edges_weight_type;
+	typedef std::vector<value_type> nodes_type;
+	typedef std::vector<edges_type> nodes_edges_type;
+	typedef std::vector<edges_weight_type> nodes_edges_weight_type;
 
-	bool *visited;
-	int *path;
-	int path_n;
-	int g_temp;
+	index_type N;
+	nodes_type V;
+	nodes_edges_type E;
+	nodes_edges_weight_type EW;
 
-	amgraph(int order) : N(order) {
-		V = new T[order];
-		E = new MatrixType *[order];
-		for (int i = 0; i < order; ++i)
-			E[i] = new MatrixType[order];
-		for (int i = 0; i < order; ++i)
-			for (int j = 0; j < order; ++j)
-				E[i][j] = 0;
-		visited = new bool[order];
-		path = new int[order];
-	}
+	std::vector<bool> visited;
+	std::vector<index_type> path;
+	std::vector<std::vector<index_type>> paths;
 
-	amgraph(int order, T data[]) : amgraph(order) {
-		for (int i = 0; i < order; ++i)
-			V[i] = data[i];
-	}
+	graph(index_type order) : N(order), V(order), E(order), EW(order),
+	                          visited(order, false), path(order), paths() {}
 
-	amgraph(int order, T data[],int edges,MatrixType ) : amgraph(order) {
-		for (int i = 0; i < order; ++i)
-			V[i] = data[i];
+	graph(index_type order, T data[]) : graph(order) {
+		for (value_type &i : V)
+			i = data[i];
 	}
 
 	void init() {
-		for (int i = 0; i < N; ++i)
-			visited[i] = false;
-		for (int i = 0; i < N; ++i)
-			path[i] = -1;
-		path_n = g_temp = 0;
+		std::fill(visited.begin(), visited.end(), false);
+		path.clear();
+		paths.clear();
 	}
 
-	int search(T t) {
+	index_type search(T t) {
 		for (int i = 0; i < N; ++i)
 			if (t == V[i])
 				return i;
 		return -1;
 	}
 
-	void print_path() {
-		for (int i = 0; path[i] != -1 && i < N; ++i)
-			std::cout << V[path[i]] << ',';
-		std::cout << '\n';
+	void print_paths() {
+		for (auto &&path : paths) {
+			for (index_type i : path)
+				std::cout << V[i] << ',';
+			std::cout << '\n';
+		}
 	}
 
-	void dfs(int u, int v) {
+	void dfs(index_type u, index_type v) {
 		visited[u] = true;
-		path[g_temp++] = u;
+		path.push_back(u);
 		if (u == v) {
-			print_path();
-			++path_n;
+			paths.push_back(path);
 			return;
 		}
-		for (int i = 0; i < N; ++i)
-			if (!visited[i] && E[u][i]) {
+		for (index_type i : E[u])
+			if (!visited[i]) {
 				dfs(i, v);
 				visited[i] = false;
-				path[--g_temp] = -1;
+				path.pop_back();
 			}
 	}
 
-	void dfs_path(int u, int v) {
+	void dfs_path(index_type u, index_type v) {
 		init();
 		dfs(u, v);
+		print_paths();
 	}
 
-	void bfs(int u, int v) {
-		std::list<int> Q;
+	void b(index_type u, index_type v) {
+		std::list<index_type> Q;
 		Q.push_back(u);
-		int cur_count = 1, next_count = 0;
+		int cur_count = 1, next_count = 0, path_length = 0;
 		while (!Q.empty()) {
 			u = Q.front();
 			Q.pop_front();
-			path[g_temp] = u;
 			visited[u] = true;
-			for (int i = 0; i < N; ++i)
-				if (!visited[i] && E[u][i]) {
-					Q.push_back(i);
-					++next_count;
-					if (i == v)
-						return;
-				}
-			--cur_count;
-			Q.push_back(-1);
-			if (cur_count == 0) {
-				++g_temp;
-				cur_count = next_count;
-				next_count = 0;
-			}
-		}
-	}
-
-	void bfsn(int u, int v) {
-		std::list<int> Q;
-		Q.push_back(u);
-		int cur_count = 1, next_count = 0;
-		while (!Q.empty()) {
-			u = Q.front();
-			Q.pop_front();
-			path[g_temp] = u;
-			visited[u] = true;
-			for (int i = 0; i < N; ++i)
-				if (!visited[i] && E[u][i]) {
+			path.push_back(u);
+			for (index_type i : E[u])
+				if (!visited[i]) {
 					if (i == v) {
-						path[++g_temp] = v;
+						paths.emplace_back(path);
 						return;
 					}
 					else {
@@ -123,18 +94,38 @@ struct amgraph {
 						++next_count;
 					}
 				}
-			if (--cur_count == 0) {
-				++g_temp;
-				cur_count = next_count;
-				next_count = 0;
+		}
+	}
+
+	void bfsn(index_type u, index_type v) {
+		std::list<index_type> cur, next;
+		visited[u] = true;
+		cur.push_back(u);
+		path.emplace_back();
+		while (!cur.empty()) {
+			u = cur.front();
+			cur.pop_front();
+			*path.rbegin() = u;
+			if (u == v) {
+				paths.push_back(path);
+				return;
+			}
+			for (index_type i : E[u])
+				if (!visited[i]) {
+					visited[i] = true;
+					next.push_back(i);
+				}
+			if (cur.empty()) {
+				cur.swap(next);
+				path.emplace_back();
 			}
 		}
 	}
 
-	void bfs_path(int u, int v) {
+	void bfs_path(index_type u, index_type v) {
 		init();
 		bfsn(u, v);
-		print_path();
+		print_paths();
 	}
 
 	// int min(int costs[]) {

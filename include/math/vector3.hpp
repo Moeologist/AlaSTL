@@ -11,15 +11,15 @@ struct vector {
 
 	vector(T x_ = 0, T y_ = 0, T z_ = 0) : x(x_), y(y_), z(z_) {}
 
-	ALA_FORCEINLINE vector<T> &normlize() {
+	_ALA_FORCEINLINE vector<T> &normlize() {
 		return *this = *this * (1 / sqrt(x * x + y * y + z * z));
 	}
 
-	ALA_FORCEINLINE vector<T> norm() {
+	_ALA_FORCEINLINE vector<T> norm() {
 		return *this * (1 / sqrt(x * x + y * y + z * z));
 	}
 
-	ALA_FORCEINLINE T operator[](const int index) const {
+	_ALA_FORCEINLINE T operator[](const int index) const {
 		switch (index) {
 		case 0:
 			return x;
@@ -31,31 +31,31 @@ struct vector {
 		return x;
 	}
 
-	ALA_FORCEINLINE friend vector<T> operator+(const vector<T> &a, const vector<T> &b) {
+	_ALA_FORCEINLINE friend vector<T> operator+(const vector<T> &a, const vector<T> &b) {
 		return vector<T>(a.x + b.x, a.y + b.y, a.z + b.z);
 	}
 
-	ALA_FORCEINLINE friend vector<T> operator-(const vector<T> &a, const vector<T> &b) {
+	_ALA_FORCEINLINE friend vector<T> operator-(const vector<T> &a, const vector<T> &b) {
 		return vector<T>(a.x - b.x, a.y - b.y, a.z - b.z);
 	}
 
-	ALA_FORCEINLINE friend vector<T> operator*(const vector<T> &a, const vector<T> &b) {
+	_ALA_FORCEINLINE friend vector<T> operator*(const vector<T> &a, const vector<T> &b) {
 		return vector<T>(a.x * b.x, a.y * b.y, a.z * b.z);
 	}
 
-	ALA_FORCEINLINE friend vector<T> operator*(const vector<T> &a, const float b) {
+	_ALA_FORCEINLINE friend vector<T> operator*(const vector<T> &a, const float b) {
 		return vector<T>(a.x * b, a.y * b, a.z * b);
 	}
 
-	ALA_FORCEINLINE friend vector<T> operator*(const float b, const vector<T> &a) {
+	_ALA_FORCEINLINE friend vector<T> operator*(const float b, const vector<T> &a) {
 		return vector<T>(a.x * b, a.y * b, a.z * b);
 	}
 
-	ALA_FORCEINLINE friend float dot(const vector<T> &a, const vector<T> &b) {
+	_ALA_FORCEINLINE friend float dot(const vector<T> &a, const vector<T> &b) {
 		return a.x * b.x + a.y * b.y + a.z * b.z;
 	}
 
-	ALA_FORCEINLINE friend vector<T> cross(const vector<T> &a, const vector<T> &b) {
+	_ALA_FORCEINLINE friend vector<T> cross(const vector<T> &a, const vector<T> &b) {
 		return vector<T>(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
 	}
 };
