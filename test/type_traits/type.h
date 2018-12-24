@@ -53,14 +53,14 @@ struct S {
     double operator()(char, int&);
     float operator()(int) { return 1.0;}
 };
- 
+
 template<class T>
 typename ala::result_of<T(int)>::type f(T& t)
 {
     std::cout << "overload of f for callable T\n";
     return t(0);
 }
- 
+
 template<class T, class U>
 int f(U u)
 {

@@ -1,9 +1,9 @@
-#ifndef ANY_HPP
-#define ANY_HPP
+#ifndef _ALA_ANY_H
+#define _ALA_ANY_H
 
 namespace ala {
 
-#if ALA_ENABLE_EXCEPTIONS
+#if _ALA_ENABLE_EXCEPTIONS
 struct bad_any_cast : std::bad_cast {
 	virtual const char *what() const noexcept {
 		return "bad_any_cast";
@@ -11,8 +11,8 @@ struct bad_any_cast : std::bad_cast {
 };
 #endif
 
-[[noreturn]] ALA_FORCEINLINE void __throw_bad_any_cast() {
-#if ALA_ENABLE_EXCEPTIONS
+[[noreturn]] _ALA_FORCEINLINE void __throw_bad_any_cast() {
+#if _ALA_ENABLE_EXCEPTIONS
 	throw bad_any_cast();
 #else
 	std::abort();
