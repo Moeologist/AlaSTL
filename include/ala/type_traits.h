@@ -2,15 +2,17 @@
 #ifndef _ALA_TYPE_TRAITS_H
 #define _ALA_TYPE_TRAITS_H
 
-#include "ala/config.h"
+#include <ala/config.h>
 
 #ifdef _ALA_MSVC
 #pragma warning(push)
-#pragma warning(disable: 4180)
-#pragma warning(disable: 4197)
+#pragma warning(disable : 4180)
+#pragma warning(disable : 4197)
 #endif
 
-#include "ala/detail/traits_declare.h"
+#include <ala/detail/traits_declare.h>
+
+// clang-format off
 
 namespace ala {
 
@@ -42,7 +44,7 @@ struct _or_<B1, B2, B3, Bn...> : conditional_t<B1::value, B1, _or_<B2, B3, Bn...
 template <typename...> struct _and_;
 template <> struct _and_<> : true_type {};
 template <typename B1> struct _and_<B1> : B1 {};
-template <typename B1, typename B2> struct _and_<B1, B2> : conditional_t<B1::value, B2, B1>::type {};
+template <typename B1, typename B2> struct _and_<B1, B2> : conditional_t<B1::value, B2, B1> {};
 template <typename B1, typename B2, typename B3, typename... Bn>
 struct _and_<B1, B2, B3, Bn...> : conditional_t<B1::value, _and_<B2, B3, Bn...>, B1> {};
 
@@ -82,9 +84,7 @@ template <typename T> struct is_array<T[]> :                  true_type {};
 template <typename T, size_t Size> struct is_array<T[Size]> : true_type {};
 
 template <typename T> struct is_enum : bool_constant<__is_enum(T)> {};
-
 template <typename T> struct is_union : bool_constant<__is_union(T)> {};
-
 template <typename T> struct is_class : bool_constant<__is_class(T)> {};
 
 template <typename> struct is_function : false_type {};
@@ -215,12 +215,12 @@ template <typename T> struct is_abstract : bool_constant<__is_abstract(T)> {};
 
 template <typename T> struct is_final : bool_constant<__is_final(T)> {};
 
-template <typename T,bool = is_arithmetic<T>::value> struct _is_unsigned_helper : bool_constant<T(0) < T(-1)> {};
-template <typename T> 							struct _is_unsigned_helper<T, false> : false_type {};
+template <typename T, bool = is_arithmetic<T>::value> struct _is_unsigned_helper : bool_constant<T(0) < T(-1)> {};
+template <typename T>                                 struct _is_unsigned_helper<T, false> : false_type {};
 template <typename T> struct is_unsigned : _is_unsigned_helper<T> {};
 
-template <typename T,bool = is_arithmetic<T>::value> struct _is_signed_helper : bool_constant<T(-1) < T(0)> {};
-template <typename T>                           struct _is_signed_helper<T, false> : false_type {};
+template <typename T, bool = is_arithmetic<T>::value> struct _is_signed_helper : bool_constant<T(-1) < T(0)> {};
+template <typename T>                                 struct _is_signed_helper<T, false> : false_type {};
 template <typename T> struct is_signed : _is_signed_helper<T> {};
 
 #if _ALA_ENABLE_TYPE_TRAITS_BIF
@@ -660,16 +660,16 @@ template <typename T>           struct remove_all_extents       { typedef T     
 template <typename T>           struct remove_all_extents<T[]>  { typedef remove_all_extents_t<T> type; };
 template <typename T, size_t N> struct remove_all_extents<T[N]> { typedef remove_all_extents_t<T> type; };
 
-template <typename T> struct remove_pointer                    {typedef T type;};
-template <typename T> struct remove_pointer<T*>                {typedef T type;};
-template <typename T> struct remove_pointer<T* const>          {typedef T type;};
-template <typename T> struct remove_pointer<T* volatile>       {typedef T type;};
-template <typename T> struct remove_pointer<T* const volatile> {typedef T type;};
+template <typename T> struct remove_pointer                    { typedef T type; };
+template <typename T> struct remove_pointer<T*>                { typedef T type; };
+template <typename T> struct remove_pointer<T* const>          { typedef T type; };
+template <typename T> struct remove_pointer<T* volatile>       { typedef T type; };
+template <typename T> struct remove_pointer<T* const volatile> { typedef T type; };
 
-template <typename T, bool is_fun = false> struct _add_pointer_helper             { typedef remove_reference_t<T>* type; };
-template <typename T>                struct _add_pointer_helper<T, true>               { typedef T type;                 };
-template <typename T, typename... Args> struct _add_pointer_helper<T(Args...), true>      { typedef T(*type)(Args...);      };
-template <typename T, typename... Args> struct _add_pointer_helper<T(Args..., ...), true> { typedef T(*type)(Args..., ...); };
+template <typename T, bool is_fun = false> struct _add_pointer_helper                        { typedef remove_reference_t<T>* type; };
+template <typename T>                      struct _add_pointer_helper<T, true>               { typedef T type;                 };
+template <typename T, typename... Args>    struct _add_pointer_helper<T(Args...), true>      { typedef T(*type)(Args...);      };
+template <typename T, typename... Args>    struct _add_pointer_helper<T(Args..., ...), true> { typedef T(*type)(Args..., ...); };
 template <typename T> struct add_pointer : _add_pointer_helper<T, is_function<T>::value> {};
 
 template <size_t Len, size_t Align = 8>
@@ -838,6 +838,7 @@ struct invoke_result : _invoke_result_helper<is_member_object_pointer<remove_ref
 
 template <typename Func, typename... Args>
 struct result_of<Func(Args...)> : invoke_result<Func, Args...> {};
+
 template <typename... Ts> struct _void_t_impl { typedef void type; };
 
 template <typename Result, typename Ret, typename = void>
@@ -907,18 +908,20 @@ template <typename B>
 struct negation : bool_constant<!bool(B::value)> {};
 
 enum class endian {
-#ifdef _ALA_WIN
-	little = 0,
-	big    = 1,
-	native = little
-#else
+#if defined(__ORDER_LITTLE_ENDIAN__) && defined(__ORDER_BIG_ENDIAN__) && defined(__BYTE_ORDER__)
 	little = __ORDER_LITTLE_ENDIAN__,
 	big    = __ORDER_BIG_ENDIAN__,
 	native = __BYTE_ORDER__
+#else
+	little = 0,
+	big    = 1,
+	native = little
 #endif
 };
 
 } // namespace ala
+
+// clang-format on
 
 #ifdef _ALA_MSVC
 #pragma warning(pop)

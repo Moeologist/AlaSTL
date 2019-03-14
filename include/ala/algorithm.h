@@ -5,9 +5,9 @@
 
 namespace ala {
 
-template <class LIt, class RIt>
+template<class LIt, class RIt>
 inline void iter_swap(LIt a, RIt b) {
-	ala::swap(*a, *b);
+    ala::swap(*a, *b);
 }
 
 // template <typename It>
@@ -17,45 +17,44 @@ inline void iter_swap(LIt a, RIt b) {
 // 		swap(*(m + i), *(m + xorgen() % num));
 // }
 
-template <typename ForIt>
+template<typename ForIt>
 inline ForIt merge(ForIt first, ForIt last, ForIt f1, ForIt l1, ForIt out) {
-	while (first != last && f1 != l1)
-		*out++ = (*first < *f1 || *first == *f1) ? *first++ : *f1++;
-	while (first != last)
-		*out++ = *first++;
-	while (f1 != l1)
-		*out++ = *f1++;
-	return out;
+    while (first != last && f1 != l1)
+        *out++ = (*first < *f1 || *first == *f1) ? *first++ : *f1++;
+    while (first != last)
+        *out++ = *first++;
+    while (f1 != l1)
+        *out++ = *f1++;
+    return out;
 }
 
-template <class BiIt>
+template<class BiIt>
 bool next_permutation(BiIt first, BiIt last) {
-	if (first == last)
-		return false;
-	BiIt i = first;
-	if (++i == last)
-		return false;
-	while (true) {
-		BiIt i1, i2;
-		i1 = i;
-		if (*--i < *i1) {
-			i2 = last;
-			while (!(*i < *--i2))
-				;
-			std::iter_swap(i, i2);
-			std::reverse(i1, last);
-			return true;
-		}
-		if (i == first) {
-			std::reverse(first, last);
-			return false;
-		}
-	}
+    if (first == last)
+        return false;
+    BiIt i = first;
+    if (++i == last)
+        return false;
+    while (true) {
+        BiIt i1, i2;
+        i1 = i;
+        if (*--i < *i1) {
+            i2 = last;
+            while (!(*i < *--i2))
+                ;
+            std::iter_swap(i, i2);
+            std::reverse(i1, last);
+            return true;
+        }
+        if (i == first) {
+            std::reverse(first, last);
+            return false;
+        }
+    }
 }
 
 } // namespace ala
 
-#include "ala/detail/sort.h"
-#include "ala/parallel/sort.h"
+#include <ala/detail/sort.h>
 
 #endif // HEAD

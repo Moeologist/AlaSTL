@@ -1,5 +1,5 @@
 #include <iostream>
-#include <reflection.hpp>
+#include <ala/reflection.h>
 
 using namespace std;
 
@@ -10,6 +10,6 @@ struct C {
 REFLECTOR(C);
 
 int main() {
-	C *ptr=(C*)creat_instance("C");
+	C *ptr = (C *)creat_instance("C");
 	return 0;
 }

@@ -3,7 +3,7 @@
 #include <vector>
 #include <utility>
 
-#include "ala/xorshift.h"
+#include "ala/detail/xorshift.h"
 #include "ala/timer.h"
 #include "ala/utility.h"
 #include "ala/algorithm.h"

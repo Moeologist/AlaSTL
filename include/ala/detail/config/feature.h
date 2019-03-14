@@ -1,0 +1,12 @@
+#ifndef _ALA_DETAIL_CONFIG_FEATURE_H
+#define _ALA_DETAIL_CONFIG_FEATURE_H
+
+#ifndef _ALA_ENABLE_RTTI
+#define ALA_ENABLE_RTTI 0
+#endif
+
+#ifndef _ALA_ENABLE_EXCEPTIONS
+#define ALA_ENABLE_EXCEPTIONS 0
+#endif
+
+#endif // HEAD

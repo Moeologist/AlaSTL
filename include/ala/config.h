@@ -1,9 +1,10 @@
 #ifndef _ALA_CONFIG_H
 #define _ALA_CONFIG_H
 
-#include <ala/config/config.h>
-#include <ala/config/feature.h>
-#include <ala/config/macro.h>
-#include <ala/config/stddef.h>
+#include <ala/detail/config/platform.h>
+
+#include <ala/detail/config/feature.h>
+#include <ala/detail/config/macro.h>
+#include <ala/detail/config/stddef.h>
 
 #endif // HEAD

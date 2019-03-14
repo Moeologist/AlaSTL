@@ -8,6 +8,6 @@ namespace ala {
 using std::allocator;
 using std::allocator_traits;
 
-}
+} // namespace ala
 
 #endif

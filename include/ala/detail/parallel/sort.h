@@ -126,86 +126,88 @@ namespace ala {
 namespace detail {
 
 // improve quick-sort
-template <typename RanIt>
+template<typename RanIt>
 inline void parallel_quick_sort_impl(RanIt m, RanIt n, ptrdiff_t limit) {
-	typedef typename iterator_traits<RanIt>::value_type T;
-	ptrdiff_t len = n - m;
-	if (len < 48) {
-		insertion_sort(m, n);
-		return;
-	}
-	const T pivot = detail::median(*m, *(m + len / 2), *(n - 1));
-	RanIt left = m, right = n;
-	for (;; ++left) {
-		while (*left < pivot)
-			++left;
-		--right;
-		while (pivot < *right)
-			--right;
-		if (left >= right)
-			break;
-		swap(*left, *right);
-	}
-	std::thread t;
-	const bool div = left - m > limit;
-	if (div)
-		t = std::thread(parallel_quick_sort_impl<RanIt>, m, left, limit);
-	else
-		parallel_quick_sort_impl(m, left, limit);
-	parallel_quick_sort_impl(left, n, limit);
-	if (div)
-		t.join();
+    typedef typename iterator_traits<RanIt>::value_type T;
+    ptrdiff_t len = n - m;
+    if (len < 48) {
+        insertion_sort(m, n);
+        return;
+    }
+    const T pivot = detail::median(*m, *(m + len / 2), *(n - 1));
+    RanIt left = m, right = n;
+    for (;; ++left) {
+        while (*left < pivot)
+            ++left;
+        --right;
+        while (pivot < *right)
+            --right;
+        if (left >= right)
+            break;
+        swap(*left, *right);
+    }
+    std::thread t;
+    const bool div = left - m > limit;
+    if (div)
+        t = std::thread(parallel_quick_sort_impl<RanIt>, m, left, limit);
+    else
+        parallel_quick_sort_impl(m, left, limit);
+    parallel_quick_sort_impl(left, n, limit);
+    if (div)
+        t.join();
 }
 
 } // namespace detail
 
-template <typename RanIt>
+template<typename RanIt>
 inline void parallel_quick_sort(RanIt m, RanIt n) {
-	if (m < n) {
-		const int ths = std::thread::hardware_concurrency();
-		detail::parallel_quick_sort_impl(m, n, (n - m) / 2 / ths);
-	}
+    if (m < n) {
+        const int ths = std::thread::hardware_concurrency();
+        detail::parallel_quick_sort_impl(m, n, (n - m) / 2 / ths);
+    }
 }
 
 namespace detail {
 
-template <typename RanIt>
+template<typename RanIt>
 inline void parallel_sort_impl(RanIt m, RanIt n, ptrdiff_t limit) {
-	std::vector<std::thread> thread_pool;
-	typedef typename iterator_traits<RanIt>::value_type T;
-	while (n - m > 48) {
-		const T pivot = forward<T>(detail::median(forward<T>(*m), forward<T>(*(m + (n - m) / 2)), forward<T>(*(n - 1))));
-		RanIt left = m, right = n;
-		for (;; ++left) {
-			while (*left < pivot)
-				++left;
-			--right;
-			while (pivot < *right)
-				--right;
-			if (left >= right)
-				break;
-			swap(*left, *right);
-		}
-		if (n - m > limit)
-			thread_pool.emplace_back(parallel_sort_impl<RanIt>, left, n, limit);
-		else
-			parallel_sort_impl(left, n, limit);
-		n = left;
-	}
-	insertion_sort(m, n);
-	for (std::thread& th : thread_pool)
-		th.join();
+    std::vector<std::thread> thread_pool;
+    typedef typename iterator_traits<RanIt>::value_type T;
+    while (n - m > 48) {
+        const T pivot = forward<T>(
+            detail::median(forward<T>(*m), forward<T>(*(m + (n - m) / 2)),
+                           forward<T>(*(n - 1))));
+        RanIt left = m, right = n;
+        for (;; ++left) {
+            while (*left < pivot)
+                ++left;
+            --right;
+            while (pivot < *right)
+                --right;
+            if (left >= right)
+                break;
+            swap(*left, *right);
+        }
+        if (n - m > limit)
+            thread_pool.emplace_back(parallel_sort_impl<RanIt>, left, n, limit);
+        else
+            parallel_sort_impl(left, n, limit);
+        n = left;
+    }
+    insertion_sort(m, n);
+    for (std::thread &th : thread_pool)
+        th.join();
 }
 
 } // namespace detail
 
 // a quick-sort variety form eastl
-template <typename RanIt>
+template<typename RanIt>
 inline void parallel_sort(RanIt m, RanIt n) {
-	if (m < n) {
-		const int ths = std::thread::hardware_concurrency();
-		detail::parallel_sort_impl(m, n, (n - m) / 2 / ths);
-	}
+    if (m < n) {
+        const int ths = std::thread::hardware_concurrency();
+        detail::parallel_sort_impl(m, n, (n - m) / 2 / ths);
+    }
 }
 
 } // namespace ala

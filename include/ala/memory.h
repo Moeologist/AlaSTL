@@ -9,16 +9,16 @@
 
 namespace ala {
 
-template <class _T>
+template<class _T>
 constexpr _T *addressof(_T &arg) noexcept {
-	return __builtin_addressof(arg);
+    return __builtin_addressof(arg);
 }
 
-template <class _T>
+template<class _T>
 const _T *addressof(const _T &&) = delete;
 
 } // namespace ala
 
-#include "ala/external/allocator.h"
+#include <ala/detail/external/allocator.h>
 
 #endif // HEAD

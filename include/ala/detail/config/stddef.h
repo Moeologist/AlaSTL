@@ -1,5 +1,5 @@
-#ifndef _ALA_CONFIG_STDDEF_H
-#define _ALA_CONFIG_STDDEF_H
+#ifndef _ALA_DETAIL_CONFIG_STDDEF_H
+#define _ALA_DETAIL_CONFIG_STDDEF_H
 
 namespace ala {
 

@@ -1,5 +1,6 @@
-#ifndef XORSHIFT_HPP
-#define XORSHIFT_HPP
+// http://xoshiro.di.unimi.it/
+#ifndef _ALA_DETAIL_XORSHIFT_HPP
+#define _ALA_DETAIL_XORSHIFT_HPP
 
 #include "ala/config.h"
 
@@ -11,50 +12,89 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wattributes"
 #elif defined _ALA_MSVC
-#pragma warning(push) 
-#pragma warning(disable: 4554)
+#pragma warning(push)
+#pragma warning(disable : 4554)
 #endif
+
+#define rotl(x, k) (x << k | x >> 8 * sizeof(x) - k)
 
 namespace ala {
 
-class xoroshiro128plus {
-	uint64_t s[2] = {0, 0xabcd};
+template<typename UInt>
+struct xoshiro {
+    UInt s[4];
 
-  public:
-	xoroshiro128plus(const uint64_t seed) { s[0] = seed; }
-	_ALA_FORCEINLINE uint64_t operator()() {
-		const uint64_t s0 = s[0];
-		uint64_t s1 = s[1];
-		s1 ^= s0;
-		s[0] = (s0 << 55 | s0 >> 64 - 55) ^ s1 ^ s1 << 14;
-		s[1] = (s1 << 36 | s1 >> 64 - 36);
-		return s[0] + s[1];
-	}
-};
+    template<typename T>
+    struct args;
 
-class xorshift1024star {
-	uint64_t s[16] = {0, 1, 2, 11, 12, 22, 111, 112, 122, 222, 1111, 1112, 1122, 1222, 2222, 11111};
-	size_t p;
+    template<>
+    struct args<uint32_t> {
+        static constexpr int shi = 9;
+        static constexpr int rot = 11;
+        static constexpr uint32_t jmp[4] = {0x8764000b, 0xf542d2d3, 0x6fa035c3,
+                                            0x77f2db5b};
+    };
 
-  public:
-	xorshift1024star(const uint64_t seed) { s[0] = seed; }
-	_ALA_FORCEINLINE uint64_t operator()() {
-		const uint64_t s0 = s[p];
-		uint64_t s1 = s[p = (p + 1) & 15];
-		s1 ^= s1 << 31;
-		s[p] = s1 ^ s0 ^ s1 >> 11 ^ s0 >> 30;
-		return s[p] * 0x9e3779b97f4a7c13;
-	}
+    template<>
+    struct args<uint64_t> {
+        static constexpr int shi = 17;
+        static constexpr int rot = 45;
+        static constexpr uint64_t jmp[4] = {
+            0x180ec6d33cfd0aba, 0xd5a61266f0c9392c, 0xa9582618e03fc9aa,
+            0x39abdc4529b1661c};
+    };
+
+    xoshiro(UInt const seed) { s[0] = seed; }
+
+    _ALA_FORCEINLINE UInt plus() { return s[0] + s[3]; }
+
+    _ALA_FORCEINLINE UInt starstar() { return rotl(s[1] * 5, 7) * 9; }
+
+    _ALA_FORCEINLINE void next() {
+        UInt const t = s[1] << args<UInt>::shi;
+        s[2] ^= s[0];
+        s[3] ^= s[1];
+        s[1] ^= s[2];
+        s[0] ^= s[3];
+        s[2] ^= t;
+        s[3] = rotl(s[3], args<UInt>::rot);
+    }
+
+    _ALA_FORCEINLINE UInt operator()() {
+        this->next();
+        return this->plus();
+    }
+
+    void jump() {
+        UInt s0 = 0;
+        UInt s1 = 0;
+        UInt s2 = 0;
+        UInt s3 = 0;
+        for (int i = 0; i < 4; ++i)
+            for (int b = 0; b < 8 * sizeof(UInt); ++b) {
+                if (args<UInt>::jmp[i] & UInt(1) << b) {
+                    s0 ^= s[0];
+                    s1 ^= s[1];
+                    s2 ^= s[2];
+                    s3 ^= s[3];
+                }
+                this->next();
+            }
+        s[0] = s0;
+        s[1] = s1;
+        s[2] = s2;
+        s[3] = s3;
+    }
 };
 
 _ALA_FORCEINLINE double rand_double(uint64_t s) {
-	s = s & (1ull << 52) - 1 | (1ull << 10) - 1 << 52;
-	return *(double *)(&s) - 1.0;
+    s = (s >> 64 - 52) | (1ull << 10) - 1 << 52;
+    return *(double *)(&s) - 1.0;
 };
 
 _ALA_FORCEINLINE float rand_float(uint32_t s) {
-	s = s & (1 << 23) - 1 | (1 << 7) - 1 << 23;
-	return *(float *)(&s) - 1.0f;
+    s = (s >> 32 - 23) | (1u << 7) - 1 << 23;
+    return *(float *)(&s) - 1.0f;
 }
 
 } // namespace ala
@@ -64,7 +104,7 @@ _ALA_FORCEINLINE float rand_float(uint32_t s) {
 #elif defined _ALA_GCC
 #pragma GCC diagnostic pop
 #elif defined _ALA_MSVC
-#pragma  warning(pop)
+#pragma warning(pop)
 #endif
 
 #endif // XORSHIFT_HPP

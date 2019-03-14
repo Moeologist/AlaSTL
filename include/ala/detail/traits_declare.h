@@ -79,25 +79,6 @@ template <class T, class U> struct is_nothrow_swappable_with;
 template <class T> struct is_nothrow_swappable;
 template <class T> struct is_nothrow_destructible;
 template <class T> struct has_virtual_destructor;
-template <class T> struct has_unique_object_representations;
-
-#ifdef _ALA_CPP17
-
-#ifdef _ALA_CLANG
-template <typename T> struct is_aggregate;
-#define ALA_HAS_NO_HAS_UNIQUE_OBJECT_REPRESENTATIONS
-
-#elif defined _ALA_GCC
-template <typename T> struct has_unique_object_representations;
-template <typename T> struct is_aggregate;
-
-#elif defined _ALA_MSVC
-template <typename T> struct has_unique_object_representations;
-#define ALA_HAS_NO_IS_AGGREGATE
-
-#endif
-
-#endif
 
 // type property queries:
 template <class T> struct alignment_of;
@@ -260,15 +241,18 @@ template <class T> inline constexpr bool is_nothrow_destructible_v = is_nothrow_
 template <class T> inline constexpr bool has_virtual_destructor_v = has_virtual_destructor<T>::value;
 template <class T> inline constexpr bool is_literal_type_v = is_literal_type<T>::value;
 
-
 #ifdef _ALA_CLANG
+template <typename T> struct is_aggregate;
 template <class T> inline constexpr bool is_aggregate_v = is_aggregate<T>::value;
 
 #elif defined _ALA_GCC
+template <typename T> struct is_aggregate;
+template <typename T> struct has_unique_object_representations;
 template <class T> inline constexpr bool is_aggregate_v = is_aggregate<T>::value;
 template <class T> inline constexpr bool has_unique_object_representations_v = has_unique_object_representations<T>::value;
 
 #elif defined _ALA_MSVC
+template <typename T> struct has_unique_object_representations;
 template <class T> inline constexpr bool has_unique_object_representations_v = has_unique_object_representations<T>::value;
 
 #endif
@@ -288,9 +272,9 @@ template <class Fn, class... ArgTypes> inline constexpr bool is_nothrow_invocabl
 template <class R, class Fn, class... ArgTypes> inline constexpr bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<R, Fn, ArgTypes...>::value;
 
 // logical operator traits:
-template<class... B> inline constexpr bool conjunction_v = conjunction<B...>::value;
-template<class... B> inline constexpr bool disjunction_v = disjunction<B...>::value;
-template<class B> inline constexpr bool negation_v = negation<B>::value;
+template <class... B> inline constexpr bool conjunction_v = conjunction<B...>::value;
+template <class... B> inline constexpr bool disjunction_v = disjunction<B...>::value;
+template <class B> inline constexpr bool negation_v = negation<B>::value;
 
 #endif // _ALA_CPP17
 
