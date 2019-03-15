@@ -1,6 +1,7 @@
 #ifndef _ALA_LA_VECTOR_H
 #define _ALA_LA_VECTOR_H
 
+#ifdef _ALALIB_USE_ALA
 #include "ala/config.h"
 #include "ala/type_traits.h"
 #include <cassert>
@@ -13,12 +14,8 @@ namespace La {
 template<class... T>
 struct all_is_convertible;
 
-template<class T, class Type1, class... Types>
-struct all_is_convertible<T, Type1, Types...>
-    : _and_<is_convertible<Type1, T>, all_is_convertible<T, Types...>> {};
-
-template<class T, class Type1>
-struct all_is_convertible<T, Type1>: is_convertible<Type1, T> {};
+template<class T, class... Types>
+struct all_is_convertible<T, Types...> : conjunction<is_convertible<Types, T>...> {};
 
 template<class T, size_t Size>
 class vector {

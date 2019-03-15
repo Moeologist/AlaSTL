@@ -1,5 +1,5 @@
-#ifndef _ALA_ALLOCATOR_H
-#define _ALA_ALLOCATOR_H
+#ifndef _ALA_DETAIL_ALLOCATOR_H
+#define _ALA_DETAIL_ALLOCATOR_H
 
 #include <ala/type_traits.h>
 
@@ -89,8 +89,7 @@ struct allocator {
     template<class T>
     allocator(const allocator<T> &) {}
     T *allocate(ala::size_t n) {
-        n *= sizeof(T);
-        return static_cast<T *>(::new (n));
+        return static_cast<T *>(::new (n * sizeof(T)));
     }
     void deallocate(T *p, ala::size_t n) { ::delete (p); }
 };

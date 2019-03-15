@@ -1,5 +1,7 @@
 class C0 {
-	C0() {}
+};
+
+class Cd {
 };
 
 class C1 {

@@ -1,8 +1,10 @@
-// Algorithms come from Introduction to Algorithms
+// Introduction to Algorithms
+#ifndef _ALA_DETAIL_RB_TREE_H
+#define _ALA_DETAIL_RB_TREE_H
 
-#include "ala/detail/functional_base.h"
-#include "ala/detail/pair.h"
-#include "ala/detail/utility_base.h"
+#include <ala/detail/functional_base.h>
+#include <ala/detail/utility_base.h>
+#include <ala/detail/pair.h>
 
 namespace ala {
 
@@ -27,41 +29,33 @@ struct rb_node {
     rb_node *_left, *_right, *_parent;
 };
 
-#define is_nil(node) (node == nullptr || node->_color < 0)
-#define is_black(node) \
-    (node == nullptr || node->_color < 0 || node->_color == BLACK)
-#define is_red(node) (node != nullptr && node->_color == RED)
-#undef is_nil
-#undef is_black
-#undef is_red
-
 template<class Data>
-_ALA_FORCEINLINE bool const is_nil(rb_node<Data> *node) {
+constexpr bool const is_nil(rb_node<Data> *node) {
     return (node == nullptr || node->_color < 0);
 }
 
 template<class Data>
-_ALA_FORCEINLINE bool const is_black(rb_node<Data> *node) {
+constexpr bool const is_black(rb_node<Data> *node) {
     return (node == nullptr || node->_color < 0 || node->_color == BLACK);
 }
 
 template<class Data>
-_ALA_FORCEINLINE bool const is_red(rb_node<Data> *node) {
+constexpr bool const is_red(rb_node<Data> *node) {
     return (node != nullptr && node->_color == RED);
 }
 
 template<class Data>
-_ALA_FORCEINLINE bool const is_left_nil(rb_node<Data> *node) {
+constexpr bool const is_left_nil(rb_node<Data> *node) {
     return (node != nullptr && node->_color == LEFT_NIL);
 }
 
 template<class Data>
-_ALA_FORCEINLINE bool const is_right_nil(rb_node<Data> *node) {
+constexpr bool const is_right_nil(rb_node<Data> *node) {
     return (node != nullptr && node->_color == RIGHT_NIL);
 }
 
 template<class Data>
-_ALA_FORCEINLINE rb_node<Data> *leftmost(rb_node<Data> *node) {
+constexpr rb_node<Data> *leftmost(rb_node<Data> *node) {
     if (is_nil(node))
         return nullptr;
     while (!is_nil(node->_left))
@@ -70,7 +64,7 @@ _ALA_FORCEINLINE rb_node<Data> *leftmost(rb_node<Data> *node) {
 }
 
 template<class Data>
-_ALA_FORCEINLINE rb_node<Data> *rightmost(rb_node<Data> *node) {
+constexpr rb_node<Data> *rightmost(rb_node<Data> *node) {
     if (is_nil(node))
         return nullptr;
     while (!is_nil(node->_right))
@@ -79,7 +73,7 @@ _ALA_FORCEINLINE rb_node<Data> *rightmost(rb_node<Data> *node) {
 }
 
 template<class Data>
-_ALA_FORCEINLINE void dealloc_tree(rb_node<Data> *root) {
+constexpr void dealloc_tree(rb_node<Data> *root) {
     if (_root->left != nullptr)
 }
 
@@ -90,8 +84,7 @@ struct rb_tree {
     typedef typename Data::second_type Val;
 
     struct iterator {
-        iterator(node_type *handle, node_type *root)
-            : _handle(handle), _root(root) {}
+        iterator(node_type *handle, node_type *root): _handle(handle) {}
 
         node_type &operator*() { return *_handle; }
 
@@ -104,7 +97,7 @@ struct rb_tree {
         }
 
         iterator &operator++() {
-            if (_handle == nullptr)
+            if (_handle == nullptr || _handle->_color == RIGHT_NIL)
                 return *this;
             else if (_handle->_right != nullptr)
                 _handle = leftmost(_handle->_right);
@@ -121,8 +114,8 @@ struct rb_tree {
         }
 
         iterator &operator--() {
-            if (_handle == nullptr)
-                _handle = rightmost(_root);
+            if (_handle == nullptr || _handle->_color == LEFT_NIL)
+                _handle = *this;
             else if (_handle->_left != nullptr)
                 _handle = rightmost(_handle->_left);
             else {
@@ -139,7 +132,6 @@ struct rb_tree {
         }
 
         node_type *_handle;
-        node_type *_root;
     };
 
     // member type alias
@@ -431,3 +423,5 @@ struct rb_tree {
 } // namespace detail
 
 } // namespace ala
+
+#endif // HEAD

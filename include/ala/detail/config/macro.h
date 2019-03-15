@@ -10,7 +10,8 @@
 #ifdef _ALA_DEBUG
 #define _ALA_FORCEINLINE
 #define _ALA_NOINLINE
-#else
+
+#else // _ALA_DEBUG
 #if defined(_ALA_MSVC) || defined(_ALA_CLANG_MSVC)
 #define _ALA_FORCEINLINE __forceinline
 #define _ALA_NOINLINE __declspec(noinline)
@@ -18,6 +19,7 @@
 #define _ALA_FORCEINLINE __attribute__((always_inline))
 #define _ALA_NOINLINE __attribute__((noinline))
 #endif
-#endif
+
+#endif // _ALA_DEBUG
 
 #endif // HEAD

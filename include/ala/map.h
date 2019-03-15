@@ -1,7 +1,7 @@
 #ifndef _ALA_MAP_H
 #define _ALA_MAP_H
 
-#include <ala/detail/external/allocator.h>
+#include <ala/detail/allocator.h>
 #include <ala/detail/rb_tree.h>
 
 namespace ala {
@@ -32,7 +32,6 @@ struct map: {
 
     protected:
         Comp comp;
-
         value_compare(Comp c): comp(c) {}
 
     public:
