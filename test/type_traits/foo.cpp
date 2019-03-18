@@ -1,8 +1,7 @@
-//@cflags=-stdlib=libc++
+// @cflags=-stdlib=libc++
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wignored-qualifiers"
-#pragma warning(push)
-#pragma warning(disable : 4180)
+
 
 #include <ala/type_traits.h>
 #include <iostream>
@@ -12,6 +11,8 @@
 #include "macro.h"
 #include "type.h"
 
+#pragma warning(push)
+#pragma warning(disable : 4180)
 int main() {
     TEST(is_void)
     TEST(is_null_pointer)
@@ -84,37 +85,39 @@ int main() {
     TEST_NOVOID(is_trivially_move_assignable)
     TEST_NOVOID(is_nothrow_move_assignable)
 
-    // TEST_2(is_swappable_with)
-    // TEST(is_swappable)
-    // TEST_2(is_nothrow_swappable_with)
-    // TEST(is_nothrow_swappable)
+    #if !defined(_ALA_MSVC) || _MSC_VER >= 1910
+    TEST_2(is_swappable_with)
+    TEST(is_swappable)
+    TEST_2(is_nothrow_swappable_with)
+    TEST(is_nothrow_swappable)
+    #endif
 
     TEST(has_virtual_destructor)
     // TEST(is_aggregate)
     // TEST(has_unique_object_representations)
 
-    // TYPETEST(remove_const)
-    // TYPETEST(remove_volatile)
-    // TYPETEST(remove_cv)
-    // TYPETEST(add_const)
-    // TYPETEST(add_volatile)
-    // TYPETEST(add_cv)
-    // TYPETEST(remove_reference)
-    // TYPETEST(add_lvalue_reference)
-    // TYPETEST(add_rvalue_reference)
-    // // TYPETEST_CV(make_signed, int)
-    // // TYPETEST_CV(make_unsigned, int)
-    // TYPETEST(remove_extent)
-    // TYPETEST(remove_all_extents)
-    // TYPETEST(remove_pointer)
-    // TYPETEST(add_pointer)
-    // TYPETEST(decay)
-    // // TYPETEST(remove_cvref)
-    // // TYPETEST(enable_if)
-    // // TYPETEST(conditional)
-    // TYPETEST(common_type)
-    // TYPETEST(underlying_type)
+    TYPETEST(remove_const)
+    TYPETEST(remove_volatile)
+    TYPETEST(remove_cv)
+    TYPETEST(add_const)
+    TYPETEST(add_volatile)
+    TYPETEST(add_cv)
+    TYPETEST(remove_reference)
+    TYPETEST(add_lvalue_reference)
+    TYPETEST(add_rvalue_reference)
+    TYPETEST_CV(make_signed, int)
+    TYPETEST_CV(make_unsigned, int)
+    TYPETEST(remove_extent)
+    TYPETEST(remove_all_extents)
+    TYPETEST(remove_pointer)
+    TYPETEST(add_pointer)
+    TYPETEST(decay)
+    TYPETEST(common_type)
+
+    // TYPETEST(enable_if)
+    // TYPETEST(conditional)
     // TYPETEST(invoke_result)
+    // TYPETEST(underlying_type)
 
     typedef int (CC::*pmf)(int);
     // std::cout<<typeid(decltype(&CC::x)).name();
@@ -127,15 +130,11 @@ int main() {
     static_assert(ala::is_constructible<C0&, Cd &&>::value == std::is_constructible<C0&, Cd &&>::value, "oh");
     static_assert(ala::is_constructible<C0&, Cd &&>::value == false, "oh");
 
+    #if !defined(_ALA_MSVC) || _MSC_VER >= 1910
 
-    static_assert(
-        ala::is_same<ala::invoke_result_t<pmf, CC, float>, int>::value, "");
-    static_assert(ala::is_same<ala::invoke_result_t<decltype(&CC::v), CC>,
-                               double &&>::value,
-                  "");
-    std::cout << __is_trivially_constructible(int[8]);
-    std::cout << typeid(ala::invoke_result_t<decltype(&CC::v), CC>).name();
-    // static_assert(ala::is_same_v<ala::invoke_result_t<decltype(&CC::pp),CC>,void>);
+    static_assert(ala::is_same<ala::invoke_result_t<pmf, CC, float>, int>::value, "oh");
+    static_assert(ala::is_same<ala::invoke_result_t<decltype(&CC::v), CC>, double &&>::value, "oh");
+    #endif
     return 0;
 }
 

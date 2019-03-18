@@ -83,10 +83,10 @@
 #define _ALA_RELEASE
 #endif
 
-#if (__cplusplus >= 201703) || ( defined(_ALA_MSVC) && _MSC_VER >= 1910)
-#define _ALA_CPP17
+#if (__cplusplus >= 201703) || (_MSC_VER >= 1910)
+#define _ALA_CPP_STD 17
 #else
-#define _ALA_CPP14
+#define _ALA_CPP_STD 14
 #endif // language standard
 
 #endif // HEAD

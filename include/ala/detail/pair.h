@@ -1,7 +1,7 @@
 #ifndef _ALA_DETAIL_PAIR_H
 #define _ALA_DETAIL_PAIR_H
 
-#include "ala/config.h"
+#include <ala/config.h>
 
 namespace ala {
 

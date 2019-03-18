@@ -2,8 +2,6 @@
 #ifndef _ALA_TYPE_TRAITS_H
 #define _ALA_TYPE_TRAITS_H
 
-#include <ala/config.h>
-
 #ifdef _ALA_MSVC
 #pragma warning(push)
 #pragma warning(disable : 4180)
@@ -16,23 +14,166 @@
 
 namespace ala {
 
-template<typename T> add_rvalue_reference_t<T> declval() noexcept;
 
-template<typename T, T Value>
-struct integral_constant {
-    static const T value = Value;
-    typedef T value_type;
-    typedef integral_constant<T, Value> type;
+template<typename T>
+add_rvalue_reference_t<T> declval() noexcept;
 
-    constexpr operator value_type() const noexcept { return value; }
-    constexpr value_type operator()() const noexcept { return value; }
+template<typename T>
+constexpr typename remove_reference<T>::type &&move(T &&x) noexcept {
+    return static_cast<typename remove_reference<T>::type &&>(x);
+}
+
+template<typename Tp>
+constexpr Tp &&forward(remove_reference_t<Tp> &t) noexcept {
+    return static_cast<Tp &&>(t);
+}
+
+template<typename Tp>
+constexpr Tp &&forward(remove_reference_t<Tp> &&t) noexcept {
+    static_assert(
+        !is_lvalue_reference<Tp>::value,
+        "template argument substituting T is an lvalue reference type");
+    return static_cast<Tp &&>(t);
+}
+
+template<class T, size_t N>
+constexpr enable_if_t<is_swappable<T>::value> swap(
+    T (&lhs)[N], T (&rhs)[N]) noexcept(is_nothrow_swappable<T>::value) {
+    if (&lhs != &rhs) {
+        T *il = lhs;
+        T *last = lhs + N;
+        T *ir = rhs;
+        for (; il != last; ++il, ++ir)
+            swap(*il, *ir);
+    }
+}
+
+template<class T>
+constexpr enable_if_t<is_move_constructible<T>::value && is_move_assignable<T>::value>
+swap(T &lhs, T &rhs) noexcept(is_nothrow_move_constructible<T>:: value &&
+                              is_nothrow_move_assignable<T>::value) {
+    T tmp = move(lhs);
+    lhs = move(rhs);
+    rhs = move(tmp);
+}
+
+#if !defined(_ALA_MSVC) || _MSC_VER >= 1910
+template<typename T>
+struct _class_of_memptr;
+
+template<typename Class, typename Ret>
+struct _class_of_memptr<Ret Class::*> { typedef Class type; };
+
+template<typename T>
+using _class_of_memptr_t = typename _class_of_memptr<T>::type;
+
+template<typename Type, template<typename...> class Template>
+struct is_specification : false_type {};
+
+template<template<typename...> class Template, typename... TArgs>
+struct is_specification<Template<TArgs...>, Template> : true_type {};
+
+template<typename T>
+struct reference_wrapper;
+
+struct _invoker_mf {
+    template<class Mf, class Class, class... Args>
+    static decltype(auto) _call(Mf mf, Class &&ins, Args &&... args)
+    noexcept(noexcept((forward<Class>(ins).*mf)(forward<Args>(args)...))) {
+        return ((forward<Class>(ins).*mf)(forward<Args>(args)...));
+    }
 };
 
-template<bool B>
-using bool_constant = bool_constant<B>;
+struct _invoker_mf_refw {
+    template<class Mf, class Class, class... Args>
+    static decltype(auto) _call(Mf mf, Class &&ins, Args &&... args)
+    noexcept(noexcept((forward<Class>(ins).get().*mf)(forward<Args>(args)...))) {
+        return ((forward<Class>(ins).get().*mf)(forward<Args>(args)...).get());
+    }
+};
 
-using true_type = bool_constant<true>;
-using false_type = bool_constant<false>;
+struct _invoker_mf_deref {
+    template<class Mf, class Class, class... Args>
+    static decltype(auto) _call(Mf mf, Class &&ins, Args &&... args)
+    noexcept(noexcept(((*forward<Class>(ins)).*mf)(forward<Args>(args)...))) {
+        return (((*forward<Class>(ins)).*mf)(forward<Args>(args)...));
+    }
+};
+
+struct _invoker_mo {
+    template<class Mo, class Class>
+    static decltype(auto) _call(Mo mo, Class &&ins)
+    noexcept(noexcept(forward<Class>(ins).*mo)) {
+        return (forward<Class>(ins).*mo);
+    }
+};
+
+struct _invoker_mo_refw {
+    template<class Mo, class Class>
+    static decltype(auto) _call(Mo mo, Class &&ins)
+    noexcept(noexcept(forward<Class>(ins).get().*mo)) {
+        return (forward<Class>(ins).get().*mo);
+    }
+};
+
+struct _invoker_mo_deref {
+    template<class Mo, class Class>
+    static decltype(auto) _call(Mo mo, Class &&ins)
+    noexcept(noexcept((*forward<Class>(ins)).*mo)) {
+        return ((*forward<Class>(ins)).*mo);
+    }
+};
+
+struct _invoker_functor {
+    template<class Call, class... Args>
+    static decltype(auto) _call(Call &&call, Args &&... args)
+    noexcept(noexcept(forward<Call>(call)(forward<Args>(args)...))) {
+        return (forward<Call>(call)(forward<Args>(args)...));
+    }
+};
+
+template<class Call, class T, class RMcvref = remove_cvref_t<Call>,
+         bool IsMfp = is_member_function_pointer<RMcvref>::value,
+         bool IsMop = is_member_object_pointer<RMcvref>::value>
+struct _invoker_helper;
+
+template<class Mf, class Class, class RMcvref>
+struct _invoker_helper<Mf, Class, RMcvref, true, false>
+    : conditional_t<
+          is_base_of<_class_of_memptr_t<Mf>, remove_reference_t<Class>>::value,
+          _invoker_mf,
+          conditional_t<is_specification<Class, reference_wrapper>::value,
+                        _invoker_mf_refw, _invoker_mf_deref>> {};
+
+template<class Mo, class Class, class RMcvref>
+struct _invoker_helper<Mo, Class, RMcvref, false, true>
+    : conditional_t<
+          is_base_of<_class_of_memptr_t<Mo>, remove_reference_t<Class>>::value,
+          _invoker_mo,
+          conditional_t<is_specification<Class, reference_wrapper>::value,
+                        _invoker_mo_refw, _invoker_mo_deref>> {};
+
+template<class Call, class T, class RMcvref>
+struct _invoker_helper<Call, T, RMcvref, false, false>: _invoker_functor {};
+
+template<class Call, class... Args>
+struct _invoker;
+
+template<class Call>
+struct _invoker<Call>: _invoker_functor {};
+
+template<class Call, class T, class... Args>
+struct _invoker<Call, T, Args...>: _invoker_helper<Call, T> {};
+
+// use decltype(auto) cause msvc bug
+template<class Call, class... Args>
+auto invoke(Call &&call, Args &&... args)
+noexcept(noexcept(_invoker<Call, Args...>::_call(forward<Call>(call), forward<Args>(args)...))) ->
+decltype(_invoker<Call, Args...>::_call(forward<Call>(call), forward<Args>(args)...)) {
+    return (_invoker<Call, Args...>::_call(forward<Call>(call), forward<Args>(args)...));
+}
+
+#endif
 
 template<typename...> struct _or_;
 template<> struct _or_<> : false_type {};
@@ -69,17 +210,17 @@ template<> struct _is_integral_helper<long long> :          true_type {};
 template<> struct _is_integral_helper<unsigned long long> : true_type {};
 template<typename T> struct is_integral : _is_integral_helper<remove_cv_t<T>> {};
 
-template<typename> struct _is_floating_point_helper :     false_type {};
-template<> struct _is_floating_point_helper<float> :       true_type {};
-template<> struct _is_floating_point_helper<double> :      true_type {};
-template<> struct _is_floating_point_helper<long double> : true_type {};
+template<typename> struct _is_floating_point_helper :             false_type {};
+template<>         struct _is_floating_point_helper<float> :       true_type {};
+template<>         struct _is_floating_point_helper<double> :      true_type {};
+template<>         struct _is_floating_point_helper<long double> : true_type {};
 template<typename T> struct is_floating_point : _is_floating_point_helper<remove_cv_t<T>> {};
 
 template<typename T> struct is_array :                      false_type {};
 template<typename T> struct is_array<T[]> :                  true_type {};
 template<typename T, size_t Size> struct is_array<T[Size]> : true_type {};
 
-template<typename T> struct is_enum : bool_constant<__is_enum(T)> {};
+template<typename T> struct is_enum  : bool_constant<__is_enum(T)>  {};
 template<typename T> struct is_union : bool_constant<__is_union(T)> {};
 template<typename T> struct is_class : bool_constant<__is_class(T)> {};
 
@@ -110,7 +251,8 @@ template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) co
 template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) volatile &&> :       true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) const volatile &&> : true_type {};
 
-#ifdef _ALA_CPP17
+#if ALA_ENABLE_CPP_MACRO && __cpp_noexcept_function_type >= 201510L || \
+    (defined(_ALA_MSVC) && _MSC_VER >= 1910)
 template<typename Ret, typename... Args> struct is_function<Ret(Args...) noexcept> :                        true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) noexcept> :                   true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args...) const noexcept> :                  true_type {};
@@ -187,20 +329,16 @@ template<typename T> struct is_pod : bool_constant<__is_pod(T)> {};
 
 template<typename T> struct is_literal_type : bool_constant<__is_literal_type(T)> {};
 
-#ifdef _ALA_CPP17
-
-#ifdef _ALA_CLANG
-template<typename T> struct is_aggregate : bool_constant<__is_aggregate(T)> {};
-
-#elif defined _ALA_GCC
-template<typename T> struct has_unique_object_representations : bool_constant<__has_unique_object_representations(remove_cv_t<remove_all_extents_t<T>>)> {};
-template<typename T> struct is_aggregate : bool_constant<__is_aggregate(remove_cv_t<T>)> {};
-
-#elif defined _ALA_MSVC
-template<typename T> struct has_unique_object_representations : bool_constant<__has_unique_object_representations(T)> {};
-
+#if (defined(_ALA_CLANG) && !__is_identifier(__has_unique_object_representations)) || \
+    (defined(_ALA_GCC) && __GNUC__ >= 7) || \
+    (defined(_ALA_MSVC) && MSC_VER >= 1911)
+template<typename T> struct has_unique_object_representations : bool_constant<__has_unique_object_representations(remove_cv_t<T>)> {};
 #endif
 
+#if (defined(_ALA_CLANG) && !__is_identifier(__is_aggregate)) || \
+    (defined(_ALA_GCC) && __GNUC__ * 1000 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__ >= 7001) || \
+    (defined(_ALA_MSVC) && MSC_VER >= 1915)
+template<typename T> struct is_aggregate : bool_constant<__is_aggregate(remove_cv_t<T>)> {};
 #endif
 
 template<typename T> struct is_empty : bool_constant<__is_empty(T)> {};
@@ -439,28 +577,20 @@ template<typename T> struct is_nothrow_move_assignable : is_nothrow_assignable<a
 
 template<typename T> struct has_virtual_destructor : bool_constant<__has_virtual_destructor(T)> {};
 
+#if !defined(_ALA_MSVC) || _MSC_VER >= 1910
 template<typename T>
 struct _is_referenceable_impl {
     template<typename T1, typename = T1&> static true_type _test(int);
-    template<typename T1>                static false_type _test(...);
+    template<typename>                   static false_type _test(...);
     typedef decltype(_test<T>(0)) type;
-    static constexpr bool value = type::value;
 };
 
 template<typename T>
 struct _is_referenceable : _is_referenceable_impl<T>::type {};
 
-template<typename T>
-enable_if_t<is_move_constructible<T>::value && is_move_assignable<T>::value>
-swap(T &lhs, T &rhs) noexcept(is_nothrow_move_constructible_v<T> &&is_nothrow_move_assignable_v<T>);
-
-template<typename T, size_t N>
-enable_if_t<is_swappable<T>::value>
-swap(T (&lhs)[N], T (&rhs)[N]) noexcept(is_nothrow_swappable_v<T>);
-
 template<typename T, typename U = T>
 struct _is_swappable_with_impl {
-    template<typename LHS, typename RHS, typename = decltype(swap(declval<LHS>(), declval<RHS>()))>
+    template<typename Lhs, typename Rhs, typename = decltype(swap(declval<Lhs>(), declval<Rhs>()))>
     static true_type _test(int);
     template<typename, typename>
     static false_type _test(...);
@@ -484,6 +614,7 @@ struct is_swappable : conditional_t<_is_referenceable<T>::value,
 template<typename T, typename U, bool = is_swappable_with<T, U>::value>
 struct _is_nothrow_swappable_helper : bool_constant<noexcept(swap(declval<T>(), declval<U>())) &&
                                                     noexcept(swap(declval<U>(), declval<T>()))> {};
+
 template<typename T, typename U>
 struct _is_nothrow_swappable_helper<T, U, false> : false_type {};
 
@@ -494,6 +625,7 @@ template<typename T>
 struct is_nothrow_swappable : conditional_t<_is_referenceable<T>::value,
                                             is_nothrow_swappable_with<add_lvalue_reference_t<T>, add_lvalue_reference_t<T>>,
                                             false_type> {};
+#endif
 
 template<typename T> struct alignment_of : integral_constant<size_t, alignof(T)> {};
 
@@ -524,11 +656,8 @@ template<typename T>           struct remove_volatile<volatile T[]>  { typedef T
 template<typename T, size_t N> struct remove_volatile<volatile T[N]> { typedef T type[N]; };
 
 template<typename T> struct remove_cv { typedef remove_volatile_t<remove_const_t<T>> type; };
-
 template<typename T> struct add_cv { typedef const volatile T type; };
-
 template<typename T> struct add_const { typedef const T type; };
-
 template<typename T> struct add_volatile { typedef volatile T type; };
 
 template<typename T> struct remove_reference      { typedef T type; };
@@ -549,44 +678,80 @@ template<>           struct add_rvalue_reference<const void>          { typedef 
 template<>           struct add_rvalue_reference<volatile void>       { typedef volatile void       type; };
 template<>           struct add_rvalue_reference<const volatile void> { typedef const volatile void type; };
 
-template<typename T> struct make_signed                 { typedef T                      type; };
-template<> struct make_signed<unsigned char>            { typedef signed char            type; };
-template<> struct make_signed<const unsigned char>      { typedef const signed char      type; };
-template<> struct make_signed<unsigned short>           { typedef signed short           type; };
-template<> struct make_signed<const unsigned short>     { typedef const signed short     type; };
-template<> struct make_signed<unsigned int>             { typedef signed int             type; };
-template<> struct make_signed<const unsigned int>       { typedef const signed int       type; };
-template<> struct make_signed<unsigned long>            { typedef signed long            type; };
-template<> struct make_signed<const unsigned long>      { typedef const signed long      type; };
-template<> struct make_signed<unsigned long long>       { typedef signed long long       type; };
-template<> struct make_signed<const unsigned long long> { typedef const signed long long type; };
-template<> struct make_signed<char>                     { typedef signed char            type; };
-template<> struct make_signed<const char>               { typedef signed char            type; };
+template<typename T> struct make_signed                          { typedef T                               type; };
+template<> struct make_signed<unsigned char>                     { typedef signed char                     type; };
+template<> struct make_signed<unsigned short>                    { typedef signed short                    type; };
+template<> struct make_signed<unsigned int>                      { typedef signed int                      type; };
+template<> struct make_signed<unsigned long>                     { typedef signed long                     type; };
+template<> struct make_signed<unsigned long long>                { typedef signed long long                type; };
+template<> struct make_signed<char>                              { typedef signed char                     type; };
+template<> struct make_signed<const unsigned char>               { typedef const signed char               type; };
+template<> struct make_signed<const unsigned short>              { typedef const signed short              type; };
+template<> struct make_signed<const unsigned int>                { typedef const signed int                type; };
+template<> struct make_signed<const unsigned long>               { typedef const signed long               type; };
+template<> struct make_signed<const unsigned long long>          { typedef const signed long long          type; };
+template<> struct make_signed<const char>                        { typedef const signed char               type; };
+template<> struct make_signed<volatile unsigned char>            { typedef volatile signed char            type; };
+template<> struct make_signed<volatile unsigned short>           { typedef volatile signed short           type; };
+template<> struct make_signed<volatile unsigned int>             { typedef volatile signed int             type; };
+template<> struct make_signed<volatile unsigned long>            { typedef volatile signed long            type; };
+template<> struct make_signed<volatile unsigned long long>       { typedef volatile signed long long       type; };
+template<> struct make_signed<volatile char>                     { typedef volatile signed char            type; };
+template<> struct make_signed<const volatile unsigned char>      { typedef const volatile signed char      type; };
+template<> struct make_signed<const volatile unsigned short>     { typedef const volatile signed short     type; };
+template<> struct make_signed<const volatile unsigned int>       { typedef const volatile signed int       type; };
+template<> struct make_signed<const volatile unsigned long>      { typedef const volatile signed long      type; };
+template<> struct make_signed<const volatile unsigned long long> { typedef const volatile signed long long type; };
+template<> struct make_signed<const volatile char>               { typedef const volatile signed char      type; };
 
 #if (defined(__WCHAR_MAX__) && (__WCHAR_MAX__ == 4294967295U))
-template<> struct make_signed<wchar_t> { typedef int32_t type; };
+template<> struct make_signed<wchar_t>                { typedef int32_t                type; };
+template<> struct make_signed<const wchar_t>          { typedef const int32_t          type; };
+template<> struct make_signed<volatile wchar_t>       { typedef volatile int32_t       type; };
+template<> struct make_signed<const volatile wchar_t> { typedef const volatile int32_t type; };
 #elif (defined(__WCHAR_MAX__) && (__WCHAR_MAX__ == 65535))
-template<> struct make_signed<wchar_t> { typedef int16_t type; };
+template<> struct make_signed<wchar_t>                { typedef int16_t                type; };
+template<> struct make_signed<const wchar_t>          { typedef const int16_t          type; };
+template<> struct make_signed<volatile wchar_t>       { typedef volatile int16_t       type; };
+template<> struct make_signed<const volatile wchar_t> { typedef const volatile int16_t type; };
 #endif
 
-template<typename T> struct make_unsigned               { typedef T                        type; };
-template<> struct make_unsigned<signed char>            { typedef unsigned char            type; };
-template<> struct make_unsigned<const signed char>      { typedef const unsigned char      type; };
-template<> struct make_unsigned<signed short>           { typedef unsigned short           type; };
-template<> struct make_unsigned<const signed short>     { typedef const unsigned short     type; };
-template<> struct make_unsigned<signed int>             { typedef unsigned int             type; };
-template<> struct make_unsigned<const signed int>       { typedef const unsigned int       type; };
-template<> struct make_unsigned<signed long>            { typedef unsigned long            type; };
-template<> struct make_unsigned<const signed long>      { typedef const unsigned long      type; };
-template<> struct make_unsigned<signed long long>       { typedef unsigned long long       type; };
-template<> struct make_unsigned<const signed long long> { typedef const unsigned long long type; };
-template<> struct make_unsigned<char>                   { typedef unsigned char            type; };
-template<> struct make_unsigned<const char>             { typedef unsigned char            type; };
+template<typename T> struct make_unsigned                        { typedef T                                 type; };
+template<> struct make_unsigned<signed char>                     { typedef unsigned char                     type; };
+template<> struct make_unsigned<signed short>                    { typedef unsigned short                    type; };
+template<> struct make_unsigned<signed int>                      { typedef unsigned int                      type; };
+template<> struct make_unsigned<signed long>                     { typedef unsigned long                     type; };
+template<> struct make_unsigned<signed long long>                { typedef unsigned long long                type; };
+template<> struct make_unsigned<char>                            { typedef unsigned char                     type; };
+template<> struct make_unsigned<const signed char>               { typedef const unsigned char               type; };
+template<> struct make_unsigned<const signed short>              { typedef const unsigned short              type; };
+template<> struct make_unsigned<const signed int>                { typedef const unsigned int                type; };
+template<> struct make_unsigned<const signed long>               { typedef const unsigned long               type; };
+template<> struct make_unsigned<const signed long long>          { typedef const unsigned long long          type; };
+template<> struct make_unsigned<const char>                      { typedef const unsigned char               type; };
+template<> struct make_unsigned<volatile signed char>            { typedef volatile unsigned char            type; };
+template<> struct make_unsigned<volatile signed short>           { typedef volatile unsigned short           type; };
+template<> struct make_unsigned<volatile signed int>             { typedef volatile unsigned int             type; };
+template<> struct make_unsigned<volatile signed long>            { typedef volatile unsigned long            type; };
+template<> struct make_unsigned<volatile signed long long>       { typedef volatile unsigned long long       type; };
+template<> struct make_unsigned<volatile char>                   { typedef volatile unsigned char            type; };
+template<> struct make_unsigned<const volatile signed char>      { typedef const volatile unsigned char      type; };
+template<> struct make_unsigned<const volatile signed short>     { typedef const volatile unsigned short     type; };
+template<> struct make_unsigned<const volatile signed int>       { typedef const volatile unsigned int       type; };
+template<> struct make_unsigned<const volatile signed long>      { typedef const volatile unsigned long      type; };
+template<> struct make_unsigned<const volatile signed long long> { typedef const volatile unsigned long long type; };
+template<> struct make_unsigned<const volatile char>             { typedef const volatile unsigned char      type; };
 
 #if defined(__WCHAR_MAX__) && (__WCHAR_MAX__ != 4294967295U)
-template<> struct make_unsigned<wchar_t> { typedef uint32_t type; };
+template<> struct make_unsigned<wchar_t>                { typedef uint32_t                type; };
+template<> struct make_unsigned<const wchar_t>          { typedef const uint32_t          type; };
+template<> struct make_unsigned<volatile wchar_t>       { typedef volatile uint32_t       type; };
+template<> struct make_unsigned<const volatile wchar_t> { typedef const volatile uint32_t type; };
 #elif defined(__WCHAR_MAX__) && (__WCHAR_MAX__ != 65535)
-template<> struct make_unsigned<wchar_t> { typedef uint16_t type; };
+template<> struct make_unsigned<wchar_t>                { typedef uint16_t                type; };
+template<> struct make_unsigned<const wchar_t>          { typedef const uint16_t          type; };
+template<> struct make_unsigned<volatile wchar_t>       { typedef volatile uint16_t       type; };
+template<> struct make_unsigned<const volatile wchar_t> { typedef const volatile uint16_t type; };
 #endif
 
 template<typename T>           struct remove_extent       { typedef T type; };
@@ -656,158 +821,32 @@ template<typename T> struct common_type<T> { typedef decay_t<T> type; };
 template<typename T, typename U> struct common_type<T, U> { typedef decay_t<decltype(true ? declval<T>() : declval<U>())> type; };
 template<typename T, typename U, typename... V> struct common_type<T, U, V...> { typedef common_type_t<common_type_t<T, U>, V...> type; };
 
-template<typename T> struct underlying_type { typedef __underlying_type(T) type; };
+template<typename T, bool = is_enum<T>::value> struct _underlying_type_helper {};
+template<typename T> struct _underlying_type_helper<T, true> { typedef __underlying_type(T) type; };
 
-// invoke
-template<typename T>
-struct _success_type { typedef T type; };
-struct _failure_type {};
+template<typename T> struct underlying_type : _underlying_type_helper<T> {};
 
-template<typename, typename MemPtr, typename Class>
-struct _result_of_memobj_nt : bool_constant<noexcept(declval<Class>().*declval<MemPtr>())> {};
+#if !defined(_ALA_MSVC) || _MSC_VER >= 1910
+template<typename Fn, typename... Args>
+struct _invoke_result_impl {
+    template<typename T>
+    struct _success_type { typedef T type; };
+    struct _failure_type {};
 
-template<typename MemPtr, typename Class>
-struct _result_of_memobj_nt<_failure_type, MemPtr, Class> : false_type {};
-
-template<typename MemPtr, typename Class>
-struct _result_of_memobj_impl {
-    template<typename MemPtr1, typename Class1>
-    static _success_type<decltype(declval<Class1>().*declval<MemPtr1>())> _test_type(int);
+    template<typename Fn1, typename... Args1>
+    static _success_type<decltype(invoke(declval<Fn1>(), declval<Args1>()...))> _test(int);
 
     template<typename...>
-    static _failure_type _test_type(...);
+    static _failure_type _test(...);
 
-    typedef decltype(_test_type<MemPtr, Class>(0)) type;
-    typedef _result_of_memobj_nt<type, MemPtr, Class> is_noexcept;
+    typedef decltype(_test<Fn, Args...>(0)) type;
 };
 
-template<typename, typename MemPtr, typename Class>
-struct _result_of_memobj_deref_nt : bool_constant<noexcept((*declval<Class>()).*declval<MemPtr>())> {};
+template<typename Fn, typename... Args>
+struct invoke_result : _invoke_result_impl<Fn, Args...>::type {};
 
-template<typename MemPtr, typename Class>
-struct _result_of_memobj_deref_nt<_failure_type, MemPtr, Class> : false_type {};
-
-template<typename MemPtr, typename Class>
-struct _result_of_memobj_deref_impl {
-    template<typename MemPtr1, typename Class1>
-    static _success_type<decltype((*declval<Class1>()).*declval<MemPtr1>())> _test_type(int);
-
-    template<typename...>
-    static _failure_type _test_type(...);
-
-    typedef decltype(_test_type<MemPtr, Class>(0)) type;
-    typedef _result_of_memobj_deref_nt<type, MemPtr, Class> is_noexcept;
-};
-
-template<typename MemPtr, typename Arg>
-struct _result_of_memobj;
-
-template<typename Ret, typename Class, typename Arg>
-struct _result_of_memobj<Ret Class::*, Arg> {
-    typedef remove_cvref_t<Arg> Arg1;
-    typedef Ret Class::* MemPtr;
-    typedef conditional_t<_or_<is_same<Arg1, Class>, is_base_of<Class, Arg1>>::value,
-                          _result_of_memobj_impl<MemPtr, Arg>,
-                          _result_of_memobj_deref_impl<MemPtr, Arg>> type;
-};
-
-template<typename, typename MemPtr, typename Class, typename... Args>
-struct _result_of_memfun_nt : bool_constant<noexcept((declval<Class>().*declval<MemPtr>())(declval<Args>()...))> {};
-
-template<typename MemPtr, typename Class, typename... Args>
-struct _result_of_memfun_nt<_failure_type, MemPtr, Class, Args...> : false_type {};
-
-template<typename MemPtr, typename Class, typename... Args>
-struct _result_of_memfun_impl {
-    template<typename MemPtr1, typename Class1, typename... Args1>
-    static _success_type<decltype((declval<Class1>().*declval<MemPtr1>())(declval<Args1>()...))> _test_type(int);
-
-    template<typename...>
-    static _failure_type _test_type(...);
-
-    typedef decltype(_test_type<MemPtr, Class, Args...>(0)) type;
-    typedef _result_of_memfun_nt<type, MemPtr, Class, Args...> is_noexcept;
-};
-
-template<typename, typename MemPtr, typename Class, typename... Args>
-struct _result_of_memfun_deref_nt : bool_constant<noexcept(((*declval<Class>()).*declval<MemPtr>())(declval<Args>()...))> {};
-
-template<typename MemPtr, typename Class, typename... Args>
-struct _result_of_memfun_deref_nt<_failure_type, MemPtr, Class, Args...> : false_type {};
-
-template<typename MemPtr, typename Class, typename... Args>
-struct _result_of_memfun_deref_impl {
-    template<typename MemPtr1, typename Class1, typename... Args1>
-    static _success_type<decltype(((*declval<Class1>()).*declval<MemPtr1>())(declval<Args1>()...))> _test_type(int);
-
-    template<typename...>
-    static _failure_type _test_type(...);
-
-    typedef decltype(_test_type<MemPtr, Class, Args...>(0)) type;
-    typedef _result_of_memfun_deref_nt<type, MemPtr, Class, Args...> is_noexcept;
-};
-
-template<typename MemPtr, typename Arg, typename... Args>
-struct _result_of_memfun;
-
-template<typename Ret, typename Class, typename Arg, typename... Args>
-struct _result_of_memfun<Ret Class::*, Arg, Args...> {
-    typedef remove_cvref_t<Arg> Arg1;
-    typedef Ret Class::* MemPtr;
-    typedef conditional_t<_or_<is_same<Arg1, Class>, is_base_of<Class, Arg1>>::value,
-                          _result_of_memfun_impl<MemPtr, Arg, Args...>,
-                          _result_of_memfun_deref_impl<MemPtr, Arg, Args...>> type;
-};
-
-template<typename, typename Func, typename... Args>
-struct _result_of_other_nt : bool_constant<noexcept(declval<Func>()(declval<Args>()...))> {};
-
-template<typename Func, typename... Args>
-struct _result_of_other_nt<_failure_type, Func, Args...> : false_type {};
-
-template<typename Func, typename... Args>
-struct _result_of_other_impl {
-    template<typename Func1, typename... Args1>
-    static _success_type<decltype(declval<Func1>()(declval<Args1>()...))> _test_type(int);
-
-    template<typename...>
-    static _failure_type _test_type(...);
-
-    typedef decltype(_test_type<Func, Args...>(0)) type;
-    typedef _result_of_other_nt<type, Func, Args...> is_noexcept;
-};
-
-template<typename T>
-struct reference_wrapper;
-
-template<typename T, typename U = decay_t<T>>
-struct _remove_refwrap { typedef T type; };
-
-template<typename T, typename U>
-struct _remove_refwrap<T, reference_wrapper<U>> { typedef U& type;};
-
-template<bool, bool, typename Func, typename... Args>
-struct _invoke_result_help;
-
-template<typename MemPtr, typename Arg>
-struct _invoke_result_help<true, false, MemPtr, Arg> : _result_of_memobj<decay_t<MemPtr>, typename _remove_refwrap<Arg>::type>::type {};
-
-template<typename MemPtr, typename Arg, typename... Args>
-struct _invoke_result_help<false, true, MemPtr, Arg, Args...> : _result_of_memfun<decay_t<MemPtr>, typename _remove_refwrap<Arg>::type, Args...>::type {};
-
-template<typename Func, typename... Args>
-struct _invoke_result_help<false, false, Func, Args...> : _result_of_other_impl<Func, Args...> {};
-
-template<typename Func, typename... Args>
-struct _invoke_result_aux : _invoke_result_help<is_member_object_pointer<remove_reference_t<Func>>::value,
-                                                is_member_function_pointer<remove_reference_t<Func>>::value,
-                                                Func, Args...> {};
-
-template<typename Func, typename... Args>
-struct invoke_result : _invoke_result_aux<Func, Args...>::type {};
-
-template<typename Func, typename... Args>
-struct result_of<Func(Args...)> : invoke_result<Func, Args...> {};
+template<typename Fn, typename... Args>
+struct result_of<Fn(Args...)> : invoke_result<Fn, Args...> {};
 
 template<typename Result, typename Ret, typename = void_t<>>
 struct _is_invocable_impl : false_type {};
@@ -816,14 +855,14 @@ template<typename Result, typename Ret>
 struct _is_invocable_impl<Result, Ret, void_t<typename Result::type>> : _or_<is_void<Ret>,
                                                                              is_convertible<typename Result::type, Ret>> {};
 
-template<typename Func, typename... Args>
-struct is_invocable : _is_invocable_impl<invoke_result<Func, Args...>, void> {};
+template<typename Fn, typename... Args>
+struct is_invocable : _is_invocable_impl<invoke_result<Fn, Args...>, void> {};
 
-template<typename Ret, typename Func, typename... Args>
-struct is_invocable_r : _is_invocable_impl<_is_invocable_impl<Func, Args...>, Ret> {};
+template<typename Ret, typename Fn, typename... Args>
+struct is_invocable_r : _is_invocable_impl<_is_invocable_impl<Fn, Args...>, Ret> {};
 
 template<typename Fn, typename... Args>
-struct is_nothrow_invocable : _and_<is_invocable<Fn, Args...>, _invoke_result_aux<Fn, Args...>::is_noexcept> {};
+struct _is_nt_invocable : bool_constant<noexcept(invoke(declval<Fn>(), declval<Args>()...))> {};
 
 template<typename Result, typename Ret, typename = void_t<>>
 struct _is_nt_invocable_r_impl : false_type {};
@@ -832,10 +871,13 @@ template<typename Result, typename Ret>
 struct _is_nt_invocable_r_impl<Result, Ret, void_t<typename Result::type>> : _or_<is_void<Ret>,
                                                                                   _and_<is_convertible<typename Result::type, Ret>,
                                                                                         is_nothrow_constructible<Ret, typename Result::type>>> {};
+template<typename Fn, typename... Args>
+struct is_nothrow_invocable : _and_<is_invocable<Fn, Args...>, _is_nt_invocable<Fn, Args...>> {};
 
 template<typename Ret, typename Fn, typename... Args>
 struct is_nothrow_invocable_r : _and_<_is_nt_invocable_r_impl<typename invoke_result<Fn, Args...>::type, Ret>,
-                                      _invoke_result_aux<Fn, Args...>::is_noexcept> {};
+                                      _is_nt_invocable<Fn, Args...>> {};
+#endif
 
 template<typename... B> struct conjunction : _and_<B...> {};
 template<typename... B> struct disjunction : _or_<B...> {};

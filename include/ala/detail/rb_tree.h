@@ -2,69 +2,163 @@
 #ifndef _ALA_DETAIL_RB_TREE_H
 #define _ALA_DETAIL_RB_TREE_H
 
-#include <ala/detail/functional_base.h>
-#include <ala/detail/utility_base.h>
-#include <ala/detail/pair.h>
+#include <ala/type_traits.h>
+#include <ala/detail/allocator.h>
+
+#if defined(RED) || defined(BLACK) || defined(LEFT_NIL) || defined(LEFT_NIL)
+#error "macro is defined"
+#endif
+//@cflags=-c
+#define RED true
+#define BLACK false
+
+#define LEFT_NIL false
+#define RIGHT_NIL true
 
 namespace ala {
 
-namespace detail {
-
-enum COLOR { LEFT_NIL = -2, RIGHT_NIL = -1, BLACK = 0, RED = 1 };
-
 template<class Data>
 struct rb_node {
-    rb_node(const Data &data, COLOR color, rb_node *l, rb_node *r, rb_node *p)
-        : _data(data), _color(color), _left(l), _right(r), _parent(p) {}
+    // rb_node(const Data &data, const COLOR color, const rb_node *l,
+    //         const rb_node *r, const rb_node *p)
+    //     : _data(data), _color(color), _left(l), _right(r), _parent(p) {}
 
-    ~rb_node() {
-        if (_left != nullptr)
-            delete _left;
-        if (_right != nullptr)
-            delete _right;
-    }
+    // rb_node(const rb_node &other, const rb_node *p = nullptr)
+    //     : _data(other.data), _color(other.color) {
+    //     if (other._left == nullptr)
+    //         _left = nullptr;
+    //     else
+    //         _left = new rb_node(other._left, this);
+    //     if (other._right == nullptr)
+    //         _right = nullptr;
+    //     else
+    //         _right = new rb_node(other._right, this);
+    //     _parent = p;
+    // }
 
-    Data _data;
-    COLOR _color;
+    // ~rb_node() {
+    //     if (_left != nullptr)
+    //         delete _left;
+    //     if (_right != nullptr)
+    //         delete _right;
+    // }
+    struct {
+        signed _nothing : 28;
+        bool _nil_type : 1;
+        bool _is_nil : 1;
+        bool _is_construct : 1;
+        bool _color : 1;
+        // nil_type false: left  true: right
+        // color    false: black true: red
+    };
     rb_node *_left, *_right, *_parent;
+    Data _data;
 };
 
-template<class Data>
-constexpr bool const is_nil(rb_node<Data> *node) {
-    return (node == nullptr || node->_color < 0);
+template<class NAlloc>
+constexpr typename NAlloc::pointer allocate_node() {
+    typename NAlloc::pointer node = NAlloc().allocate(1);
+    node->_is_construct = false;
+    return node;
+}
+
+template<class NAlloc, class Alloc, class... Args>
+constexpr typename NAlloc::pointer construct_node(Args... args) {
+    typename NAlloc::pointer node = NAlloc().allocate(1);
+    Alloc().construct(addressof(node->_data), forward<Args>(args)...);
+    node->_is_construct = true;
+    return node;
+}
+
+template<class NAlloc, class Alloc>
+constexpr typename NAlloc::pointer copy_node(typename NAlloc::pointer other) {
+    typename NAlloc::pointer node;
+    if (other._is_construct)
+        node = construct_node<NAlloc, Alloc>(other._data);
+    else
+        node = allocate_node<NAlloc>(other._data);
+    node->_color = other._color;
+    node->_is_construct = other._is_construct;
+    node->_is_nil = other._is_nil;
+    node->_nil_type = other._nil_type;
+    node->_left = other._left;
+    node->_right = other._right;
+    node->_parent = other._parent;
+    return node;
+}
+
+template<class NAlloc, class Alloc>
+constexpr void destruct_node(typename NAlloc::pointer node) {
+    Alloc().destroy(addressof(node->_data));
+    NAlloc().deallocate(node, 1);
+}
+
+template<class NAlloc, class Alloc>
+constexpr void destruct_tree(typename NAlloc::pointer node) {
+    if (node->_left != nullptr)
+        destruct_tree<NAlloc, Alloc>(node->_left);
+    if (node->_right != nullptr)
+        destruct_tree<NAlloc, Alloc>(node->_right);
+    destruct_node<NAlloc, Alloc>(node);
+}
+
+template<class NAlloc, class Alloc>
+constexpr typename NAlloc::pointer
+copy_tree(typename NAlloc::pointer other,
+          typename NAlloc::pointer p = nullptr) {
+    typename NAlloc::pointer node = construct_node<NAlloc>(other._data);
+    node->_color = other._color;
+    node->_is_construct = other._is_construct;
+    node->_is_nil = other._is_nil;
+    node->_nil_type = other._nil_type;
+    node->_parent = p;
+    if (other._left == nullptr)
+        node->_left = nullptr;
+    else
+        node->_left = copy_tree(other._left, node);
+    if (other._right == nullptr)
+        node->_right = nullptr;
+    else
+        node->_right = copy_tree(other._right, node);
+    return node;
 }
 
 template<class Data>
-constexpr bool const is_black(rb_node<Data> *node) {
-    return (node == nullptr || node->_color < 0 || node->_color == BLACK);
+constexpr const bool is_nil(rb_node<Data> *node) {
+    return node == nullptr || node->_is_nil;
 }
 
 template<class Data>
-constexpr bool const is_red(rb_node<Data> *node) {
-    return (node != nullptr && node->_color == RED);
+constexpr const bool is_black(rb_node<Data> *node) {
+    return node == nullptr || !node->_color;
 }
 
 template<class Data>
-constexpr bool const is_left_nil(rb_node<Data> *node) {
-    return (node != nullptr && node->_color == LEFT_NIL);
+constexpr const bool is_red(rb_node<Data> *node) {
+    return node != nullptr && node->_color;
 }
 
 template<class Data>
-constexpr bool const is_right_nil(rb_node<Data> *node) {
-    return (node != nullptr && node->_color == RIGHT_NIL);
+constexpr const bool is_left_nil(rb_node<Data> *node) {
+    return node != nullptr && node->_is_nil && !node->_nil_type;
 }
 
 template<class Data>
-constexpr rb_node<Data> *leftmost(rb_node<Data> *node) {
+constexpr const bool is_right_nil(rb_node<Data> *node) {
+    return node != nullptr && node->_is_nil && node->_nil_type;
+}
+
+template<class Data>
+constexpr rb_node<Data> *left_leaf(rb_node<Data> *node) {
     if (is_nil(node))
-        return nullptr;
+        return node;
     while (!is_nil(node->_left))
         node = node->_left;
     return node;
 }
 
 template<class Data>
-constexpr rb_node<Data> *rightmost(rb_node<Data> *node) {
+constexpr rb_node<Data> *right_leaf(rb_node<Data> *node) {
     if (is_nil(node))
         return nullptr;
     while (!is_nil(node->_right))
@@ -72,19 +166,14 @@ constexpr rb_node<Data> *rightmost(rb_node<Data> *node) {
     return node;
 }
 
-template<class Data>
-constexpr void dealloc_tree(rb_node<Data> *root) {
-    if (_root->left != nullptr)
-}
-
-template<class Data, class Compare>
+template<class Data, class Comp, class Alloc = allocator<Data>>
 struct rb_tree {
+public:
     typedef rb_node<Data> node_type;
-    typedef typename Data::first_type Key;
-    typedef typename Data::second_type Val;
+    typedef typename Alloc::template rebind<node_type>::other node_allocator;
 
     struct iterator {
-        iterator(node_type *handle, node_type *root): _handle(handle) {}
+        iterator(node_type *handle): _handle(handle) {}
 
         node_type &operator*() { return *_handle; }
 
@@ -97,10 +186,10 @@ struct rb_tree {
         }
 
         iterator &operator++() {
-            if (_handle == nullptr || _handle->_color == RIGHT_NIL)
+            if (_handle == nullptr || is_right_nil(_handle))
                 return *this;
             else if (_handle->_right != nullptr)
-                _handle = leftmost(_handle->_right);
+                _handle = left_leaf(_handle->_right);
             else
                 while (true) {
                     if (_handle->_parent == nullptr ||
@@ -114,10 +203,10 @@ struct rb_tree {
         }
 
         iterator &operator--() {
-            if (_handle == nullptr || _handle->_color == LEFT_NIL)
-                _handle = *this;
+            if (_handle == nullptr)
+                return *this;
             else if (_handle->_left != nullptr)
-                _handle = rightmost(_handle->_left);
+                _handle = right_leaf(_handle->_left);
             else {
                 while (true) {
                     if (_handle->_parent == nullptr ||
@@ -134,22 +223,49 @@ struct rb_tree {
         node_type *_handle;
     };
 
-    // member type alias
-
-    // member function
-
-    ~rb_tree() { delete _root; }
-
-    rb_tree(): _root(nullptr), _cmp() {
-        _left_nil = new node_type(Data(), NIL, nullptr, nullptr, nullptr);
-        _right_nil = new node_type(Data(), NIL, nullptr, nullptr, nullptr);
-        _left_nil->_parent = _right_nil;
-        _right_nil->_parent = _left_nil;
+    ~rb_tree() {
+        if (_root != nullptr) {
+            destruct_tree<node_allocator, Alloc>(_root);
+        } else {
+            destruct_node<node_allocator, Alloc>(_left_nil);
+            destruct_node<node_allocator, Alloc>(_right_nil);
+        }
     }
 
-    iterator begin() { return iterator(leftmost(_root), _root); }
+    rb_tree(Comp cmp = Comp(), Alloc a = Alloc()): _cmp(cmp) {
+        _root = nullptr;
+        _left_nil = allocate_node<node_allocator>();
+        _right_nil = allocate_node<node_allocator>();
 
-    iterator end() { return iterator(nullptr, _root); }
+        _left_nil->_parent = _right_nil;
+        _left_nil->_color = BLACK;
+        _left_nil->_is_construct = false;
+        _left_nil->_is_nil = true;
+        _left_nil->_nil_type = LEFT_NIL;
+        _left_nil->_left=nullptr;
+        _left_nil->_right=nullptr;
+
+        _right_nil->_parent = _left_nil;
+        _right_nil->_color = BLACK;
+        _right_nil->_is_construct = false;
+        _right_nil->_is_nil = true;
+        _right_nil->_nil_type = RIGHT_NIL;
+        _right_nil->_left=nullptr;
+        _right_nil->_right=nullptr;
+    }
+
+    rb_tree(const rb_tree &other) {
+        if (other._root != nullptr) {
+            _root = copy_tree<node_allocator, Alloc>(other._root);
+            _left_nil = left_leaf(_root);
+        } else {
+            destruct_node<node_allocator, Alloc>(_left_nil);
+            destruct_node<node_allocator, Alloc>(_right_nil);
+        }
+    }
+
+    iterator begin() { return iterator(_left_nil->_parent); }
+    iterator end() { return iterator(_right_nil); }
 
     // rotate
     /*-------------------------------------
@@ -160,11 +276,11 @@ struct rb_tree {
 	|      b   c    right   a   b         |
 	--------------------------------------*/
 
-    _ALA_FORCEINLINE node_type *rotate_left(node_type *x) {
+    node_type *rotate_left(node_type *x) {
         node_type *y = x->_right;
 
-        if ((x->_right = y->_left) !=
-            nullptr) // b can't be equal to NIL,so using is_nil is correct,too
+        if ((x->_right = y->_left) != nullptr)
+            // b can't be equal to NIL,so using is_nil is correct,too
             y->_left->_parent = x;
         y->_left = x;
 
@@ -178,7 +294,7 @@ struct rb_tree {
         return y;
     }
 
-    _ALA_FORCEINLINE node_type *rotate_right(node_type *y) {
+    node_type *rotate_right(node_type *y) {
         node_type *x = y->_left;
 
         if ((y->_left = x->_right) != nullptr)
@@ -195,12 +311,26 @@ struct rb_tree {
         return x;
     }
 
-    node_type *search(Key key) {
+    void fix_nil() noexcept {
+        if (_root == nullptr) {
+            _left_nil->_parent = _right_nil;
+            _right_nil->_parent = _left_nil;
+        } else {
+            node_type *lleaf = left_leaf(_root);
+            node_type *rleaf = right_leaf(_root);
+            lleaf->_left = _left_nil;
+            rleaf->_right = _right_nil;
+            _left_nil->_parent = lleaf;
+            _right_nil->_parent = rleaf;
+        }
+    }
+
+    node_type *search(Data d) {
         node_type *current = _root;
         while (!is_nil(current))
-            if (_cmp(pair<Key, Val>(key, 0), current->_data))
+            if (_cmp(d, current->_data))
                 current = current->_left;
-            else if (_cmp(current->_data, pair<Key, Val>(key, 0)))
+            else if (_cmp(current->_data, d))
                 current = current->_right;
             else
                 return current;
@@ -243,42 +373,34 @@ struct rb_tree {
     }
 
     node_type *insert(Data data, bool overwrite = false) {
-        node_type *current = _root, *parent = nullptr, temp = nullptr;
-        while (!is_nil(current)) {
-            parent = current;
-            if (_cmp(data, current->_data))
-                current = current->_left;
-            else if (_cmp(current->_data, data))
-                current = current->_right;
+        node_type *current = nullptr, *guard = _root;
+        node_type *new_node = construct_node<node_allocator, Alloc>(data);
+        new_node->_color=RED;
+        new_node->_left=nullptr;
+        new_node->_right=nullptr;
+        while (!is_nil(guard)) {
+            current = guard;
+            if (_cmp(data, guard->_data))
+                guard = guard->_left;
+            else if (_cmp(guard->_data, data))
+                guard = guard->_right;
             else {
                 if (overwrite)
                     // current->_val = val;
                     ;
-                return current;
+                return guard;
             }
         }
-        temp == current;
-        current = new node_type(data, RED, nullptr, nullptr, nullptr);
-        current->_parent = parent;
-        if (is_left_nil(temp->_color)) {
-            temp->_parent = current;
-            current->_left = temp;
-        } else if (is_right_nil(_temp->_color)) {
-            temp->_parent = current;
-            current->_right = temp;
-        }
-        if (parent == nullptr) { // empty tree
-            _root = current;
-            current->_left = _left_nil;
-            current->_right = _right_nil;
-            _left_nil->_parent = _right_nil->_parent = current;
-        } else if (_cmp(data, current->_data))
-            parent->_left = current;
+        new_node->_parent = current;
+        if (current == nullptr) // empty tree
+            _root = new_node;
+        else if (_cmp(new_node->_data, current->_data))
+            current->_left = new_node;
         else
-            parent->_right = current;
-
-        rebalance_for_insert(current);
-        return current;
+            current->_right = new_node;
+        fix_nil();
+        rebalance_for_insert(new_node);
+        return new_node;
     }
 
     void transplant(node_type *u, node_type *v) {
@@ -358,41 +480,23 @@ struct rb_tree {
             current->_color = BLACK;
     }
 
-    void erase(Key key) {
+    void erase(Data d) {
         node_type *current, *child, *parent, *temp;
-        COLOR color;
-        if ((temp = current = search(key)) == nullptr)
+        bool color;
+        if ((temp = current = search(d)) == nullptr)
             return;
         if (is_nil(current->_left)) {
             color = current->_color;
             child = current->_right;
             parent = current->_parent;
             transplant(current, child);
-            if (is_left_nil(current->_left)) {
-                if (is_right_nil(child))
-                    child->_parent == _left_nil;
-                else if (child == nullptr)
-                    left_leaf = parent;
-                else
-                    left_leaf = left_most(child);
-                left_leaf->_left = _left_nil;
-                left_nil->_parent = left_leaf;
-            }
         } else if (is_nil(current->_right)) {
             color = current->_color;
             child = current->_left;
             parent = current->_parent;
             transplant(current, child);
-            if (is_right_nil(current->_right)) {
-                if (is_nil(child))
-                    right_leaf = parent;
-                else
-                    right_leaf = right_most(child);
-                right_leaf = _right_nil;
-                right_nil->_parent = right_leaf;
-            }
         } else {
-            current = leftmost(current->_right);
+            current = left_leaf(current->_right);
             color = current->_color;
             child = current->_right;
             parent = current->_parent;
@@ -410,18 +514,24 @@ struct rb_tree {
         }
 
         temp->_left = temp->_right = nullptr;
-        delete temp;
+        destruct_node<node_allocator, Alloc>(temp);
+        fix_nil();
         if (color == BLACK)
             rebalance_for_erase(child, parent);
     }
 
     // member variable
+private:
     node_type *_root, *_left_nil, *_right_nil;
-    Compare _cmp;
+    Comp _cmp;
 };
 
-} // namespace detail
-
 } // namespace ala
+
+#undef RED
+#undef BLACK
+
+#undef LEFT_NIL
+#undef RIGHT_NIL
 
 #endif // HEAD
