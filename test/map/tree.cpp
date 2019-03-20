@@ -25,30 +25,66 @@ public:
     }
 };
 
-ala::rb_tree<ala::pair<const int, char>,
-             value_compare<ala::pair<const int, char>>>
-    rb;
+using pr = ala::pair<const int, char>;
+// using pr = std::pair<const int, char>;
+
+#define TEST_SIZE 1000
 
 void test() {
-    for (int i = 0; i < 1000; ++i)
-        rb.insert(ala::pair<const int, char>(i, 0));
+    ala::rb_tree<pr, value_compare<pr>, ala::allocator<pr>> rb{
+        value_compare<pr>(), ala::allocator<pr>()};
+    // for (int i = 0; i < TEST_SIZE; ++i)
+    //     rb.insert(ala::pair(i, 0));
 
-    for (int i = 0; i < 1000; i += 7)
-        rb.erase(ala::pair<const int, char>(i, 0));
+    // for (int i = 0; i < TEST_SIZE; i += 7)
+    //     rb.erase(ala::pair(i, 0));
 
-    // for (int i = 0; i < 1000; i += 1)
+    // std::cout << (*rb.begin()).first << ",";
+    // std::cout << (*--rb.end()).first << ",";
+
+    // for (int i = 0; i < TEST_SIZE; i += 1)
     //     rb.search(ala::pair<const int, char>(i, 0));
 
-    for (auto i = rb.begin(); i != rb.end(); ++i)
-        std::cout << (*i)._data.first << ",";
+    // for (auto i = rb.begin(); i != rb.end(); ++i)
+    //     std::cout << (*i)._data.first << ",";
 
-    for (auto i = --rb.end(); i != rb.begin(); --i)
-        std::cout << (*i)._data.second << ",";
+    // for (auto i = --rb.end(); i != rb.begin(); --i)
+    //     std::cout << (*i)._data.second << ",";
 }
 
+void test1() {
+    std::map<const int, char> rb;
+    for (int i = 0; i < TEST_SIZE; ++i)
+        rb.insert(std::pair(i, 0));
+
+    for (int i = 0; i < TEST_SIZE; i += 7)
+        rb.erase(i);
+    std::cout << (*rb.begin()).first << ",";
+    std::cout << (*--rb.end()).first << ",";
+}
+//@build_type=dbg
 int main() {
+    // static_assert(std::is_copy_assignable<const int>::value, "oh");
+    static_assert(ala::is_default_constructible<const int>::value &&
+                      ala::is_default_constructible<char>::value,
+                  "oh");
+
+    // static_assert(ala::is_copy_assignable<const int>::value, "oh");
+    // static_assert(std::is_copy_assignable<const int>::value, "oh");
+
+    static_assert(ala::is_implicitly_default_constructible<const int>::value &&
+                      ala::is_implicitly_default_constructible<char>::value,
+                  "oh");
+
+    static_assert(std::is_default_constructible<const int>::value &&
+                      std::is_default_constructible<char>::value,
+                  "oh");
+
+    static_assert(
+        std::__is_implicitly_default_constructible<const int>::value &&
+            std::__is_implicitly_default_constructible<char>::value,
+        "oh");
     std::cout << ala::timer(test);
-    // auto x = rb._root;
-    // r(x);
+    std::cout << ala::timer(test1);
     return 0;
 }

@@ -146,27 +146,27 @@ template<typename T> using remove_pointer_t = typename remove_pointer<T>::type;
 template<typename T> using add_pointer_t    = typename add_pointer<T>::type;
 
 // other transformations:
-template<size_t Len, size_t Align>   struct aligned_storage;
+template<size_t Len, size_t Align>      struct aligned_storage;
 template<size_t Len, typename... Types> struct aligned_union;
 template<typename T>                    struct decay;
 template<typename T>                    struct remove_cvref;
-template<bool, typename T>              struct enable_if;
-template<bool, typename T, typename F>     struct conditional;
+template<bool, typename T = void>       struct enable_if;
+template<bool, typename T, typename F>  struct conditional;
 template<typename... T>                 struct common_type;
 template<typename T>                    struct underlying_type;
 template<typename>                      struct result_of;
-template<typename F, typename... Args>     struct invoke_result;
+template<typename F, typename... Args>  struct invoke_result;
 
 template<size_t Len, size_t Align = alignof(double)> using aligned_storage_t = typename aligned_storage<Len, Align>::type;
-template<size_t Len, typename... Types>                 using aligned_union_t   = typename aligned_union<Len, Types...>::type;
-template<typename T>                                    using decay_t           = typename decay<T>::type;
-template<typename T>                                    using remove_cvref_t    = typename remove_cvref<T>::type;
-template<bool b, typename T = void>                     using enable_if_t       = typename enable_if<b, T>::type;
-template<bool b, typename T, typename F>                   using conditional_t     = typename conditional<b, T, F>::type;
-template<typename... T>                                 using common_type_t     = typename common_type<T...>::type;
-template<typename T>                                    using underlying_type_t = typename underlying_type<T>::type;
-template<typename T>                                    using result_of_t       = typename result_of<T>::type;
-template<typename F, typename... Args>                     using invoke_result_t   = typename invoke_result<F, Args...>::type;
+template<size_t Len, typename... Types>              using aligned_union_t   = typename aligned_union<Len, Types...>::type;
+template<typename T>                                 using decay_t           = typename decay<T>::type;
+template<typename T>                                 using remove_cvref_t    = typename remove_cvref<T>::type;
+template<bool b, typename T = void>                  using enable_if_t       = typename enable_if<b, T>::type;
+template<bool b, typename T, typename F>             using conditional_t     = typename conditional<b, T, F>::type;
+template<typename... T>                              using common_type_t     = typename common_type<T...>::type;
+template<typename T>                                 using underlying_type_t = typename underlying_type<T>::type;
+template<typename T>                                 using result_of_t       = typename result_of<T>::type;
+template<typename F, typename... Args>               using invoke_result_t   = typename invoke_result<F, Args...>::type;
 
 #if _ALA_CPP_STD >= 17
 template<typename...> using void_t = void;
@@ -284,6 +284,9 @@ template<typename R, typename Fn, typename... Args> ALA_VAR_INLINE constexpr boo
 template<typename... B> ALA_VAR_INLINE constexpr bool conjunction_v = conjunction<B...>::value;
 template<typename... B> ALA_VAR_INLINE constexpr bool disjunction_v = disjunction<B...>::value;
 template<typename B>    ALA_VAR_INLINE constexpr bool negation_v    = negation<B>::value;
+
+template<class T> struct type_identity { typedef T type; };
+template<class T> using type_identity_t = typename type_identity<T>::type;
 
 // clang-format on
 

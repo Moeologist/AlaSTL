@@ -666,6 +666,9 @@ template<typename T> struct remove_reference<T&&> { typedef T type; };
 
 template<typename T> struct add_lvalue_reference                      { typedef T&                  type; };
 template<typename T> struct add_lvalue_reference<T&>                  { typedef T&                  type; };
+// template<typename T> struct add_lvalue_reference<const T&>            { typedef T&                  type; };
+// template<typename T> struct add_lvalue_reference<volatile T&>         { typedef T&                  type; };
+// template<typename T> struct add_lvalue_reference<const volatile T&>   { typedef T&                  type; };
 template<>           struct add_lvalue_reference<void>                { typedef void                type; };
 template<>           struct add_lvalue_reference<const void>          { typedef const void          type; };
 template<>           struct add_lvalue_reference<volatile void>       { typedef volatile void       type; };
@@ -673,6 +676,9 @@ template<>           struct add_lvalue_reference<const volatile void> { typedef 
 
 template<typename T> struct add_rvalue_reference                      { typedef T&&                 type; };
 template<typename T> struct add_rvalue_reference<T&>                  { typedef T&                  type; };
+// template<typename T> struct add_rvalue_reference<const T&>            { typedef T&                  type; };
+// template<typename T> struct add_rvalue_reference<volatile T&>         { typedef T&                  type; };
+// template<typename T> struct add_rvalue_reference<const volatile T&>   { typedef T&                  type; };
 template<>           struct add_rvalue_reference<void>                { typedef void                type; };
 template<>           struct add_rvalue_reference<const void>          { typedef const void          type; };
 template<>           struct add_rvalue_reference<volatile void>       { typedef volatile void       type; };
@@ -810,7 +816,7 @@ public:
 template< typename T >
 struct remove_cvref { typedef remove_cv_t<remove_reference_t<T>> type; };
 
-template<bool B, typename T = void> struct enable_if {};
+template<bool B, typename T> struct enable_if {};
 template<typename T> struct enable_if<true, T> { typedef T type; };
 
 template<bool B, typename T, typename F> struct conditional      { typedef T type; };

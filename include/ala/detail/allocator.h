@@ -3,12 +3,6 @@
 
 #include <ala/type_traits.h>
 
-template<class T>
-constexpr T *addressof(T &arg) noexcept {
-    return __builtin_addressof(arg);
-}
-
-//@cflags=-c
 #define HAS_MEM(mem) \
     template<typename _type, typename = void_t<>> \
     struct _has_##mem: false_type {}; \
@@ -27,6 +21,11 @@ constexpr T *addressof(T &arg) noexcept {
     typedef typename _##mem<cls>::type mem;
 
 namespace ala {
+
+template<class T>
+constexpr T *addressof(T &arg) noexcept {
+    return __builtin_addressof(arg);
+}
 
 template<typename Ptr>
 struct pointer_traits {
@@ -73,8 +72,9 @@ struct pointer_traits {
     template<typename U>
     using rebind = typename _rebind<pointer, U>::type;
 
-    static pointer
-    pointer_to(conditional_t<is_void_v<element_type>, void, element_type> &r) {
+    constexpr static pointer
+    pointer_to(conditional_t<is_void_v<element_type>, void, element_type>
+                   &r) noexcept {
         return pointer::pointer_to(r);
     }
 };
@@ -88,9 +88,10 @@ struct pointer_traits<T *> {
     template<typename U>
     using rebind = U *;
 
-    static pointer pointer_to(conditional_t<is_void_v<element_type>, void,
-                                            element_type> &r) noexcept {
-        return addressof(r);
+    constexpr static pointer
+    pointer_to(conditional_t<is_void_v<element_type>, void, element_type>
+                   &r) noexcept {
+        return ala::addressof(r);
     }
 };
 
@@ -98,11 +99,11 @@ struct pointer_traits<T *> {
 
 template<class T>
 struct allocator {
-    typedef T              value_type;
-    typedef T*             pointer;
-    typedef const T*       const_pointer;
-    typedef T&             reference;
-    typedef const T&       const_reference;
+    typedef T         value_type;
+    typedef T*        pointer;
+    typedef const T*  const_pointer;
+    typedef T&        reference;
+    typedef const T&  const_reference;
     typedef size_t    size_type;
     typedef ptrdiff_t difference_type;
     typedef true_type propagate_on_container_move_assignment;
@@ -127,13 +128,13 @@ struct allocator {
 
     template<class U, class... Args>
     void construct(U *p, Args &&... args) {
-        ::new ((void *)p) U(forward<Args>(args)...);
+        ::new ((void *)p) U(ala::forward<Args>(args)...);
     }
 
     template<class U>
     void destroy(U *p) {
         p->~U();
-    };
+    }
 };
 
 template<class T, class U>

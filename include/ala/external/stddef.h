@@ -1,5 +1,5 @@
-#ifndef _ALA_DETAIL_EXTERNAL_STDDEF_H
-#define _ALA_DETAIL_EXTERNAL_STDDEF_H
+#ifndef _ALA_EXTERNAL_STDDEF_H
+#define _ALA_EXTERNAL_STDDEF_H
 
 #include <cstdint>
 #include <cstddef>

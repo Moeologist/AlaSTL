@@ -2,16 +2,16 @@
 #ifndef _ALA_DETAIL_RB_TREE_H
 #define _ALA_DETAIL_RB_TREE_H
 
-#include <ala/type_traits.h>
 #include <ala/detail/allocator.h>
+#include <ala/iterator.h>
+#include <ala/type_traits.h>
 
 #if defined(RED) || defined(BLACK) || defined(LEFT_NIL) || defined(LEFT_NIL)
 #error "macro is defined"
 #endif
-//@cflags=-c
+
 #define RED true
 #define BLACK false
-
 #define LEFT_NIL false
 #define RIGHT_NIL true
 
@@ -19,54 +19,24 @@ namespace ala {
 
 template<class Data>
 struct rb_node {
-    // rb_node(const Data &data, const COLOR color, const rb_node *l,
-    //         const rb_node *r, const rb_node *p)
-    //     : _data(data), _color(color), _left(l), _right(r), _parent(p) {}
-
-    // rb_node(const rb_node &other, const rb_node *p = nullptr)
-    //     : _data(other.data), _color(other.color) {
-    //     if (other._left == nullptr)
-    //         _left = nullptr;
-    //     else
-    //         _left = new rb_node(other._left, this);
-    //     if (other._right == nullptr)
-    //         _right = nullptr;
-    //     else
-    //         _right = new rb_node(other._right, this);
-    //     _parent = p;
-    // }
-
-    // ~rb_node() {
-    //     if (_left != nullptr)
-    //         delete _left;
-    //     if (_right != nullptr)
-    //         delete _right;
-    // }
-    struct {
-        signed _nothing : 28;
-        bool _nil_type : 1;
-        bool _is_nil : 1;
-        bool _is_construct : 1;
-        bool _color : 1;
-        // nil_type false: left  true: right
-        // color    false: black true: red
-    };
-    rb_node *_left, *_right, *_parent;
     Data _data;
+    rb_node *_left, *_right, *_parent;
+    bool _nil_type;
+    bool _is_nil;
+    bool _is_construct;
+    bool _color;
 };
 
 template<class NAlloc>
 constexpr typename NAlloc::pointer allocate_node() {
     typename NAlloc::pointer node = NAlloc().allocate(1);
-    node->_is_construct = false;
     return node;
 }
 
 template<class NAlloc, class Alloc, class... Args>
-constexpr typename NAlloc::pointer construct_node(Args... args) {
+constexpr typename NAlloc::pointer construct_node(Args &&... args) {
     typename NAlloc::pointer node = NAlloc().allocate(1);
-    Alloc().construct(addressof(node->_data), forward<Args>(args)...);
-    node->_is_construct = true;
+    Alloc().construct(ala::addressof(node->_data), ala::forward<Args>(args)...);
     return node;
 }
 
@@ -89,7 +59,8 @@ constexpr typename NAlloc::pointer copy_node(typename NAlloc::pointer other) {
 
 template<class NAlloc, class Alloc>
 constexpr void destruct_node(typename NAlloc::pointer node) {
-    Alloc().destroy(addressof(node->_data));
+    if (node->_is_construct)
+        Alloc().destroy(ala::addressof(node->_data));
     NAlloc().deallocate(node, 1);
 }
 
@@ -124,27 +95,27 @@ copy_tree(typename NAlloc::pointer other,
 }
 
 template<class Data>
-constexpr const bool is_nil(rb_node<Data> *node) {
+constexpr bool is_nil(rb_node<Data> *node) {
     return node == nullptr || node->_is_nil;
 }
 
 template<class Data>
-constexpr const bool is_black(rb_node<Data> *node) {
+constexpr bool is_black(rb_node<Data> *node) {
     return node == nullptr || !node->_color;
 }
 
 template<class Data>
-constexpr const bool is_red(rb_node<Data> *node) {
+constexpr bool is_red(rb_node<Data> *node) {
     return node != nullptr && node->_color;
 }
 
 template<class Data>
-constexpr const bool is_left_nil(rb_node<Data> *node) {
+constexpr bool is_left_nil(rb_node<Data> *node) {
     return node != nullptr && node->_is_nil && !node->_nil_type;
 }
 
 template<class Data>
-constexpr const bool is_right_nil(rb_node<Data> *node) {
+constexpr bool is_right_nil(rb_node<Data> *node) {
     return node != nullptr && node->_is_nil && node->_nil_type;
 }
 
@@ -166,117 +137,267 @@ constexpr rb_node<Data> *right_leaf(rb_node<Data> *node) {
     return node;
 }
 
-template<class Data, class Comp, class Alloc = allocator<Data>>
-struct rb_tree {
-public:
-    typedef rb_node<Data> node_type;
-    typedef typename Alloc::template rebind<node_type>::other node_allocator;
-
-    struct iterator {
-        iterator(node_type *handle): _handle(handle) {}
-
-        node_type &operator*() { return *_handle; }
-
-        bool operator==(const iterator &rhs) const {
-            return _handle == rhs._handle;
-        }
-
-        bool operator!=(const iterator &rhs) const {
-            return _handle != rhs._handle;
-        }
-
-        iterator &operator++() {
-            if (_handle == nullptr || is_right_nil(_handle))
-                return *this;
-            else if (_handle->_right != nullptr)
-                _handle = left_leaf(_handle->_right);
-            else
-                while (true) {
-                    if (_handle->_parent == nullptr ||
-                        _handle->_parent->_left == _handle) {
-                        _handle = _handle->_parent;
-                        break;
-                    }
-                    _handle = _handle->_parent;
-                }
-            return *this;
-        }
-
-        iterator &operator--() {
-            if (_handle == nullptr)
-                return *this;
-            else if (_handle->_left != nullptr)
-                _handle = right_leaf(_handle->_left);
-            else {
-                while (true) {
-                    if (_handle->_parent == nullptr ||
-                        _handle->_parent->_right == _handle) {
-                        _handle = _handle->_parent;
-                        break;
-                    }
-                    _handle = _handle->_parent;
-                }
+template<class Data>
+constexpr void move_suc(rb_node<Data> *&_handle) {
+    if (_handle == nullptr || is_right_nil(_handle))
+        return;
+    else if (_handle->_left != nullptr)
+        _handle = right_leaf(_handle->_left);
+    else {
+        while (true) {
+            if (_handle->_parent == nullptr ||
+                _handle->_parent->_right == _handle) {
+                _handle = _handle->_parent;
+                break;
             }
-            return *this;
+            _handle = _handle->_parent;
         }
+    }
+    return;
+}
 
-        node_type *_handle;
-    };
+template<class Data>
+constexpr void move_pre(rb_node<Data> *&_handle) {
+    if (_handle == nullptr || is_left_nil(_handle))
+        return;
+    else if (_handle->_right != nullptr)
+        _handle = left_leaf(_handle->_right);
+    else
+        while (true) {
+            if (_handle->_parent == nullptr ||
+                _handle->_parent->_left == _handle) {
+                _handle = _handle->_parent;
+                break;
+            }
+            _handle = _handle->_parent;
+        }
+    return;
+}
+
+template<typename>
+struct rb_const_iterator;
+template<typename>
+struct rb_iterator;
+
+template<typename Data>
+struct rb_iterator {
+    typedef bidirectional_iterator_tag iterator_category;
+    typedef Data value_type;
+    typedef ptrdiff_t difference_type;
+    typedef Data *pointer;
+    typedef Data &reference;
+    typedef rb_iterator<Data> _self_type;
+    typedef rb_node<Data> *_handle_type;
+
+    constexpr rb_iterator(): _handle() {}
+    constexpr rb_iterator(const _self_type &other): _handle(other._handle) {}
+    constexpr explicit rb_iterator(const rb_const_iterator<Data> &other)
+        : _handle(other._handle) {}
+
+    constexpr reference operator*() const {
+        return const_cast<reference>(_handle->_data);
+    }
+
+    constexpr decltype(auto) operator-> () const {
+        return ala::pointer_traits<pointer>::pointer_to(_handle->_data);
+    }
+
+    constexpr bool operator==(const _self_type &rhs) const {
+        return _handle == rhs._handle;
+    }
+
+    constexpr bool operator!=(const _self_type &rhs) const {
+        return _handle != rhs._handle;
+    }
+
+    constexpr _self_type operator++() {
+        move_suc(_handle);
+        return *this;
+    }
+
+    constexpr _self_type operator++(int) {
+        _handle_type tmp(_handle);
+        move_suc(_handle);
+        return _self_type(tmp);
+    }
+
+    constexpr _self_type operator--() {
+        move_pre(_handle);
+        return *this;
+    }
+
+    constexpr _self_type operator--(int) {
+        _handle_type tmp(_handle);
+        move_pre(_handle);
+        return _self_type(tmp);
+    }
+
+    template<typename, typename, typename>
+    friend struct rb_tree;
+    template<typename>
+    friend struct rb_const_iterator;
+
+protected:
+    rb_iterator(rb_node<Data> *handle): _handle(handle) {}
+    _handle_type _handle;
+};
+
+template<typename Data>
+struct rb_const_iterator {
+    typedef bidirectional_iterator_tag iterator_category;
+    typedef Data value_type;
+    typedef ptrdiff_t difference_type;
+    typedef Data *const pointer;
+    typedef const Data &reference;
+    typedef rb_const_iterator<Data> _self_type;
+    typedef rb_node<Data> *_handle_type;
+
+    constexpr rb_const_iterator(): _handle() {}
+    constexpr rb_const_iterator(const _self_type &other)
+        : _handle(other._handle) {}
+    constexpr explicit rb_const_iterator(const rb_iterator<Data> &other)
+        : _handle(other._handle) {}
+
+    constexpr reference &operator*() const {
+        return const_cast<reference>(_handle->_data);
+    }
+
+    constexpr pointer operator->() const {
+        return ala::pointer_traits<pointer>::pointer_to(_handle->_data);
+    }
+
+    constexpr bool operator==(const _self_type &rhs) const {
+        return _handle == rhs._handle;
+    }
+
+    constexpr bool operator!=(const _self_type &rhs) const {
+        return _handle != rhs._handle;
+    }
+
+    constexpr _self_type operator++() {
+        move_suc(_handle);
+        return *this;
+    }
+
+    constexpr _self_type operator++(int) {
+        _handle_type tmp(_handle);
+        move_suc(_handle);
+        return _self_type(tmp);
+    }
+
+    constexpr _self_type operator--() {
+        move_pre(_handle);
+        return *this;
+    }
+
+    constexpr _self_type operator--(int) {
+        _handle_type tmp(_handle);
+        move_pre(_handle);
+        return _self_type(tmp);
+    }
+
+private:
+    template<typename, typename, typename>
+    friend struct rb_tree;
+    template<typename>
+    friend struct rb_iterator;
+    rb_const_iterator(_handle_type *handle): _handle(handle) {}
+    _handle_type _handle;
+};
+
+template<class Data, class Comp, class Alloc>
+class rb_tree {
+public:
+    typedef Data value_type;
+    typedef Comp value_compare;
+    typedef Alloc allocator_type;
+    typedef rb_node<Data> node_type;
+    typedef
+        typename Alloc::template rebind<node_type>::other node_allocator_type;
+    typedef rb_iterator<Data> iterator;
+    typedef rb_const_iterator<Data> const_iterator;
+    typedef ala::reverse_iterator<iterator> reverse_iterator;
+    typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
 
     ~rb_tree() {
         if (_root != nullptr) {
-            destruct_tree<node_allocator, Alloc>(_root);
+            destruct_tree<node_allocator_type, Alloc>(_root);
         } else {
-            destruct_node<node_allocator, Alloc>(_left_nil);
-            destruct_node<node_allocator, Alloc>(_right_nil);
+            destruct_node<node_allocator_type, Alloc>(_left_nil);
+            destruct_node<node_allocator_type, Alloc>(_right_nil);
         }
     }
 
-    rb_tree(Comp cmp = Comp(), Alloc a = Alloc()): _cmp(cmp) {
-        _root = nullptr;
-        _left_nil = allocate_node<node_allocator>();
-        _right_nil = allocate_node<node_allocator>();
-
+    rb_tree(Comp cmp, Alloc alloc)
+        : _cmp(cmp), _root(nullptr),
+          _left_nil(allocate_node<node_allocator_type>()),
+          _right_nil(allocate_node<node_allocator_type>()) {
+        _left_nil->_is_construct = false;
         _left_nil->_parent = _right_nil;
         _left_nil->_color = BLACK;
-        _left_nil->_is_construct = false;
         _left_nil->_is_nil = true;
         _left_nil->_nil_type = LEFT_NIL;
-        _left_nil->_left=nullptr;
-        _left_nil->_right=nullptr;
+        _left_nil->_left = nullptr;
+        _left_nil->_right = nullptr;
 
+        _right_nil->_is_construct = false;
         _right_nil->_parent = _left_nil;
         _right_nil->_color = BLACK;
-        _right_nil->_is_construct = false;
         _right_nil->_is_nil = true;
         _right_nil->_nil_type = RIGHT_NIL;
-        _right_nil->_left=nullptr;
-        _right_nil->_right=nullptr;
+        _right_nil->_left = nullptr;
+        _right_nil->_right = nullptr;
     }
 
-    rb_tree(const rb_tree &other) {
+    template<class OtherAlloc>
+    rb_tree(const rb_tree<Data, Comp, OtherAlloc> &other,
+            Alloc a = OtherAlloc())
+        : _cmp(other._cmp) {
         if (other._root != nullptr) {
-            _root = copy_tree<node_allocator, Alloc>(other._root);
+            _root = copy_tree<node_allocator_type, Alloc>(other._root);
             _left_nil = left_leaf(_root);
         } else {
-            destruct_node<node_allocator, Alloc>(_left_nil);
-            destruct_node<node_allocator, Alloc>(_right_nil);
+            destruct_node<node_allocator_type, Alloc>(_left_nil);
+            destruct_node<node_allocator_type, Alloc>(_right_nil);
         }
+    }
+
+    template<class OtherAlloc>
+    rb_tree(rb_tree<Data, Comp, OtherAlloc> &&other, Alloc a = OtherAlloc())
+        : _cmp(other._cmp) {
+        _root = other._root;
+        _left_nil = other._left_nil;
+        _right_nil = other._right_nil;
+        other._root = nullptr;
+        other._left_nil = nullptr;
+        other._right_nil = nullptr;
     }
 
     iterator begin() { return iterator(_left_nil->_parent); }
     iterator end() { return iterator(_right_nil); }
+    const_iterator cbegin() const { return const_iterator(_left_nil->_parent); }
+    const_iterator cend() const { return const_iterator(_right_nil); }
+    reverse_iterator rbegin() {
+        return reverse_iterator(iterator(_right_nil->_parent));
+    }
+    reverse_iterator rend() { return reverse_iterator(iterator(_left_nil)); }
+    const_reverse_iterator crbegin() const {
+        return const_reverse_iterator(const_iterator(_right_nil->_parent));
+    }
+    const_reverse_iterator crend() const {
+        return const_reverse_iterator(const_iterator(_left_nil));
+    }
 
     // rotate
     /*-------------------------------------
-	|      x        left        y         |
-	|     / \       ====>      / \        |
-	|    a   y                x   c       |
-	|       / \     <====    / \          |
-	|      b   c    right   a   b         |
-	--------------------------------------*/
+    |      x        left        y         |
+    |     / \       ====>      / \        |
+    |    a   y                x   c       |
+    |       / \     <====    / \          |
+    |      b   c    right   a   b         |
+    --------------------------------------*/
 
-    node_type *rotate_left(node_type *x) {
+    node_type *rotate_left(node_type *x) noexcept {
         node_type *y = x->_right;
 
         if ((x->_right = y->_left) != nullptr)
@@ -294,7 +415,7 @@ public:
         return y;
     }
 
-    node_type *rotate_right(node_type *y) {
+    node_type *rotate_right(node_type *y) noexcept {
         node_type *x = y->_left;
 
         if ((y->_left = x->_right) != nullptr)
@@ -325,12 +446,13 @@ public:
         }
     }
 
-    node_type *search(Data d) {
+    template<typename Data1>
+    node_type *search(Data1 &&data) {
         node_type *current = _root;
         while (!is_nil(current))
-            if (_cmp(d, current->_data))
+            if (_cmp(data, current->_data))
                 current = current->_left;
-            else if (_cmp(current->_data, d))
+            else if (_cmp(current->_data, data))
                 current = current->_right;
             else
                 return current;
@@ -372,12 +494,16 @@ public:
         _root->_color = BLACK;
     }
 
-    node_type *insert(Data data, bool overwrite = false) {
+    template<typename Data1>
+    node_type *insert(Data1 &&data, bool overwrite = false) {
         node_type *current = nullptr, *guard = _root;
-        node_type *new_node = construct_node<node_allocator, Alloc>(data);
-        new_node->_color=RED;
-        new_node->_left=nullptr;
-        new_node->_right=nullptr;
+        node_type *new_node = construct_node<node_allocator_type, Alloc>(
+            ala::forward<Data1>(data));
+        new_node->_is_construct = true;
+        new_node->_is_nil = false;
+        new_node->_color = RED;
+        new_node->_left = nullptr;
+        new_node->_right = nullptr;
         while (!is_nil(guard)) {
             current = guard;
             if (_cmp(data, guard->_data))
@@ -480,10 +606,12 @@ public:
             current->_color = BLACK;
     }
 
-    void erase(Data d) {
+    template<typename Data1>
+    void erase(Data1 &&data) {
         node_type *current, *child, *parent, *temp;
         bool color;
-        if ((temp = current = search(d)) == nullptr)
+        temp = current = search(ala::forward<Data1>(data));
+        if (current == nullptr)
             return;
         if (is_nil(current->_left)) {
             color = current->_color;
@@ -514,14 +642,15 @@ public:
         }
 
         temp->_left = temp->_right = nullptr;
-        destruct_node<node_allocator, Alloc>(temp);
+        destruct_node<node_allocator_type, Alloc>(temp);
         fix_nil();
         if (color == BLACK)
             rebalance_for_erase(child, parent);
     }
-
+    template<class Key, class T, class Comp,class Alloc>
+    friend class map<Key, T, Comp, Alloc>;
     // member variable
-private:
+protected:
     node_type *_root, *_left_nil, *_right_nil;
     Comp _cmp;
 };

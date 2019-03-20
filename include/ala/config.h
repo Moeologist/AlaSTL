@@ -4,6 +4,6 @@
 #include <ala/detail/config/platform.h>
 #include <ala/detail/config/feature.h>
 #include <ala/detail/config/macro.h>
-#include <ala/detail/external/stddef.h>
+#include <ala/external/stddef.h>
 
 #endif // HEAD
