@@ -6,14 +6,8 @@
 #include <ala/iterator.h>
 #include <ala/type_traits.h>
 
-#if defined(RED) || defined(BLACK) || defined(LEFT_NIL) || defined(LEFT_NIL)
-#error "macro is defined"
-#endif
-
-#define RED true
-#define BLACK false
-#define LEFT_NIL false
-#define RIGHT_NIL true
+#define ALA_RED true
+#define ALA_BLACK false
 
 namespace ala {
 
@@ -95,11 +89,6 @@ copy_tree(typename NAlloc::pointer other,
 }
 
 template<class Data>
-constexpr bool is_nil(rb_node<Data> *node) {
-    return node == nullptr || node->_is_nil;
-}
-
-template<class Data>
 constexpr bool is_black(rb_node<Data> *node) {
     return node == nullptr || !node->_color;
 }
@@ -107,6 +96,11 @@ constexpr bool is_black(rb_node<Data> *node) {
 template<class Data>
 constexpr bool is_red(rb_node<Data> *node) {
     return node != nullptr && node->_color;
+}
+
+template<class Data>
+constexpr bool is_nil(rb_node<Data> *node) {
+    return node == nullptr || node->_is_nil;
 }
 
 template<class Data>
@@ -334,17 +328,17 @@ public:
           _right_nil(allocate_node<node_allocator_type>()) {
         _left_nil->_is_construct = false;
         _left_nil->_parent = _right_nil;
-        _left_nil->_color = BLACK;
+        _left_nil->_color = ALA_BLACK;
         _left_nil->_is_nil = true;
-        _left_nil->_nil_type = LEFT_NIL;
+        _left_nil->_nil_type = false;
         _left_nil->_left = nullptr;
         _left_nil->_right = nullptr;
 
         _right_nil->_is_construct = false;
         _right_nil->_parent = _left_nil;
-        _right_nil->_color = BLACK;
+        _right_nil->_color = ALA_BLACK;
         _right_nil->_is_nil = true;
-        _right_nil->_nil_type = RIGHT_NIL;
+        _right_nil->_nil_type = true;
         _right_nil->_left = nullptr;
         _right_nil->_right = nullptr;
     }
@@ -466,32 +460,32 @@ public:
             if (parent == grandp->_left) {
                 uncle = grandp->_right;
                 if (is_red(uncle)) {
-                    parent->_color = uncle->_color = BLACK;
-                    grandp->_color = RED;
+                    parent->_color = uncle->_color = ALA_BLACK;
+                    grandp->_color = ALA_RED;
                     current = grandp;
                 } else {
                     if (parent->_right == current)
                         rotate_left(current = parent);
-                    parent->_color = BLACK;
-                    grandp->_color = RED;
+                    parent->_color = ALA_BLACK;
+                    grandp->_color = ALA_RED;
                     rotate_right(grandp);
                 }
             } else {
                 uncle = grandp->_left;
                 if (is_red(uncle)) {
-                    parent->_color = uncle->_color = BLACK;
-                    grandp->_color = RED;
+                    parent->_color = uncle->_color = ALA_BLACK;
+                    grandp->_color = ALA_RED;
                     current = grandp;
                 } else {
                     if (parent->_left == current)
                         rotate_right(current = parent);
-                    parent->_color = BLACK;
-                    grandp->_color = RED;
+                    parent->_color = ALA_BLACK;
+                    grandp->_color = ALA_RED;
                     rotate_left(grandp);
                 }
             }
         }
-        _root->_color = BLACK;
+        _root->_color = ALA_BLACK;
     }
 
     template<typename Data1>
@@ -501,7 +495,7 @@ public:
             ala::forward<Data1>(data));
         new_node->_is_construct = true;
         new_node->_is_nil = false;
-        new_node->_color = RED;
+        new_node->_color = ALA_RED;
         new_node->_left = nullptr;
         new_node->_right = nullptr;
         while (!is_nil(guard)) {
@@ -546,56 +540,56 @@ public:
         while (current != _root && is_black(current)) {
             if (parent->_left == current) {
                 brother = parent->_right;
-                if (brother->_color == RED) {
-                    brother->_color = BLACK;
-                    parent->_color = RED;
+                if (brother->_color == ALA_RED) {
+                    brother->_color = ALA_BLACK;
+                    parent->_color = ALA_RED;
                     rotate_left(parent);
                     brother = parent->_right;
                 }
                 if (is_black(brother->_left) && is_black(brother->_right)) {
-                    brother->_color = RED;
+                    brother->_color = ALA_RED;
                     current = parent;
                     parent = current->_parent;
                 } else {
                     if (is_black(brother->_right)) {
                         if (!is_nil(brother->_left))
-                            brother->_left->_color = BLACK;
-                        brother->_color = RED;
+                            brother->_left->_color = ALA_BLACK;
+                        brother->_color = ALA_RED;
                         rotate_right(brother);
                         brother = parent->_right;
                     }
                     brother->_color = parent->_color;
-                    parent->_color = BLACK;
+                    parent->_color = ALA_BLACK;
                     if (!is_nil(brother->_right))
-                        brother->_right->_color = BLACK;
+                        brother->_right->_color = ALA_BLACK;
                     rotate_left(parent);
                     current = _root;
                     break;
                 }
             } else {
                 brother = parent->_left;
-                if (brother->_color == RED) {
-                    brother->_color = BLACK;
-                    parent->_color = RED;
+                if (brother->_color == ALA_RED) {
+                    brother->_color = ALA_BLACK;
+                    parent->_color = ALA_RED;
                     rotate_right(parent);
                     brother = parent->_left;
                 }
                 if (is_black(brother->_left) && is_black(brother->_right)) {
-                    brother->_color = RED;
+                    brother->_color = ALA_RED;
                     current = parent;
                     parent = current->_parent;
                 } else {
                     if (is_black(brother->_left)) {
                         if (!is_nil(brother->_right))
-                            brother->_right->_color = BLACK;
-                        brother->_color = RED;
+                            brother->_right->_color = ALA_BLACK;
+                        brother->_color = ALA_RED;
                         rotate_left(brother);
                         brother = parent->_left;
                     }
                     brother->_color = parent->_color;
-                    parent->_color = BLACK;
+                    parent->_color = ALA_BLACK;
                     if (!is_nil(brother->_left))
-                        brother->_left->_color = BLACK;
+                        brother->_left->_color = ALA_BLACK;
                     rotate_right(parent);
                     current = _root;
                     break;
@@ -603,7 +597,7 @@ public:
             }
         }
         if (!is_nil(current))
-            current->_color = BLACK;
+            current->_color = ALA_BLACK;
     }
 
     template<typename Data1>
@@ -644,11 +638,11 @@ public:
         temp->_left = temp->_right = nullptr;
         destruct_node<node_allocator_type, Alloc>(temp);
         fix_nil();
-        if (color == BLACK)
+        if (color == ALA_BLACK)
             rebalance_for_erase(child, parent);
     }
     template<class Key, class T, class Comp,class Alloc>
-    friend class map<Key, T, Comp, Alloc>;
+    friend class map;
     // member variable
 protected:
     node_type *_root, *_left_nil, *_right_nil;
@@ -657,10 +651,7 @@ protected:
 
 } // namespace ala
 
-#undef RED
-#undef BLACK
-
-#undef LEFT_NIL
-#undef RIGHT_NIL
+#undef ALA_RED
+#undef ALA_BLACK
 
 #endif // HEAD

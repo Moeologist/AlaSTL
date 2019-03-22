@@ -1,3 +1,6 @@
+#ifndef _ALA_NUMERIC_LIMITS_H
+#define _ALA_NUMERIC_LIMITS_H
+
 #include <ala/config.h>
 #include <ala/external/climits.h>
 
@@ -25,7 +28,6 @@
 
 template<typename T>
 struct numeric_limits;
-// clang-format off
 
 #if defined(__FLT_DENORM_MIN__)
 #define _ALA_DENORM_MIN __FLT_DENORM_MIN__
@@ -35,7 +37,7 @@ struct numeric_limits;
 #error "no denorm min"
 #endif
 
-// #define
+// clang-format off
 MAKE_numeric_limits(bool, false, true, false, false, false, false, false, false, false)
 MAKE_numeric_limits(char, CHAR_MIN, CHAR_MAX, CHAR_MIN, 0, 0, 0, 0, 0, 0)
 MAKE_numeric_limits(signed char, SCHAR_MIN, SCHAR_MAX, SCHAR_MIN, 0, 0, 0, 0, 0, 0)
@@ -55,5 +57,7 @@ MAKE_numeric_limits(unsigned long long, 0, ULLONG_MAX, 0, 0, 0, 0, 0, 0, 0)
 MAKE_numeric_limits(float, FLT_MIN, FLT_MAX, FLT_MAX, FLT_EPSILON, 5, __builtin_huge_valf(), __builtin_nanf(""), __builtin_nansf(""), _ALA_DENORM_MIN)
 MAKE_numeric_limits(double, DBL_MIN, DBL_MAX, DBL_MAX, DBL_EPSILON, 5, __builtin_huge_val(), __builtin_nan(""), __builtin_nans(""), _ALA_DENORM_MIN)
 MAKE_numeric_limits(long double, LDBL_MIN, LDBL_MAX, LDBL_MAX, LDBL_EPSILON, 5L, __builtin_huge_val(), __builtin_nan(""), __builtin_nans(""), _ALA_DENORM_MIN)
+// clang-format on
 
 #undef MAKE_numeric_limits
+#endif

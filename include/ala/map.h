@@ -45,7 +45,7 @@ public:
     typedef typename tree_type::const_iterator         const_iterator;
     typedef typename tree_type::reverse_iterator       reverse_iterator;
     typedef typename tree_type::const_reverse_iterator const_reverse_iterator;
-    typedef typename tree_type::node_type              node_type;
+    typedef          void                              node_type;
     typedef             void                           insert_return_type;
 
     // construct/copy/destroy:
@@ -108,7 +108,9 @@ public:
     size_type max_size() const noexcept { return numeric_limits<difference_type>::max(); }
 
     // element access:
-    mapped_type& operator[](const key_type& k);
+    mapped_type& operator[](const key_type& k) {
+        if (search())
+    }
     mapped_type& operator[](key_type&& k);
 
     mapped_type&       at(const key_type& k);

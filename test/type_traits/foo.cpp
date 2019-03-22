@@ -130,11 +130,23 @@ int main() {
     static_assert(ala::is_constructible<C0&, Cd &&>::value == std::is_constructible<C0&, Cd &&>::value, "oh");
     static_assert(ala::is_constructible<C0&, Cd &&>::value == false, "oh");
 
-    #if !defined(_ALA_MSVC) || _MSC_VER >= 1910
+    #if !defined(_ALA_MSVC) || _ALA_CPP_STD >= 17
 
     static_assert(ala::is_same<ala::invoke_result_t<pmf, CC, float>, int>::value, "oh");
     static_assert(ala::is_same<ala::invoke_result_t<decltype(&CC::v), CC>, double &&>::value, "oh");
     #endif
+
+    struct A {};
+    struct B { explicit B() = default; };
+
+    A a1 = {};
+    A a2 {};
+
+    // B b1 = {}; // Error, would use explicit default constructor
+    B b2 {};
+    static_assert(ala::is_implicitly_default_constructible<A>::value, "oh");
+    static_assert(!ala::is_implicitly_default_constructible<B>::value, "oh");
+
     return 0;
 }
 

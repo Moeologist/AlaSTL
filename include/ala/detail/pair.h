@@ -7,31 +7,6 @@
 
 namespace ala {
 
-template<typename T>
-struct _is_implicitly_default_constructible_impl {
-    template<typename T1>
-    static void _help(const T1 &);
-
-    template<typename T1, typename = decltype(_help<const T1 &>({}))>
-    static true_type _test(const T1 &);
-
-    static false_type _test(...);
-
-    typedef decltype(_test(declval<T>())) type;
-};
-
-template<typename T>
-struct _is_implicitly_default_constructible_helper
-    : _is_implicitly_default_constructible_impl<T>::type {};
-
-template<typename T>
-struct is_implicitly_default_constructible
-    : _and_<is_default_constructible<T>,
-            _is_implicitly_default_constructible_helper<T>> {};
-
-template<typename T>
-constexpr ALA_VAR_INLINE bool is_implicitly_default_constructible_v =
-    is_implicitly_default_constructible<T>::value;
 
 template<typename T1, typename T2>
 struct pair {
@@ -42,7 +17,7 @@ struct pair {
     second_type second;
 
     // clang-format off
-    // make template not specialization
+    // make template not specialization immediately
     template<typename  U1 = T1, typename U2 = T2, typename = enable_if_t<
                  is_default_constructible<U1>::value &&
                  is_default_constructible<U2>::value &&

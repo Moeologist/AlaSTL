@@ -14,7 +14,6 @@
 
 namespace ala {
 
-
 template<typename T>
 add_rvalue_reference_t<T> declval() noexcept;
 
@@ -44,20 +43,47 @@ constexpr enable_if_t<is_swappable<T>::value> swap(
         T *last = lhs + N;
         T *ir = rhs;
         for (; il != last; ++il, ++ir)
-            swap(*il, *ir);
+            ala::swap(*il, *ir);
     }
 }
 
 template<class T>
 constexpr enable_if_t<is_move_constructible<T>::value && is_move_assignable<T>::value>
-swap(T &lhs, T &rhs) noexcept(is_nothrow_move_constructible<T>:: value &&
+swap(T &lhs, T &rhs) noexcept(is_nothrow_move_constructible<T>::value &&
                               is_nothrow_move_assignable<T>::value) {
     T tmp = move(lhs);
     lhs = move(rhs);
     rhs = move(tmp);
 }
 
-#if !defined(_ALA_MSVC) || _MSC_VER >= 1910
+template<typename T>
+struct _is_implicitly_default_constructible_impl {
+    template<typename T1>
+    static void _help(const T1 &);
+
+    template<typename T1, typename = decltype(_help<const T1 &>({}))>
+    static true_type _test(const T1 &);
+
+    static false_type _test(...);
+
+    typedef decltype(_test(declval<T>())) type;
+};
+
+template<typename T, bool>
+struct _is_implicitly_default_constructible_helper: false_type {};
+
+template<typename T>
+struct _is_implicitly_default_constructible_helper<T, true>
+    : _is_implicitly_default_constructible_impl<T>::type {};
+
+template<typename T>
+struct is_implicitly_default_constructible
+    : _is_implicitly_default_constructible_helper<T, is_default_constructible<T>::value> {};
+
+template<typename T>
+constexpr ALA_VAR_INLINE bool is_implicitly_default_constructible_v =
+    is_implicitly_default_constructible<T>::value;
+
 template<typename T>
 struct _class_of_memptr;
 
@@ -79,56 +105,56 @@ struct reference_wrapper;
 struct _invoker_mf {
     template<class Mf, class Class, class... Args>
     static decltype(auto) _call(Mf mf, Class &&ins, Args &&... args)
-    noexcept(noexcept((forward<Class>(ins).*mf)(forward<Args>(args)...))) {
-        return ((forward<Class>(ins).*mf)(forward<Args>(args)...));
+    noexcept(noexcept((ala::forward<Class>(ins).*mf)(ala::forward<Args>(args)...))) {
+        return ((ala::forward<Class>(ins).*mf)(ala::forward<Args>(args)...));
     }
 };
 
 struct _invoker_mf_refw {
     template<class Mf, class Class, class... Args>
     static decltype(auto) _call(Mf mf, Class &&ins, Args &&... args)
-    noexcept(noexcept((forward<Class>(ins).get().*mf)(forward<Args>(args)...))) {
-        return ((forward<Class>(ins).get().*mf)(forward<Args>(args)...).get());
+    noexcept(noexcept((ala::forward<Class>(ins).get().*mf)(ala::forward<Args>(args)...))) {
+        return ((ala::forward<Class>(ins).get().*mf)(ala::forward<Args>(args)...).get());
     }
 };
 
 struct _invoker_mf_deref {
     template<class Mf, class Class, class... Args>
     static decltype(auto) _call(Mf mf, Class &&ins, Args &&... args)
-    noexcept(noexcept(((*forward<Class>(ins)).*mf)(forward<Args>(args)...))) {
-        return (((*forward<Class>(ins)).*mf)(forward<Args>(args)...));
+    noexcept(noexcept(((*ala::forward<Class>(ins)).*mf)(ala::forward<Args>(args)...))) {
+        return (((*ala::forward<Class>(ins)).*mf)(ala::forward<Args>(args)...));
     }
 };
 
 struct _invoker_mo {
     template<class Mo, class Class>
     static decltype(auto) _call(Mo mo, Class &&ins)
-    noexcept(noexcept(forward<Class>(ins).*mo)) {
-        return (forward<Class>(ins).*mo);
+    noexcept(noexcept(ala::forward<Class>(ins).*mo)) {
+        return (ala::forward<Class>(ins).*mo);
     }
 };
 
 struct _invoker_mo_refw {
     template<class Mo, class Class>
     static decltype(auto) _call(Mo mo, Class &&ins)
-    noexcept(noexcept(forward<Class>(ins).get().*mo)) {
-        return (forward<Class>(ins).get().*mo);
+    noexcept(noexcept(ala::forward<Class>(ins).get().*mo)) {
+        return (ala::forward<Class>(ins).get().*mo);
     }
 };
 
 struct _invoker_mo_deref {
     template<class Mo, class Class>
     static decltype(auto) _call(Mo mo, Class &&ins)
-    noexcept(noexcept((*forward<Class>(ins)).*mo)) {
-        return ((*forward<Class>(ins)).*mo);
+    noexcept(noexcept((*ala::forward<Class>(ins)).*mo)) {
+        return ((*ala::forward<Class>(ins)).*mo);
     }
 };
 
 struct _invoker_functor {
     template<class Call, class... Args>
     static decltype(auto) _call(Call &&call, Args &&... args)
-    noexcept(noexcept(forward<Call>(call)(forward<Args>(args)...))) {
-        return (forward<Call>(call)(forward<Args>(args)...));
+    noexcept(noexcept(ala::forward<Call>(call)(ala::forward<Args>(args)...))) {
+        return (ala::forward<Call>(call)(ala::forward<Args>(args)...));
     }
 };
 
@@ -168,12 +194,10 @@ struct _invoker<Call, T, Args...>: _invoker_helper<Call, T> {};
 // use decltype(auto) cause msvc bug
 template<class Call, class... Args>
 auto invoke(Call &&call, Args &&... args)
-noexcept(noexcept(_invoker<Call, Args...>::_call(forward<Call>(call), forward<Args>(args)...))) ->
-decltype(_invoker<Call, Args...>::_call(forward<Call>(call), forward<Args>(args)...)) {
-    return (_invoker<Call, Args...>::_call(forward<Call>(call), forward<Args>(args)...));
+noexcept(noexcept(_invoker<Call, Args...>::_call(ala::forward<Call>(call), ala::forward<Args>(args)...))) ->
+decltype(_invoker<Call, Args...>::_call(ala::forward<Call>(call), ala::forward<Args>(args)...)) {
+    return (_invoker<Call, Args...>::_call(ala::forward<Call>(call), ala::forward<Args>(args)...));
 }
-
-#endif
 
 template<typename...> struct _or_;
 template<> struct _or_<> : false_type {};
@@ -252,7 +276,7 @@ template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) vo
 template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) const volatile &&> : true_type {};
 
 #if ALA_ENABLE_CPP_MACRO && __cpp_noexcept_function_type >= 201510L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1910)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1912)
 template<typename Ret, typename... Args> struct is_function<Ret(Args...) noexcept> :                        true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) noexcept> :                   true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args...) const noexcept> :                  true_type {};
@@ -358,7 +382,7 @@ template<typename T>                                 struct _is_signed_helper<T,
 template<typename T> struct is_signed : _is_signed_helper<T> {};
 
 template<typename T>
-struct _is_array_known_bounds : _and_<is_array<T>, 
+struct _is_array_known_bounds : _and_<is_array<T>,
                                       bool_constant<(extent<T, 0>::value > 0)>> {};
 
 template<typename T>
@@ -461,7 +485,7 @@ template<typename T, typename Arg>
 struct _is_a_constructible_helper : _and_<is_destructible<T>, _is_a_constructible_impl<T, Arg>> {};
 
 template<typename T, typename Arg, bool = is_reference<T>::value>
-struct _is_a_constructible : _and_<_is_static_castable_impl<Arg, T>, 
+struct _is_a_constructible : _and_<_is_static_castable_impl<Arg, T>,
                                    _not_<typename _is_base_to_derived_cast<T, Arg>::type>,
                                    _not_<typename _is_lvalue_to_rvalue_cast<T, Arg>::type>> {};
 // Clang version under 4.0 static_cast not work well
@@ -577,7 +601,6 @@ template<typename T> struct is_nothrow_move_assignable : is_nothrow_assignable<a
 
 template<typename T> struct has_virtual_destructor : bool_constant<__has_virtual_destructor(T)> {};
 
-#if !defined(_ALA_MSVC) || _MSC_VER >= 1910
 template<typename T>
 struct _is_referenceable_impl {
     template<typename T1, typename = T1&> static true_type _test(int);
@@ -590,7 +613,7 @@ struct _is_referenceable : _is_referenceable_impl<T>::type {};
 
 template<typename T, typename U = T>
 struct _is_swappable_with_impl {
-    template<typename Lhs, typename Rhs, typename = decltype(swap(declval<Lhs>(), declval<Rhs>()))>
+    template<typename Lhs, typename Rhs, typename = decltype(ala::swap(declval<Lhs>(), declval<Rhs>()))>
     static true_type _test(int);
     template<typename, typename>
     static false_type _test(...);
@@ -611,21 +634,20 @@ struct is_swappable : conditional_t<_is_referenceable<T>::value,
                                     is_swappable_with<add_lvalue_reference_t<T>, add_lvalue_reference_t<T>>,
                                     false_type> {};
 
-template<typename T, typename U, bool = is_swappable_with<T, U>::value>
-struct _is_nothrow_swappable_helper : bool_constant<noexcept(swap(declval<T>(), declval<U>())) &&
-                                                    noexcept(swap(declval<U>(), declval<T>()))> {};
+template<typename T, typename U, bool>
+struct _is_nothrow_swappable_helper : bool_constant<noexcept(noexcept(ala::swap(declval<T>(), declval<U>())) &&
+                                                             noexcept(ala::swap(declval<U>(), declval<T>())))> {};
 
 template<typename T, typename U>
 struct _is_nothrow_swappable_helper<T, U, false> : false_type {};
 
 template<typename T, typename U>
-struct is_nothrow_swappable_with : _is_nothrow_swappable_helper<T, U> {};
+struct is_nothrow_swappable_with : _is_nothrow_swappable_helper<T, U, is_swappable_with<T, U>::value> {};
 
 template<typename T>
 struct is_nothrow_swappable : conditional_t<_is_referenceable<T>::value,
                                             is_nothrow_swappable_with<add_lvalue_reference_t<T>, add_lvalue_reference_t<T>>,
                                             false_type> {};
-#endif
 
 template<typename T> struct alignment_of : integral_constant<size_t, alignof(T)> {};
 
@@ -900,6 +922,16 @@ enum class endian {
     native = little
 #endif
 };
+
+template<typename T> struct type_identity { typedef T type; };
+template<typename T> using type_identity_t = typename type_identity<T>::type;
+
+template<typename T> struct unwrap_reference { using type = T; };
+template<typename T> struct unwrap_reference<reference_wrapper<T>> { using type = T&; };
+template<typename T> using unwrap_reference_t = typename unwrap_reference<T>::type;
+
+template<typename T> struct unwrap_ref_decay : unwrap_reference<decay_t<T>> {};
+template<typename T> using unwrap_ref_decay_t = typename unwrap_ref_decay<T>::type;
 
 } // namespace ala
 

@@ -9,7 +9,7 @@ namespace ala {
 // helper class:
 template<typename T, T Value>
 struct integral_constant {
-    static const T value = Value;
+    static constexpr T value = Value;
     typedef T value_type;
     typedef integral_constant<T, Value> type;
 
@@ -285,8 +285,7 @@ template<typename... B> ALA_VAR_INLINE constexpr bool conjunction_v = conjunctio
 template<typename... B> ALA_VAR_INLINE constexpr bool disjunction_v = disjunction<B...>::value;
 template<typename B>    ALA_VAR_INLINE constexpr bool negation_v    = negation<B>::value;
 
-template<class T> struct type_identity { typedef T type; };
-template<class T> using type_identity_t = typename type_identity<T>::type;
+
 
 // clang-format on
 

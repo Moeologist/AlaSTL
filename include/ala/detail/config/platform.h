@@ -14,7 +14,7 @@
 #else // __clang__
 #define _ALA_MSVC
 
-#if _MSC_VER < 1900
+#if _MSC_VER < 1910
 #error "unsupported compiler; ala needs c++14 compiler at least."
 #endif
 
@@ -80,10 +80,10 @@
 #endif
 
 #if !defined(_ALA_DEBUG) && !defined(_ALA_RELEASE)
-#define _ALA_RELEASE
+#define _ALA_DEBUG
 #endif
 
-#if (__cplusplus >= 201703) || (_MSC_VER >= 1910)
+#if __cplusplus >= 201703
 #define _ALA_CPP_STD 17
 #else
 #define _ALA_CPP_STD 14
