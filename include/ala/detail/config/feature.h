@@ -7,13 +7,15 @@
 
 #if defined(_ALA_MSVC)
 
+#if !defined(__is_identifier)
 #define __has_cpp_attribute(x) 0
+#endif
 #define _ALA_ENABLE_CPP_ATTR_MACRO 0
 
-#if _MSC_VER < 1915
-#define _ALA_ENABLE_CPP_MACRO 0
-#else
+#if _MSC_VER >= 1915
 #define _ALA_ENABLE_CPP_MACRO 1
+#else
+#define _ALA_ENABLE_CPP_MACRO 0
 #endif
 
 #else
@@ -32,6 +34,13 @@
 #define _ALA_ENABLE_DEDUCTION_GUIDES 1
 #else
 #define _ALA_ENABLE_DEDUCTION_GUIDES 0
+#endif
+
+#if _ALA_ENABLE_CPP_MACRO && __cpp_if_constexpr	>= 201606L || \
+    (defined(_ALA_MSVC) && _MSC_VER >= 1911)
+#define ALA_CONST_IF if constexpr
+#else
+#define ALA_CONST_IF if
 #endif
 
 // compatibility macro

@@ -2,25 +2,12 @@
 #define _ALA_DETAIL_ALLOCATOR_H
 
 #include <ala/type_traits.h>
-
-#define HAS_MEM(mem) \
-    template<typename _type, typename = void_t<>> \
-    struct _has_##mem: false_type {}; \
-    template<typename _type> \
-    struct _has_##mem<_type, void_t<typename _type::mem>>: true_type {};
-
-#define HAS_MEM_TYPE(cls, mem, def) \
-    template<typename _type, typename = void_t<>> \
-    struct _##mem { \
-        typedef def type; \
-    }; \
-    template<typename _type> \
-    struct _##mem<_type, void_t<typename _type::mem>> { \
-        typedef typename _type::mem type; \
-    }; \
-    typedef typename _##mem<cls>::type mem;
+#include <ala/detail/macro.h>
 
 namespace ala {
+
+template<class T>
+const T *addressof(const T &&) = delete;
 
 template<class T>
 constexpr T *addressof(T &arg) noexcept {
@@ -29,18 +16,17 @@ constexpr T *addressof(T &arg) noexcept {
 
 template<typename Ptr>
 struct pointer_traits {
-    HAS_MEM(element_type)
+    ALA_HAS_MEM(element_type)
     template<typename T, bool = _has_element_type<T>::value>
-    struct _element_type {};
+    struct _get_element_type {};
 
     template<typename T>
-    struct _element_type<T, true> {
+    struct _get_element_type<T, true> {
         typedef typename T::element_type type;
     };
 
-    template<template<typename, typename...> class Template, typename T,
-             typename... Args>
-    struct _element_type<Template<T, Args...>, false> {
+    template<template<typename, typename...> class Template, typename T, typename... Args>
+    struct _get_element_type<Template<T, Args...>, false> {
         typedef T type;
     };
 
@@ -48,33 +34,32 @@ struct pointer_traits {
     struct _has_rebind_template: false_type {};
 
     template<typename T>
-    struct _has_rebind_template<T, void_t<typename T::template rebind<void>>>
+    struct _has_rebind_template<T, void_t<typename T::template rebind<int>>>
         : true_type {};
 
     template<typename T, typename U, bool = _has_rebind_template<T>::value>
-    struct _rebind {};
+    struct _get_rebind;
 
     template<typename T, typename U>
-    struct _rebind<T, U, true> {
+    struct _get_rebind<T, U, true> {
         typedef typename T::template rebind<U> type;
     };
 
     template<template<typename, typename...> class Template, typename U,
              typename T, typename... Args>
-    struct _rebind<Template<T, Args...>, U, false> {
+    struct _get_rebind<Template<T, Args...>, U, false> {
         typedef Template<U, Args...> type;
     };
 
     typedef Ptr pointer;
-    typedef typename _element_type<pointer>::type element_type;
-    HAS_MEM_TYPE(pointer, difference_type, ptrdiff_t)
+    typedef typename _get_element_type<pointer>::type element_type;
+    ALA_HAS_MEM_TYPEDEF(pointer, difference_type, ptrdiff_t)
 
     template<typename U>
-    using rebind = typename _rebind<pointer, U>::type;
+    using rebind = typename _get_rebind<pointer, U>::type;
 
-    constexpr static pointer
-    pointer_to(conditional_t<is_void_v<element_type>, void, element_type>
-                   &r) noexcept {
+    constexpr static pointer pointer_to(
+        conditional_t<is_void<element_type>::value, void, element_type &>r) noexcept {
         return pointer::pointer_to(r);
     }
 };
@@ -88,25 +73,24 @@ struct pointer_traits<T *> {
     template<typename U>
     using rebind = U *;
 
-    constexpr static pointer
-    pointer_to(conditional_t<is_void_v<element_type>, void, element_type>
-                   &r) noexcept {
+    constexpr static pointer pointer_to(
+        conditional_t<is_void<element_type>::value, void, element_type> &r) noexcept {
         return ala::addressof(r);
     }
 };
 
-// clang-format off
-
 template<class T>
 struct allocator {
-    typedef T         value_type;
-    typedef T*        pointer;
-    typedef const T*  const_pointer;
-    typedef T&        reference;
-    typedef const T&  const_reference;
-    typedef size_t    size_type;
+    typedef T value_type;
+    typedef T *pointer;
+    typedef const T *const_pointer;
+    typedef T &reference;
+    typedef const T &const_reference;
+    typedef size_t size_type;
     typedef ptrdiff_t difference_type;
+    typedef false_type propagate_on_container_copy_assignment;
     typedef true_type propagate_on_container_move_assignment;
+    typedef false_type propagate_on_container_swap;
     typedef true_type is_always_equal;
     template<class U>
     struct rebind {
@@ -119,11 +103,11 @@ struct allocator {
     ~allocator() {}
 
     ALA_NODISCARD T *allocate(ala::size_t n) {
-        return static_cast<T *>(::operator new (n * sizeof(T)));
+        return static_cast<T *>(::operator new(n * sizeof(T)));
     }
 
     void deallocate(T *p, ala::size_t n) {
-        ::operator delete (static_cast<void*>(p), n * sizeof(T));
+        ::operator delete(static_cast<void *>(p), n * sizeof(T));
     }
 
     template<class U, class... Args>
@@ -149,24 +133,22 @@ bool operator!=(const allocator<T> &, const allocator<U> &) noexcept {
 
 template<class Alloc>
 struct allocator_traits {
+    // clang-format off
     typedef Alloc                      allocator_type;
     typedef typename Alloc::value_type value_type;
-    HAS_MEM_TYPE(allocator_type, pointer,            value_type*)
-    HAS_MEM_TYPE(allocator_type, const_pointer,      typename pointer_traits<pointer>::template rebind<const value_type>)
-    HAS_MEM_TYPE(allocator_type, void_pointer,       typename pointer_traits<pointer>::template rebind<void>)
-    HAS_MEM_TYPE(allocator_type, const_void_pointer, typename pointer_traits<pointer>::template rebind<const void>)
-    HAS_MEM_TYPE(allocator_type, difference_type,    typename pointer_traits<pointer>::difference_type)
-    HAS_MEM_TYPE(allocator_type, size_type,          make_signed_t<difference_type>)
-    HAS_MEM_TYPE(allocator_type, propagate_on_container_copy_assignment, false_type)
-    HAS_MEM_TYPE(allocator_type, propagate_on_container_move_assignment, false_type)
-    HAS_MEM_TYPE(allocator_type, propagate_on_container_swap,            false_type)
-    HAS_MEM_TYPE(allocator_type, is_always_equal,                        false_type)
+    ALA_HAS_MEM_TYPEDEF(allocator_type, pointer,            value_type*)
+    ALA_HAS_MEM_TYPEDEF(allocator_type, const_pointer,      typename pointer_traits<pointer>::template rebind<const value_type>)
+    ALA_HAS_MEM_TYPEDEF(allocator_type, void_pointer,       typename pointer_traits<pointer>::template rebind<void>)
+    ALA_HAS_MEM_TYPEDEF(allocator_type, const_void_pointer, typename pointer_traits<pointer>::template rebind<const void>)
+    ALA_HAS_MEM_TYPEDEF(allocator_type, difference_type,    typename pointer_traits<pointer>::difference_type)
+    ALA_HAS_MEM_TYPEDEF(allocator_type, size_type,          make_signed_t<difference_type>)
+    ALA_HAS_MEM_TYPEDEF(allocator_type, propagate_on_container_copy_assignment, false_type)
+    ALA_HAS_MEM_TYPEDEF(allocator_type, propagate_on_container_move_assignment, false_type)
+    ALA_HAS_MEM_TYPEDEF(allocator_type, propagate_on_container_swap,            false_type)
+    ALA_HAS_MEM_TYPEDEF(allocator_type, is_always_equal,                        false_type)
+    // clang-format on
 };
 
-// clang-format on
 } // namespace ala
-
-#undef HAS_MEM
-#undef HAS_MEM_TYPE
 
 #endif

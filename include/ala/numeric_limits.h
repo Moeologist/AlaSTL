@@ -2,27 +2,27 @@
 #define _ALA_NUMERIC_LIMITS_H
 
 #include <ala/config.h>
-#include <ala/external/climits.h>
+#include <ala/external/limits.h>
 
 #define MAKE_numeric_limits(_type_, _minV_, _maxV_, _lowestV_, _epsilonV_, \
                             _round_errorV_, _infinityV_, _quiet_NaNV_, \
                             _signaling_NaNV_, _denorm_minV_) \
     template<> \
-    struct numeric_limits< _type_ > { \
-        static constexpr _type_ min() noexcept { return _minV_ ; } \
-        static constexpr _type_ max() noexcept { return _maxV_ ; } \
-        static constexpr _type_ lowest() noexcept { return _lowestV_ ; } \
-        static constexpr _type_ epsilon() noexcept { return _epsilonV_ ; } \
+    struct numeric_limits<_type_> { \
+        static constexpr _type_ min() noexcept { return _minV_; } \
+        static constexpr _type_ max() noexcept { return _maxV_; } \
+        static constexpr _type_ lowest() noexcept { return _lowestV_; } \
+        static constexpr _type_ epsilon() noexcept { return _epsilonV_; } \
         static constexpr _type_ round_error() noexcept { \
-            return _round_errorV_ ; \
+            return _round_errorV_; \
         } \
-        static constexpr _type_ infinity() noexcept { return _infinityV_ ; } \
-        static constexpr _type_ quiet_NaN() noexcept { return _quiet_NaNV_ ; } \
+        static constexpr _type_ infinity() noexcept { return _infinityV_; } \
+        static constexpr _type_ quiet_NaN() noexcept { return _quiet_NaNV_; } \
         static constexpr _type_ signaling_NaN() noexcept { \
-            return _signaling_NaNV_ ; \
+            return _signaling_NaNV_; \
         } \
         static constexpr _type_ denorm_min() noexcept { \
-            return _denorm_minV_ ; \
+            return _denorm_minV_; \
         } \
     };
 

@@ -23,6 +23,7 @@ struct PointCmp {
 int main() {
     // (1) 默认构造函数
     ala::map<std::string, int> map1;
+    ala::map<std::string, int>::iterator it = map1.cbegin();
     map1["something"] = 69;
     map1["anything"] = 199;
     map1["that thing"] = 50;
@@ -80,7 +81,7 @@ int main() {
     ala::map<Point, double, decltype(cmpLambda)> magy(cmpLambda);
 
     // 各种插入元素的方式：
-    magy.insert(std::pair<Point, double>({5, -12}, 13));
+    magy.insert(ala::pair<Point, double>({5, -12}, 13));
     magy.insert({{3, 4}, 5});
     magy.insert({Point{-8.0, -15.0}, 17});
 

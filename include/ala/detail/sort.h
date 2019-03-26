@@ -1,4 +1,3 @@
-// left-closed right-open interval, first: left iterator, last: tright iterator
 // ForIt: forward iterator, BiIt: bidirectional iterator, RanIt: random access iterator
 
 #ifndef _ALA_DETAIL_SORT_H
@@ -44,6 +43,7 @@ void insertion_sort(BiIt first, BiIt last) {
 // 	for (int i = 0; i < 128; ++i)
 // 		printf("%d", seq[i]);
 // }
+
 template<typename RanIt>
 void shell_sort(RanIt first, RanIt last) {
     typedef typename iterator_traits<RanIt>::value_type T;

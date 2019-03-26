@@ -80,10 +80,9 @@ int main() {
                       std::is_default_constructible<char>::value,
                   "oh");
 
-    static_assert(
-        std::__is_implicitly_default_constructible<const int>::value &&
-            std::__is_implicitly_default_constructible<char>::value,
-        "oh");
+    static_assert(ala::is_implicitly_default_constructible<const int>::value &&
+                      ala::is_implicitly_default_constructible<char>::value,
+                  "oh");
     std::cout << ala::timer(test);
     std::cout << ala::timer(test1);
     return 0;

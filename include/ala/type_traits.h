@@ -64,6 +64,7 @@ struct _is_implicitly_default_constructible_impl {
     template<typename T1, typename = decltype(_help<const T1 &>({}))>
     static true_type _test(const T1 &);
 
+    template<typename T1>
     static false_type _test(...);
 
     typedef decltype(_test(declval<T>())) type;
