@@ -5,13 +5,10 @@
 typedef ala::La::vector<float, 3> Vec;
 typedef ala::La::vector<float, 2> Vec2;
 
-template<class... T>
-constexpr void shit(T... t) {
-	static_assert(sizeof...(T) == 3);
-}
 
 int main() {
-	Vec a{1, 2, 3};
+	ala::La::vector ax{1., 2, 3};
+	Vec a {1, 2, 3};
 	const Vec b = Vec{3, 4, 5};
 
 	assert(b + a == Vec({4, 6, 8}));
@@ -35,12 +32,15 @@ int main() {
 
 	auto c = b;
 
-	auto k = Vec2(3, 4).normlized();
-	assert(k == Vec2(0.6, 0.8));
+	auto k = Vec2{3, 4}.normlized();
+	assert((k == Vec2{0.6, 0.8}));
 
 	c = ala::La::cross(Vec{1, 0, 0}, Vec{0, 1, 0});
 	auto xx = ala::La::dot(Vec{1, 2, 3}, Vec{4, 5, 6});
 
-	shit(2, 3, 4);
+	ala::La::vector<double ,3> xd = c.cast<double>();
+	// auto xd = ala::La::vector<double ,3>{1,2,3};
+	// Vec xf = xd;
+
 	return 0;
 }
