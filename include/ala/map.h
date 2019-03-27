@@ -207,17 +207,16 @@ protected:
         _node_adaptor(_node_adaptor &&nh) noexcept: _empty(nh._empty) {
             if (!nh._empty) {
                 _ptr = ala::move(nh._ptr);
-                _a = ala::move(nh._a)
+                _a = ala::move(nh._a);
             }
             nh._empty = true;
         }
 
         _node_adaptor &operator=(_node_adaptor &&nh) {
             if (!_empty) {
-                using nalloc_type =
-                    typename allocator_type::template rebind<NodePtr>::other;
+                if(_ptr->_is_construct)
                 _a.destroy(ala::addressof(_ptr->_data));
-                nalloc_type().deallocate(_ptr);
+                NAlloc().deallocate(_ptr);
             }
 
             if (!nh._empty) {
@@ -232,19 +231,31 @@ protected:
 
         ~_node_adaptor() {
             if (!_empty) {
-                using nalloc_type =
-                    typename allocator_type::template rebind<NodePtr>::other;
-                _a.destroy(ala::addressof(_ptr->_data));
-                nalloc_type().deallocate(_ptr);
+                if(_ptr->_is_construct)
+                    _a.destroy(ala::addressof(_ptr->_data));
+                NAlloc().deallocate(_ptr, 1);
             }
         }
 
-        explicit operator bool() const noexcept { return !_empty; }
-        ALA_NODISCARD bool empty() const noexcept { return _empty; }
+        explicit operator bool() const noexcept {
+            return !_empty;
+        }
 
-        allocator_type get_allocator() const { return _a; }
-        key_type &key() const { return _ptr->_data.first; }
-        mapped_type &mapped() const { return _ptr->_data.second; }
+        ALA_NODISCARD bool empty() const noexcept {
+            return _empty;
+        }
+
+        allocator_type get_allocator() const {
+            return _a;
+        }
+
+        key_type &key() const {
+            return const_cast<key_type &>(_ptr->_data.first);
+        }
+
+        mapped_type &mapped() const {
+            return _ptr->_data.second;
+        }
 
         void swap(_node_adaptor &nh) noexcept(
             allocator_type::propagate_on_container_swap::value ||
@@ -278,10 +289,10 @@ protected:
     };
 
 public:
-    typedef typename tree_type::iterator iterator;
-    typedef typename tree_type::const_iterator const_iterator;
-    typedef typename tree_type::reverse_iterator reverse_iterator;
-    typedef typename tree_type::const_reverse_iterator const_reverse_iterator;
+    typedef rb_iterator<value_type, typename tree_type::node_pointer> iterator;
+    typedef ala::const_iterator<iterator> const_iterator;
+    typedef ala::reverse_iterator<iterator> reverse_iterator;
+    typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
     typedef _node_adaptor<typename tree_type::node_pointer> node_type;
     typedef _insert_return_adaptor<iterator, node_type> insert_return_type;
 
@@ -298,10 +309,13 @@ public:
         : tree(value_compare(key_compare()), a) {}
 
     map(const map &m): tree(m.tree) {}
+
     map(map &&m) noexcept(is_nothrow_move_constructible<allocator_type>::value &&
                               is_nothrow_move_constructible<key_compare>::value)
         : tree(ala::move(m.tree)) {}
+
     map(const map &m, const allocator_type &a): tree(m.tree, a) {}
+
     map(map &&m, const allocator_type &a): tree(ala::move(m.tree), a) {}
 
     template<class It>
@@ -320,6 +334,7 @@ public:
         : tree(value_compare(comp), a) {
         this->insert(il);
     }
+
     map(initializer_list<value_type> il, const allocator_type &a)
         : map(il, key_compare(), a) {}
 
@@ -327,7 +342,7 @@ public:
 
     // assignment
     map &operator=(const map &m) {
-        tree(m.tree);
+        tree = m.tree;
         return *this;
     }
 
@@ -335,56 +350,93 @@ public:
         allocator_type::propagate_on_container_move_assignment::value
             &&is_nothrow_move_assignable<allocator_type>::value
                 &&is_nothrow_move_assignable<key_compare>::value) {
-        tree(move(m.tree));
+        tree = move(m.tree);
         return *this;
     }
 
     map &operator=(initializer_list<value_type> il) {
         tree.clear();
-        insert(il);
+        this->insert(il);
         return *this;
     }
 
     // iterators:
-    iterator begin() noexcept { return tree.begin(); }
-    const_iterator begin() const noexcept { return tree.cbegin(); }
-    iterator end() noexcept { return tree.end(); }
-    const_iterator end() const noexcept { return tree.cend(); }
+    iterator begin() noexcept {
+        return iterator(tree.begin());
+    }
 
-    reverse_iterator rbegin() noexcept { return tree.rbegin(); }
-    const_reverse_iterator rbegin() const noexcept { return tree.crbegin(); }
-    reverse_iterator rend() noexcept { return tree.rend(); }
-    const_reverse_iterator rend() const noexcept { return tree.crend(); }
+    const_iterator begin() const noexcept {
+        return this->cbegin();
+    }
 
-    const_iterator cbegin() const noexcept { return tree.cbegin(); }
-    const_iterator cend() const noexcept { return tree.cend(); }
-    const_reverse_iterator crbegin() const noexcept { return tree.crbegin(); }
-    const_reverse_iterator crend() const noexcept { return tree.crend(); }
+    iterator end() noexcept {
+        return iterator(tree.end());
+    }
+
+    const_iterator end() const noexcept {
+        return this->cend();
+    }
+
+    reverse_iterator rbegin() noexcept {
+        return reverse_iterator(iterator(tree.end()));
+    }
+
+    const_reverse_iterator rbegin() const noexcept {
+        return this->crbegin();
+    }
+
+    reverse_iterator rend() noexcept {
+        return reverse_iterator(iterator(tree.begin()));
+    }
+
+    const_reverse_iterator rend() const noexcept {
+        return this->crend();
+    }
+
+    const_iterator cbegin() const noexcept {
+        return const_iterator(iterator(tree.begin()));
+    }
+
+    const_iterator cend() const noexcept {
+        return const_iterator(iterator(tree.end()));
+    }
+
+    const_reverse_iterator crbegin() const noexcept {
+        return const_iterator(reverse_iterator(iterator(tree.end())));
+    }
+
+    const_reverse_iterator crend() const noexcept {
+        return const_iterator(reverse_iterator(iterator(tree.begin())));
+    }
 
     // capacity:
-    bool empty() const noexcept { return size() == 0; }
-    size_type size() const noexcept { return tree.size(); }
+    bool empty() const noexcept {
+        return size() == 0;
+    }
+
+    size_type size() const noexcept {
+        return tree.size();
+    }
+
     size_type max_size() const noexcept {
         return numeric_limits<difference_type>::max();
     }
 
     // element access:
     mapped_type &operator[](const key_type &k) {
-        return tree
-            .emplace(ala::piecewise_construct, ala::forward_as_tuple(k),
-                     ala::forward_as_tuple())
-            .first->second;
-    }
-    mapped_type &operator[](key_type &&k) {
-        return tree
-            .emplace(ala::piecewise_construct,
-                     ala::forward_as_tuple(ala::move(k)), ala::forward_as_tuple())
-            .first->second;
+        return this->try_emplace(k).first->second;
     }
 
-    mapped_type &at(const key_type &k) { return tree.find(k)->second; }
+    mapped_type &operator[](key_type &&k) {
+        return this->try_emplace(ala::move(k)).first->second;
+    }
+
+    mapped_type &at(const key_type &k) {
+        return iterator(tree.find(k))->second;
+    }
+
     const mapped_type &at(const key_type &k) const {
-        return tree.find(k)->second;
+        return const_iterator(iterator(tree.find(k)))->second;
     }
 
     // modifiers:
@@ -395,31 +447,35 @@ public:
 
     template<class... Args>
     iterator emplace_hint(const_iterator position, Args &&... args) {
-        return tree.emplace_hint(position, ala::forward<Args>(args)...);
+        return tree.emplace_hint(position._ptr, ala::forward<Args>(args)...);
     }
 
-    pair<iterator, bool> insert(const value_type &v) { return tree.emplace(v); }
+    pair<iterator, bool> insert(const value_type &v) {
+        return tree.emplace(v);
+    }
 
     pair<iterator, bool> insert(value_type &&v) {
         return tree.emplace(ala::move(v));
     }
 
-    template<class P, typename = enable_if_t<is_constructible<value_type, P &&>::value>>
+    template<class P,
+             typename = enable_if_t<is_constructible<value_type, P &&>::value>>
     pair<iterator, bool> insert(P &&p) {
         return tree.emplace(ala::forward<P>(p));
     }
 
     iterator insert(const_iterator position, const value_type &v) {
-        return tree.emplace_hint(position, v);
+        return tree.emplace_hint(position._ptr, v);
     }
 
     iterator insert(const_iterator position, value_type &&v) {
-        return tree.emplace_hint(position, ala::move(v));
+        return tree.emplace_hint(position._ptr, ala::move(v));
     }
 
-    template<class P>
+    template<class P,
+             typename = enable_if_t<is_constructible<value_type, P &&>::value>>
     iterator insert(const_iterator position, P &&p) {
-        return tree.emplace_hint(position, ala::forward<P>(p)...);
+        return tree.emplace_hint(position._ptr, ala::forward<P>(p));
     }
 
     template<class It>
@@ -434,25 +490,18 @@ public:
     }
 
     insert_return_type insert(node_type &&nh) {
-        if (nh._empty) {
-            return {end(), false, node_type()};
-        } else {
-            auto pr(search(nh._ptr));
-            if (pr.second)
-                return {iterator(pr.first), false, ala::move(nh)};
-            tree.attach(nh._ptr);
-            nh._empty = true;
-            return {iterator(nh._ptr), true, node_type()};
-        }
+        auto pr(tree.insert(nh._ptr));
+        if (!pr.second)
+            return {iterator(pr.first), pr.second, ala::move(nh)};
+        nh._empty=true;
+        return {iterator(pr.first), pr.second, node_type()};
     }
 
     iterator insert(const_iterator hint, node_type &&nh) {
-        auto pr(tree.search_hint(hint._ptr, nh._ptr));
-        if (pr.second)
-            return pr.first;
-        tree.attach_to(pr.first, nh.ptr);
-        nh._empty = true;
-        return nh._ptr;
+        auto pr(tree.insert_hint(hint._ptr, nh._ptr));
+        if (!pr.second)
+            return {iterator(pr.first), pr.second, ala::move(nh)};
+        return {iterator(pr.first), pr.second, node_type()};
     }
 
     template<class M>
@@ -476,41 +525,65 @@ public:
     }
 
     node_type extract(const_iterator position) {
-        if (position == end())
-            return node_type();
-        tree.detach(position->_ptr);
-        return node_type(position->_ptr);
+        tree.extract(position._ptr);
+        return node_type(position._ptr);
     }
 
-    node_type extract(const key_type &k) { return extract(this->find(k)); }
+    node_type extract(const key_type &k) {
+        return extract(this->find(k));
+    }
+
+    template<class Comp1>
+    void merge(map<key_type, mapped_type, key_compare, allocator_type> &source) {
+        tree.merge(source);
+    }
+
+    template<class Comp1>
+    void merge(map<key_type, mapped_type, key_compare, allocator_type> &&source) {
+        tree.merge(ala::move(source));
+    }
 
     template<class... Args>
     pair<iterator, bool> try_emplace(const key_type &k, Args &&... args) {
-        tree.emplace(ala::piecewise_construct, ala::forward_as_tuple(k),
-                     ala::forward_as_tuple(ala::forward<Args>(args)...));
+        return tree.emplace(ala::piecewise_construct, ala::forward_as_tuple(k),
+                            ala::forward_as_tuple(ala::forward<Args>(args)...));
     }
 
     template<class... Args>
     pair<iterator, bool> try_emplace(key_type &&k, Args &&... args) {
-        tree.emplace(ala::piecewise_construct,
-                     ala::forward_as_tuple(ala::move(k)),
-                     ala::forward_as_tuple(ala::forward<Args>(args)...));
+        return tree.emplace(ala::piecewise_construct,
+                            ala::forward_as_tuple(ala::move(k)),
+                            ala::forward_as_tuple(ala::forward<Args>(args)...));
     }
 
     template<class... Args>
-    iterator try_emplace(const_iterator hint, const key_type &k, Args &&... args) {
-        tree.emplace_hint(ala::piecewise_construct, ala::forward_as_tuple(k),
-                          ala::forward_as_tuple(ala::forward<Args>(args)...));
+    iterator try_emplace(const_iterator hint, const key_type &k,
+                         Args &&... args) {
+        return tree.emplace_hint(ala::piecewise_construct,
+                                 ala::forward_as_tuple(k),
+                                 ala::forward_as_tuple(
+                                     ala::forward<Args>(args)...));
     }
 
     template<class... Args>
     iterator try_emplace(const_iterator hint, key_type &&k, Args &&... args) {
-        tree.emplace_hint(ala::piecewise_construct, ala::forward_as_tuple(k),
-                          ala::forward_as_tuple(ala::forward<Args>(args)...));
+        return tree.emplace_hint(ala::piecewise_construct,
+                                 ala::forward_as_tuple(k),
+                                 ala::forward_as_tuple(
+                                     ala::forward<Args>(args)...));
     }
 
-    iterator erase(iterator position) { return tree.erase(position); }
-    size_type erase(const key_type &k) { return tree.erase<key_type>(k); }
+    iterator erase(iterator position) {
+        iterator ret = position;
+        ++ret;
+        tree.remove(position._ptr);
+        return ret;
+    }
+
+    size_type erase(const key_type &k) {
+        return tree.erase<key_type>(k);
+    }
+
     iterator erase(const_iterator first, const_iterator last) {
         iterator ret;
         for (const_iterator i = first; i != last; ++i)
@@ -518,10 +591,13 @@ public:
         return ret;
     }
 
-    void clear() noexcept { tree.clear(); }
+    void clear() noexcept {
+        tree.clear();
+    }
 
-    void swap(map &m) noexcept(allocator_traits<allocator_type>::is_always_equal::value
-                                   &&is_nothrow_swappable<key_compare>::value) {
+    void
+    swap(map &m) noexcept(allocator_traits<allocator_type>::is_always_equal::value
+                              &&is_nothrow_swappable<key_compare>::value) {
         tree.swap(m.tree);
     }
 
@@ -529,95 +605,124 @@ public:
     allocator_type get_allocator() const noexcept {
         return tree.get_allocator();
     }
-    key_compare key_comp() const { return value_comp().comp; }
-    value_compare value_comp() const { return tree.value_comp(); }
+
+    key_compare key_comp() const {
+        return this->value_comp().comp;
+    }
+
+    value_compare value_comp() const {
+        return tree.value_comp();
+    }
 
     // map operations:
-    iterator find(const key_type &k) { return tree.find(k); }
-
-    const_iterator find(const key_type &k) const { return tree.find(k); }
-
-    template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
-    iterator find(const K &x) {
-        return tree.find(x);
+    iterator find(const key_type &k) {
+        return tree.find(k);
     }
 
-    template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
-    const_iterator find(const K &x) const {
-        return tree.find(x);
+    const_iterator find(const key_type &k) const {
+        return iterator(tree.find(k));
     }
 
-    size_type count(const key_type &k) const { return tree.count<key_type>(k); }
+    template<class K, typename Dummy = key_compare,
+             typename = typename Dummy::is_transparent>
+    iterator find(const K &k) {
+        return tree.find(k);
+    }
 
-    template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
-    size_type count(const K &x) const {
-        return tree.count(x);
+    template<class K, typename Dummy = key_compare,
+             typename = typename Dummy::is_transparent>
+    const_iterator find(const K &k) const {
+        return tree.find(k);
+    }
+
+    size_type count(const key_type &k) const {
+        return tree.count<key_type>(k);
+    }
+
+    template<class K, typename Dummy = key_compare,
+             typename = typename Dummy::is_transparent>
+    size_type count(const K &k) const {
+        return tree.count(k);
+    }
+
+    bool contains(const key_type &k) const {
+        return tree.contains(k);
+    }
+
+    template<class K, typename Dummy = key_compare,
+             typename = typename Dummy::is_transparent>
+    bool contains(const K &k) const {
+        return tree.contains(k);
     }
 
     iterator lower_bound(const key_type &k) {
-        const key_compare &comp = key_comp();
+        key_compare comp = key_comp();
         iterator i = begin();
-        for (; I != end() && comp(key, (*i).first); ++i)
+        for (; i != end() && comp(i->first, k); ++i)
             ;
         return i;
     }
 
     const_iterator lower_bound(const key_type &k) const {
-        const key_compare &comp = key_comp();
+        key_compare comp = key_comp();
         iterator i = begin();
-        for (; I != end() && comp(key, (*i).first); ++i)
+        for (; i != end() && comp(i->first, k); ++i)
             ;
         return i;
     }
 
-    template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
-    iterator lower_bound(const K &x) {
-        const key_compare &comp = key_comp();
+    template<class K, typename Dummy = key_compare,
+             typename = typename Dummy::is_transparent>
+    iterator lower_bound(const K &k) {
+        key_compare comp = key_comp();
         iterator i = begin();
-        for (; I != end() && comp(key, (*i).first); ++i)
+        for (; i != end() && comp(i->first, k); ++i)
             ;
         return i;
     }
 
-    template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
-    const_iterator lower_bound(const K &x) const {
-        const key_compare &comp = key_comp();
+    template<class K, typename Dummy = key_compare,
+             typename = typename Dummy::is_transparent>
+    const_iterator lower_bound(const K &k) const {
+        key_compare comp = key_comp();
         iterator i = begin();
-        for (iterator i = begin(); I != end() && !comp((*i).first, key); ++i)
+        for (; i != end() && comp(i->first, k); ++i)
             ;
         return i;
     }
 
     iterator upper_bound(const key_type &k) {
-        const key_compare &comp = key_comp();
+        key_compare comp = key_comp();
         iterator i = begin();
-        for (iterator i = begin(); I != end() && !comp((*i).first, key); ++i)
+        for (; i != end() && !comp(k, i->first); ++i)
             ;
         return i;
     }
 
     const_iterator upper_bound(const key_type &k) const {
-        const key_compare &comp = key_comp();
+        key_compare comp = key_comp();
         iterator i = begin();
-        for (iterator i = begin(); I != end() && !comp((*i).first, key); ++i)
+        for (; i != end() && !comp(k, i->first); ++i)
             ;
         return i;
     }
 
-    template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
-    iterator upper_bound(const K &x) {
-        const key_compare &comp = key_comp();
+    template<class K, typename Dummy = key_compare,
+             typename = typename Dummy::is_transparent>
+    iterator upper_bound(const K &k) {
+        key_compare comp = key_comp();
         iterator i = begin();
-        for (iterator i = begin(); I != end() && !comp((*i).first, key); ++i)
+        for (; i != end() && !comp(k, i->first); ++i)
             ;
         return i;
     }
 
-    template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
-    const_iterator upper_bound(const K &x) const {
-        const key_compare &comp = key_comp();
+    template<class K, typename Dummy = key_compare,
+             typename = typename Dummy::is_transparent>
+    const_iterator upper_bound(const K &k) const {
+        key_compare comp = key_comp();
         iterator i = begin();
-        for (iterator i = begin(); I != end() && !comp((*i).first, key); ++i)
+        for (; i != end() && !comp(k, i->first); ++i)
             ;
         return i;
     }
@@ -625,18 +730,22 @@ public:
     pair<iterator, iterator> equal_range(const key_type &k) {
         return pair<iterator, iterator>(lower_bound(k), upper_bound(k));
     }
+
     pair<const_iterator, const_iterator> equal_range(const key_type &k) const {
-        return pair<iterator, iterator>(lower_bound(k), upper_bound(k));
+        return pair<const_iterator, const_iterator>(lower_bound(k),
+                                                    upper_bound(k));
     }
 
-    template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
-    pair<iterator, iterator> equal_range(const K &x) {
-        return pair<iterator, iterator>(lower_bound(k), upper_bound(k));
+    template<class K, typename Dummy = key_compare,
+             typename = typename Dummy::is_transparent>
+    pair<iterator, iterator> equal_range(const K &k) {
+        return pair<iterator, iterator>(lower_bound(x), upper_bound(x));
     }
 
-    template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
-    pair<const_iterator, const_iterator> equal_range(const K &x) const {
-        return pair<iterator, iterator>(lower_bound(k), upper_bound(k));
+    template<class K, typename Dummy = key_compare,
+             typename = typename Dummy::is_transparent>
+    pair<const_iterator, const_iterator> equal_range(const K &k) const {
+        return pair<const_iterator, const_iterator>(lower_bound(x), upper_bound(x));
     }
 };
 

@@ -32,10 +32,11 @@ struct pair {
     constexpr pair(): first(), second() {}
 
     template<typename U1 = T1, typename U2 = T2, typename = void,
-             typename = enable_if_t<is_default_constructible<U1>::value &&
-                                    is_default_constructible<U2>::value &&
-                                    !(is_implicitly_default_constructible<U1>::value &&
-                                      is_implicitly_default_constructible<U2>::value)>>
+             typename =
+                 enable_if_t<is_default_constructible<U1>::value &&
+                             is_default_constructible<U2>::value &&
+                             !(is_implicitly_default_constructible<U1>::value &&
+                               is_implicitly_default_constructible<U2>::value)>>
     explicit constexpr pair(): first(), second() {}
 
     template<typename U1 = T1, typename U2 = T2,
@@ -69,10 +70,11 @@ struct pair {
         : first(ala::forward<U1>(a)), second(ala::forward<U2>(b)) {}
 
     template<typename U1, typename U2,
-             typename = enable_if_t<is_constructible<first_type, const U1 &>::value &&
-                                    is_constructible<second_type, const U2 &>::value &&
-                                    is_convertible<const U1 &, first_type>::value &&
-                                    is_convertible<const U2 &, second_type>::value>>
+             typename =
+                 enable_if_t<is_constructible<first_type, const U1 &>::value &&
+                             is_constructible<second_type, const U2 &>::value &&
+                             is_convertible<const U1 &, first_type>::value &&
+                             is_convertible<const U2 &, second_type>::value>>
     constexpr pair(const pair<U1, U2> &p): first(p.first), second(p.second) {}
 
     template<typename U1, typename U2, typename = void,
@@ -90,7 +92,8 @@ struct pair {
                                     is_convertible<U1 &&, first_type>::value &&
                                     is_convertible<U2 &&, second_type>::value>>
     constexpr pair(pair<U1, U2> &&p)
-        : first(ala::forward<U1>(p.first)), second(ala::forward<U2>(p.second)) {}
+        : first(ala::forward<U1>(p.first)), second(ala::forward<U2>(p.second)) {
+    }
 
     template<typename U1, typename U2, typename = void,
              typename = enable_if_t<is_constructible<first_type, U1 &&>::value &&
@@ -98,7 +101,8 @@ struct pair {
                                     !(is_convertible<U1 &&, first_type>::value &&
                                       is_convertible<U2 &&, second_type>::value)>>
     explicit constexpr pair(pair<U1, U2> &&p)
-        : first(ala::forward<U1>(p.first)), second(ala::forward<U2>(p.second)) {}
+        : first(ala::forward<U1>(p.first)), second(ala::forward<U2>(p.second)) {
+    }
 
     template<typename... Args1, typename... Args2>
     constexpr pair(piecewise_construct_t pct, tuple<Args1...> first_args,
@@ -195,7 +199,8 @@ constexpr bool operator>=(const pair<T1, T2> &x, const pair<T1, T2> &y) {
 
 template<class T1, class T2>
 constexpr decltype(auto) make_pair(T1 &&t1, T2 &&t2) {
-    return pair<decay_t<T1>, decay_t<T2>>(ala::forward<T1>(t1), ala::forward<T2>(t2));
+    return pair<decay_t<T1>, decay_t<T2>>(ala::forward<T1>(t1),
+                                          ala::forward<T2>(t2));
 }
 
 template<class T1, class T2>

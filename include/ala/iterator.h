@@ -30,7 +30,7 @@ struct random_access_iterator_tag {};
 struct contiguous_iterator_tag {};
 
 template<class It>
-struct reverse_iterator: protected It {
+struct reverse_iterator {
     typedef typename It::iterator_category iterator_category;
     typedef typename It::value_type value_type;
     typedef typename It::difference_type difference_type;
@@ -50,21 +50,45 @@ struct reverse_iterator: protected It {
     constexpr reverse_iterator(const reverse_iterator<U> &other)
         : current(other.current) {}
 
-    constexpr iterator_type base() const { return current; }
+    constexpr iterator_type base() const {
+        return current;
+    }
 
     template<class U>
     constexpr reverse_iterator &operator=(const reverse_iterator<U> &other) {
         current = other.current;
     }
 
-    constexpr reference operator*() const { return *current; }
-    constexpr pointer operator->() const { return current.operator->(); }
+    constexpr reference operator*() const {
+        It tmp = current;
+        return (--tmp).operator *();
+    }
+
+    constexpr pointer operator->() const {
+        It tmp = current;
+        return (--tmp).operator ->();
+    }
+
     constexpr reference operator[](difference_type n) const;
 
-    constexpr reverse_iterator &operator++() { return --current, *this; }
-    constexpr reverse_iterator &operator--() { return ++current, *this; }
-    constexpr reverse_iterator operator++(int) { return current--; }
-    constexpr reverse_iterator operator--(int) { return current++; }
+    constexpr reverse_iterator &operator++() {
+        --current;
+        return  *this;
+    }
+
+    constexpr reverse_iterator &operator--() {
+        ++current;
+        return  *this;
+    }
+
+    constexpr reverse_iterator operator++(int) {
+        return current--;
+    }
+
+    constexpr reverse_iterator operator--(int) {
+        return current++;
+    }
+
     constexpr reverse_iterator operator+(difference_type n) const;
     constexpr reverse_iterator operator-(difference_type n) const;
     constexpr reverse_iterator &operator+=(difference_type n);
@@ -112,21 +136,21 @@ struct const_iterator: public It {
     typedef typename It::iterator_category iterator_category;
     typedef typename It::difference_type difference_type;
     typedef const typename It::value_type value_type;
-    typedef typename It::value_type *const pointer;
-    typedef const typename It::reference reference;
+    typedef const typename It::value_type *pointer;
+    typedef const typename It::value_type &reference;
 
     constexpr const_iterator(const It &base): It(base) {}
 
     constexpr reference operator*() const {
-        return const_cast<reference>(this->It::operator*());
+        return this->It::operator*();
     }
 
     constexpr pointer operator->() const {
-        return const_cast<pointer>(this->It::operator->());
+        return this->It::operator->();
     }
 
     constexpr reference operator[](difference_type n) const {
-        return const_cast<reference>(this->It::operator[](n));
+        return this->It::operator[](n);
     }
 };
 

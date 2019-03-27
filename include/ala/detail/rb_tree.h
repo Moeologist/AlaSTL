@@ -6,6 +6,7 @@
 #include <ala/detail/allocator.h>
 #include <ala/detail/macro.h>
 #include <ala/iterator.h>
+#include <ala/external/assert.h>
 
 #define ALA_RED true
 #define ALA_BLACK false
@@ -38,16 +39,6 @@ constexpr bool is_nil(rb_node<Data> *node) {
 }
 
 template<class Data>
-constexpr bool is_left_nil(rb_node<Data> *node) {
-    return node != nullptr && node->_is_nil && !node->_nil_type;
-}
-
-template<class Data>
-constexpr bool is_right_nil(rb_node<Data> *node) {
-    return node != nullptr && node->_is_nil && node->_nil_type;
-}
-
-template<class Data>
 constexpr rb_node<Data> *left_leaf(rb_node<Data> *node) {
     if (is_nil(node))
         return node;
@@ -73,18 +64,15 @@ struct rb_iterator {
     typedef value_type *pointer;
     typedef value_type &reference;
 
+    constexpr rb_iterator(): _ptr(nullptr) {}
     constexpr rb_iterator(const rb_iterator &other): _ptr(other._ptr) {}
-    constexpr rb_iterator(rb_iterator &&other): _ptr(ala::move(other._ptr)) {}
     constexpr rb_iterator(const Ptr &ptr): _ptr(ptr) {}
-    constexpr rb_iterator(Ptr &&ptr): _ptr(ala::move(ptr)) {}
-
-    constexpr operator Ptr() { return _ptr; }
 
     constexpr reference operator*() const {
         return const_cast<reference>(_ptr->_data);
     }
 
-    constexpr decltype(auto) operator-> () const {
+    constexpr pointer operator->() const {
         return ala::pointer_traits<pointer>::pointer_to(_ptr->_data);
     }
 
@@ -96,36 +84,31 @@ struct rb_iterator {
         return _ptr != rhs._ptr;
     }
 
-    constexpr rb_iterator operator++() {
-        move_suc();
+    constexpr rb_iterator &operator++() {
+        if (_ptr == nullptr || (_ptr->_is_nil && _ptr->_nil_type))
+            return *this;
+        else if (_ptr->_right != nullptr)
+            _ptr = left_leaf(_ptr->_right);
+        else
+            while (true) {
+                if (_ptr->_parent->_left == _ptr) {
+                    _ptr = _ptr->_parent;
+                    break;
+                }
+                _ptr = _ptr->_parent;
+            }
         return *this;
     }
 
     constexpr rb_iterator operator++(int) {
-        Ptr tmp(_ptr);
-        move_suc();
-        return _self_type(tmp);
+        rb_iterator tmp(*this);
+        ++*this;
+        return tmp;
     }
 
-    constexpr rb_iterator operator--() {
-        move_pre();
-        return *this;
-    }
-
-    constexpr rb_iterator operator--(int) {
-        Ptr tmp(_ptr);
-        move_pre();
-        return _self_type(tmp);
-    }
-
-protected:
-    template<typename, typename, typename, typename>
-    friend struct rb_tree;
-    Ptr _ptr;
-
-    constexpr void move_pre() {
-        if (_ptr == nullptr || is_left_nil(_ptr))
-            return;
+    constexpr rb_iterator &operator--() {
+        if (_ptr == nullptr || (_ptr->_is_nil && !_ptr->_nil_type))
+            return *this;
         else if (_ptr->_left != nullptr)
             _ptr = right_leaf(_ptr->_left);
         else {
@@ -137,22 +120,19 @@ protected:
                 _ptr = _ptr->_parent;
             }
         }
+        return *this;
     }
 
-    constexpr void move_suc() {
-        if (_ptr == nullptr || is_right_nil(_ptr))
-            return;
-        else if (_ptr->_right != nullptr)
-            _ptr = left_leaf(_ptr->_right);
-        else
-            while (true) {
-                if (_ptr->_parent->_left == _ptr) {
-                    _ptr = _ptr->_parent;
-                    break;
-                }
-                _ptr = _ptr->_parent;
-            }
+    constexpr rb_iterator operator--(int) {
+        rb_iterator tmp(*this);
+        --*this;
+        return tmp;
     }
+
+protected:
+    template<typename, typename, typename, typename>
+    friend struct map;
+    Ptr _ptr;
 };
 
 template<class Data, class Comp, class Alloc,
@@ -165,10 +145,7 @@ public:
     typedef rb_node<Data> node_type;
     typedef NAlloc node_allocator_type;
     typedef typename node_allocator_type::pointer node_pointer;
-    typedef rb_iterator<value_type, node_pointer> iterator;
-    typedef ala::const_iterator<iterator> const_iterator;
-    typedef ala::reverse_iterator<iterator> reverse_iterator;
-    typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
+
     static_assert(is_same<node_pointer, node_type *>::value,
                   "ala node-based container use raw pointer");
 
@@ -177,23 +154,59 @@ public:
         initializer_nil();
     }
 
-    template<class Alloc1, class NAlloc1>
-    rb_tree(const rb_tree<value_type, value_compare, Alloc1> &other)
-        : _comp(other._comp), _alloc(other._a), _nalloc(), _size(other._size) {
+    rb_tree(const rb_tree &other)
+        : _comp(other._comp), _alloc(other._alloc), _nalloc(other._nalloc),
+          _size(other._size) {
         initializer_nil();
         _root = copy_tree(other._root);
         fix_nil();
     }
 
-    template<class Alloc1>
-    rb_tree(rb_tree<value_type, value_compare, Alloc1> &&other,
-            const allocator_type &a = Alloc1())
+    rb_tree(rb_tree &&other)
+        : _comp(ala::move(other._comp)), _alloc(ala::move(other._alloc)),
+          _nalloc(ala::move(other._nalloc)), _size(other._size) {
+        initializer_nil();
+        _root = other._root;
+        fix_nil();
+        other._root = nullptr;
+        other._size = 0;
+        other.fix_nil();
+    }
+
+    rb_tree(const rb_tree &other, const allocator_type &a)
+        : _comp(other._comp), _alloc(a), _nalloc(), _size(other._size) {
+        initializer_nil();
+        _root = copy_tree(other._root);
+        fix_nil();
+    }
+
+    rb_tree(rb_tree &&other, const allocator_type &a)
         : _comp(other._comp), _alloc(a), _nalloc(), _size(other._size) {
         initializer_nil();
         _root = other._root;
         fix_nil();
         other._root = nullptr;
+        other._size = 0;
         other.fix_nil();
+    }
+
+    rb_tree &operator=(const rb_tree &other) {
+        destruct_tree(_root);
+        _root = copy_tree(other._root);
+        _size = other._size;
+        fix_nil();
+        return *this;
+    }
+
+    rb_tree &operator=(rb_tree &&other) {
+        destruct_tree(_root);
+        _root = other._root;
+        _size = other._size;
+        fix_nil();
+        other._root = nullptr;
+        other._size = 0;
+        other.fix_nil();
+        return *this;
     }
 
     ~rb_tree() {
@@ -202,27 +215,53 @@ public:
         destruct_node(_right_nil);
     }
 
-    iterator begin() { return iterator(_left_nil->_parent); }
-    iterator end() { return iterator(_right_nil); }
-    const_iterator cbegin() const { return iterator(_left_nil->_parent); }
-    const_iterator cend() const { return iterator(_right_nil); }
-    reverse_iterator rbegin() {
-        return reverse_iterator(iterator(_right_nil->_parent));
+    node_pointer begin() const {
+        return _left_nil->_parent;
     }
-    reverse_iterator rend() { return reverse_iterator(iterator(_left_nil)); }
-    const_reverse_iterator crbegin() const {
-        return reverse_iterator(iterator(_right_nil->_parent));
+
+    node_pointer end() const {
+        return _right_nil;
     }
-    const_reverse_iterator crend() const {
-        return reverse_iterator(iterator(_left_nil));
-    }
+
+    // node_pointer rbegin() const {
+    //     return _right_nil->_parent;
+    // }
+
+    // node_pointer rend() const {
+    //     return _left_nil;
+    // }
 
     void clear() {
         destruct_tree(_root);
+        _size = 0;
         fix_nil();
     }
 
-    size_t size() { return _size; }
+    size_t size() const {
+        return _size;
+    }
+
+    void remove(node_pointer position) {
+        if (!is_nil(position)) {
+            detach(position);
+            destruct_node(position);
+        }
+    }
+
+    void extract(node_pointer position) {
+        if (!is_nil(position)) {
+            detach(position);
+            position->_left = position->_right = position->_parent = nullptr;
+        }
+    }
+
+    allocator_type get_allocator() const noexcept {
+        return _alloc;
+    }
+
+    value_compare value_comp() const noexcept {
+        return _comp;
+    }
 
     void swap(rb_tree &other) noexcept(
         allocator_traits<allocator_type>::is_always_equal::value
@@ -234,47 +273,32 @@ public:
         ala::swap(_size, other._size);
     }
 
-    template<class RBTree>
-    void merge_tree_lv(RBTree &tree, node_pointer other) {
-        if (!is_nil(other->_left))
-            merge_tree_lv(tree, other->_left);
-        if (!is_nil(other->_right))
-            merge_tree_lv(tree, other->_right);
-        pair<iterator, bool> pr(search(other));
-        if (!pr.second) {
-            tree.detach(other);
-            attach_to(pr.first, other);
-        }
-    }
-
-    template<class RBTree>
-    void merge_tree_rv(RBTree &tree, node_pointer other) {
+    template<class RBTree, bool ReBalance = true>
+    void merge_tree(RBTree &tree, node_pointer other) {
         if (!is_nil(other->_left))
             merge_tree_rv(tree, other->_left);
         if (!is_nil(other->_right))
             merge_tree_rv(tree, other->_right);
-        pair<iterator, bool> pr(search(other));
+        pair<node_pointer, bool> pr(search(other));
         if (!pr.second) {
-            tree.detach<false>(other);
+            tree.detach<ReBalance>(other);
             attach_to(pr.first, other);
         }
     }
 
     template<class Comp1>
     void merge(rb_tree<value_type, Comp1, allocator_type> &source) {
-        merge_tree_lv(source, source._root);
+        merge_tree<true>(source, source._root);
     }
 
     template<class Comp1>
     void merge(rb_tree<value_type, Comp1, allocator_type> &&source) {
-        merge_tree_rv(source, source._root);
+        merge_tree<false>(source, source._root);
         source.clear();
     }
 
-    node_pointer extract(const_iterator position) { detach(position->_ptr); }
-
     template<class K>
-    iterator find(const K &key) {
+    node_pointer find(const K &key) const {
         decltype(auto) comp = get_key_comp();
         node_pointer current = _root;
         while (!is_nil(current))
@@ -283,12 +307,12 @@ public:
             else if (comp(get_key(current->_data), key))
                 current = current->_right;
             else
-                return iterator(current);
+                return current;
         return end();
     }
 
     template<class K>
-    size_t count(const K &key) {
+    size_t count(const K &key) const {
         decltype(auto) comp = get_key_comp();
         node_pointer current = _root;
         size_t eql = 0;
@@ -297,16 +321,14 @@ public:
                 current = current->_left;
             else if (comp(get_key(current->_data), key))
                 current = current->_right;
-            else {
+            else
                 ++eql;
-                branch = current->_left;
-            }
         }
         return eql;
     }
 
     template<class K>
-    bool contains(const K &key) {
+    bool contains(const K &key) const {
         decltype(auto) comp = get_key_comp();
         node_pointer current = _root;
         while (!is_nil(current))
@@ -317,13 +339,6 @@ public:
             else
                 return true;
         return false;
-    }
-
-    iterator erase(iterator position) {
-        iterator cur = position++;
-        detach(cur->_ptr);
-        destruct_node(cur->_ptr);
-        return position;
     }
 
     template<class K>
@@ -337,8 +352,7 @@ public:
             else if (comp(get_key(current->_data), key))
                 current = current->_right;
             else {
-                detach(current);
-                destruct_node(current);
+                remove(current);
                 ++eql;
                 current = current->_left;
             }
@@ -347,34 +361,55 @@ public:
     }
 
     template<class... Args>
-    pair<iterator, bool> emplace(Args &&... args) {
-        using ret = pair<iterator, bool>;
+    pair<node_pointer, bool> emplace(Args &&... args) {
+        using ret = pair<node_pointer, bool>;
         node_pointer new_node = construct_node(ala::forward<Args>(args)...);
-        pair<iterator, bool> pr(search(new_node));
+        pair<node_pointer, bool> pr(search(new_node));
         if (pr.second) {
             destruct_node(new_node);
-            return ret(iterator(pr.first), false);
+            return ret(pr.first, false);
         } else {
             attach_to(pr.first, new_node);
-            return ret(iterator(new_node), true);
+            return ret(new_node, true);
         }
     }
 
     template<class... Args>
-    iterator emplace_hint(const_iterator hint, Args &&... args) {
+    node_pointer emplace_hint(node_pointer hint, Args &&... args) {
         node_pointer new_node = construct_node(ala::forward<Args>(args)...);
-        pair<iterator, bool> pr(search(hint->_ptr, new_node));
+        pair<node_pointer, bool> pr(search_hint(hint, new_node));
         if (pr.second) {
             destruct_node(new_node);
             return pr.first;
         } else {
-            attach_to(p.first, new_node);
-            return iterator(new_node);
+            attach_to(pr.first, new_node);
+            return new_node;
         }
     }
 
-    allocator_type get_allocator() noexcept { return _alloc; }
-    value_compare value_comp() noexcept { return _cmp; }
+    pair<node_pointer, bool> insert(node_pointer p) {
+        if (is_nil(p))
+            return pair<node_pointer, bool>(end(), false);
+        pair<node_pointer, bool> pr(search(p));
+        if (pr.second) {
+            return pair<node_pointer, bool>(pr.first, false);
+        } else {
+            attach_to(pr.first, p);
+            return pair<node_pointer, bool>(p, true);
+        }
+    }
+
+    pair<node_pointer, bool> insert_hint(node_pointer hint, node_pointer p) {
+        if (is_nil(p))
+            return pair<node_pointer, bool>(end(), false);
+        pair<node_pointer, bool> pr(search_hint(hint, p));
+        if (pr.second) {
+            return pair<node_pointer, bool>(pr.first, false);
+        } else {
+            attach_to(pr.first, p);
+            return pair<node_pointer, bool>(p, true);
+        }
+    }
 
 protected:
     node_pointer _root, _left_nil, _right_nil;
@@ -386,30 +421,31 @@ protected:
     ALA_HAS_MEM_VAL(first)
     ALA_HAS_MEM_VAL(comp)
 
-    static_assert(_has_first<value_type>::value == _has_comp<value_compare>::value,
+    static_assert(_has_first<value_type>::value ==
+                      _has_comp<value_compare>::value,
                   "key compare check failed");
 
     template<typename Dummy = value_type,
              typename Ret = decltype(declval<value_type>().first)>
-    const Ret &get_key(const value_type &v) {
+    const Ret &get_key(const value_type &v) const {
         return v.first;
     }
 
     template<typename Dummy = value_type, typename = void,
              typename = enable_if_t<!_has_first<Dummy>::value>>
-    const value_type &get_key(const value_type &v) {
+    const value_type &get_key(const value_type &v) const {
         return v;
     }
 
     template<typename Dummy = value_compare,
              typename Ret = decltype(declval<value_compare>().comp)>
-    const Ret &get_key_comp() {
+    const Ret &get_key_comp() const {
         return _comp.comp;
     }
 
     template<typename Dummy = value_compare, typename = void,
              typename = enable_if_t<!_has_comp<Dummy>::value>>
-    const value_compare &get_key_comp() {
+    const value_compare &get_key_comp() const {
         return _comp;
     }
 
@@ -444,13 +480,13 @@ protected:
 
     node_pointer copy_node(node_pointer other) {
         node_pointer node;
-        if (other._is_construct)
-            node = construct_node(other._data);
+        if (other->_is_construct)
+            node = construct_node(other->_data);
         else
             node = allocate_node();
-        node->_color = other._color;
-        node->_is_nil = other._is_nil;
-        node->_nil_type = other._nil_type;
+        node->_color = other->_color;
+        node->_is_nil = other->_is_nil;
+        node->_nil_type = other->_nil_type;
         return node;
     }
 
@@ -459,8 +495,8 @@ protected:
             return nullptr;
         node_pointer node = copy_node(other);
         node->_parent = parent;
-        node->_left = copy_tree(other._left, node);
-        node->_right = copy_tree(other._right, node);
+        node->_left = copy_tree(other->_left, node);
+        node->_right = copy_tree(other->_right, node);
         return node;
     }
 
@@ -554,7 +590,7 @@ protected:
     }
 
     pair<node_pointer, bool> search_hint(node_pointer hint, node_pointer p) {
-        if (comp(p->_data, hint->_data))
+        if (_comp(p->_data, hint->_data))
             return search_at(hint, p);
         else
             return search_at(_root, p);
@@ -600,6 +636,9 @@ protected:
         node_pointer parent, grandp, uncle;
         while (is_red(parent = current->_parent)) {
             grandp = parent->_parent;
+            /*if (grandp == nullptr)
+                break;
+            else */
             if (parent == grandp->_left) {
                 uncle = grandp->_right;
                 if (is_red(uncle)) {
@@ -609,8 +648,8 @@ protected:
                 } else {
                     if (parent->_right == current)
                         rotate_left(current = parent);
-                    parent->_color = ALA_BLACK;
-                    grandp->_color = ALA_RED;
+                    current->_parent->_color = ALA_BLACK;
+                    current->_parent->_parent->_color = ALA_RED;
                     rotate_right(grandp);
                 }
             } else {
@@ -622,8 +661,8 @@ protected:
                 } else {
                     if (parent->_left == current)
                         rotate_right(current = parent);
-                    parent->_color = ALA_BLACK;
-                    grandp->_color = ALA_RED;
+                    current->_parent->_color = ALA_BLACK;
+                    current->_parent->_parent->_color = ALA_RED;
                     rotate_left(grandp);
                 }
             }
@@ -670,7 +709,8 @@ protected:
         --_size;
     }
 
-    void rebalance_for_detach(node_pointer current, node_pointer parent) noexcept {
+    void rebalance_for_detach(node_pointer current,
+                              node_pointer parent) noexcept {
         node_pointer brother;
         while (current != _root && is_black(current)) {
             if (parent->_left == current) {
