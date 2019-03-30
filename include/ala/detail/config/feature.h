@@ -1,13 +1,13 @@
 #ifndef _ALA_DETAIL_CONFIG_FEATURE_H
 #define _ALA_DETAIL_CONFIG_FEATURE_H
 
-#if defined(_ALA_CLANG) && !defined(__is_identifier)
+#if !defined(_ALA_CLANG) && !defined(__is_identifier)
 #define __is_identifier(x) 0
 #endif
 
 #if defined(_ALA_MSVC)
 
-#if !defined(__is_identifier)
+#if !defined(__has_cpp_attribute)
 #define __has_cpp_attribute(x) 0
 #endif
 #define _ALA_ENABLE_CPP_ATTR_MACRO 0
@@ -30,14 +30,14 @@
 #endif
 
 #if _ALA_ENABLE_CPP_MACRO && __cpp_deduction_guides >= 201606 || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1914)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1914 && _ALA_CPP_STD >= 17)
 #define _ALA_ENABLE_DEDUCTION_GUIDES 1
 #else
 #define _ALA_ENABLE_DEDUCTION_GUIDES 0
 #endif
 
 #if _ALA_ENABLE_CPP_MACRO && __cpp_if_constexpr	>= 201606L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1911)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_CPP_STD >= 17)
 #define ALA_CONST_IF if constexpr
 #else
 #define ALA_CONST_IF if
@@ -45,17 +45,24 @@
 
 // compatibility macro
 #if _ALA_ENABLE_CPP_ATTR_MACRO && __has_cpp_attribute(nodiscard) || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1911)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_CPP_STD >= 17)
 #define ALA_NODISCARD [[nodiscard]]
 #else
 #define ALA_NODISCARD
 #endif
 
 #if _ALA_ENABLE_CPP_MACRO && __cpp_inline_variables >= 201606L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1912)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1912 && _ALA_CPP_STD >= 17)
 #define ALA_VAR_INLINE inline
 #else
 #define ALA_VAR_INLINE
+#endif
+
+#if ALA_ENABLE_CPP_MACRO && __cpp_noexcept_function_type >= 201510L || \
+    (defined(_ALA_MSVC) && _MSC_VER >= 1912 && _ALA_CPP_STD >= 17)
+#define _ALA_ENABLE_NOEXCEPT_TYPE 1
+#else
+#define _ALA_ENABLE_NOEXCEPT_TYPE 0
 #endif
 
 #ifdef _ALA_DEBUG

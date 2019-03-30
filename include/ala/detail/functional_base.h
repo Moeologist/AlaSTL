@@ -1,5 +1,5 @@
-#ifndef _ALA_DETAIL_FUNCTIONAL_BASE
-#define _ALA_DETAIL_FUNCTIONAL_BASE
+#ifndef _ALA_DETAIL_FUNCTIONAL_BASE_H
+#define _ALA_DETAIL_FUNCTIONAL_BASE_H
 
 #include <ala/config.h>
 

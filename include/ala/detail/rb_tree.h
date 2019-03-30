@@ -6,7 +6,6 @@
 #include <ala/detail/allocator.h>
 #include <ala/detail/macro.h>
 #include <ala/iterator.h>
-#include <ala/external/assert.h>
 
 #define ALA_RED true
 #define ALA_BLACK false
@@ -17,10 +16,9 @@ template<class Data>
 struct rb_node {
     Data _data;
     rb_node *_left, *_right, *_parent;
+    bool _color;
     bool _nil_type;
     bool _is_nil;
-    bool _is_construct;
-    bool _color;
 };
 
 template<class Data>
@@ -56,11 +54,11 @@ constexpr rb_node<Data> *right_leaf(rb_node<Data> *node) {
     return node;
 }
 
-template<class Data, class Ptr>
+template<class Ptr>
 struct rb_iterator {
     typedef bidirectional_iterator_tag iterator_category;
-    typedef Data value_type;
-    typedef ptrdiff_t difference_type;
+    typedef decltype(declval<Ptr>()->_data) value_type;
+    typedef typename pointer_traits<Ptr>::difference_type difference_type;
     typedef value_type *pointer;
     typedef value_type &reference;
 
@@ -69,11 +67,11 @@ struct rb_iterator {
     constexpr rb_iterator(const Ptr &ptr): _ptr(ptr) {}
 
     constexpr reference operator*() const {
-        return const_cast<reference>(_ptr->_data);
+        return _ptr->_data;
     }
 
     constexpr pointer operator->() const {
-        return ala::pointer_traits<pointer>::pointer_to(_ptr->_data);
+        return ala::addressof(_ptr->_data);
     }
 
     constexpr bool operator==(const rb_iterator &rhs) const {
@@ -132,6 +130,8 @@ struct rb_iterator {
 protected:
     template<typename, typename, typename, typename>
     friend struct map;
+    template<typename, typename, typename>
+    friend struct set;
     Ptr _ptr;
 };
 
@@ -193,16 +193,16 @@ public:
     rb_tree &operator=(const rb_tree &other) {
         destruct_tree(_root);
         _root = copy_tree(other._root);
-        _size = other._size;
         fix_nil();
+        _size = other._size;
         return *this;
     }
 
     rb_tree &operator=(rb_tree &&other) {
         destruct_tree(_root);
         _root = other._root;
-        _size = other._size;
         fix_nil();
+        _size = other._size;
         other._root = nullptr;
         other._size = 0;
         other.fix_nil();
@@ -222,14 +222,6 @@ public:
     node_pointer end() const {
         return _right_nil;
     }
-
-    // node_pointer rbegin() const {
-    //     return _right_nil->_parent;
-    // }
-
-    // node_pointer rend() const {
-    //     return _left_nil;
-    // }
 
     void clear() {
         destruct_tree(_root);
@@ -264,22 +256,26 @@ public:
     }
 
     void swap(rb_tree &other) noexcept(
-        allocator_traits<allocator_type>::is_always_equal::value
+        allocator_type::is_always_equal::value
             &&is_nothrow_swappable<value_compare>::value) {
         ala::swap(_comp, other._comp);
         ala::swap(_root, other._root);
         ala::swap(_left_nil, other._left_nil);
         ala::swap(_right_nil, other._right_nil);
         ala::swap(_size, other._size);
+        ALA_CONST_IF(allocator_type::propagate_on_container_swap::value)
+        ala::swap(_alloc, other._alloc);
+        ALA_CONST_IF(node_allocator_type::propagate_on_container_swap::value)
+        ala::swap(_nalloc, other._nalloc);
     }
 
     template<class RBTree, bool ReBalance = true>
     void merge_tree(RBTree &tree, node_pointer other) {
         if (!is_nil(other->_left))
-            merge_tree_rv(tree, other->_left);
+            merge_tree(tree, other->_left);
         if (!is_nil(other->_right))
-            merge_tree_rv(tree, other->_right);
-        pair<node_pointer, bool> pr(search(other));
+            merge_tree(tree, other->_right);
+        pair<node_pointer, bool> pr(search(nullptr, other));
         if (!pr.second) {
             tree.detach<ReBalance>(other);
             attach_to(pr.first, other);
@@ -321,8 +317,10 @@ public:
                 current = current->_left;
             else if (comp(get_key(current->_data), key))
                 current = current->_right;
-            else
+            else {
+                current = current->_left;
                 ++eql;
+            }
         }
         return eql;
     }
@@ -352,19 +350,20 @@ public:
             else if (comp(get_key(current->_data), key))
                 current = current->_right;
             else {
+                node_pointer temp = current->_left;
                 remove(current);
+                current = temp;
                 ++eql;
-                current = current->_left;
             }
         }
         return eql;
     }
 
     template<class... Args>
-    pair<node_pointer, bool> emplace(Args &&... args) {
+    pair<node_pointer, bool> emplace(node_pointer hint, Args &&... args) {
         using ret = pair<node_pointer, bool>;
         node_pointer new_node = construct_node(ala::forward<Args>(args)...);
-        pair<node_pointer, bool> pr(search(new_node));
+        pair<node_pointer, bool> pr(search(hint, new_node));
         if (pr.second) {
             destruct_node(new_node);
             return ret(pr.first, false);
@@ -374,41 +373,20 @@ public:
         }
     }
 
-    template<class... Args>
-    node_pointer emplace_hint(node_pointer hint, Args &&... args) {
-        node_pointer new_node = construct_node(ala::forward<Args>(args)...);
-        pair<node_pointer, bool> pr(search_hint(hint, new_node));
-        if (pr.second) {
-            destruct_node(new_node);
-            return pr.first;
-        } else {
-            attach_to(pr.first, new_node);
-            return new_node;
-        }
-    }
-
-    pair<node_pointer, bool> insert(node_pointer p) {
+    pair<node_pointer, bool> insert(node_pointer hint, node_pointer p) {
         if (is_nil(p))
             return pair<node_pointer, bool>(end(), false);
-        pair<node_pointer, bool> pr(search(p));
-        if (pr.second) {
-            return pair<node_pointer, bool>(pr.first, false);
-        } else {
+        pair<node_pointer, bool> pr(search(hint, p));
+        if (!pr.second)
             attach_to(pr.first, p);
-            return pair<node_pointer, bool>(p, true);
-        }
+        return pair<node_pointer, bool>(p, !pr.second);
     }
 
-    pair<node_pointer, bool> insert_hint(node_pointer hint, node_pointer p) {
-        if (is_nil(p))
-            return pair<node_pointer, bool>(end(), false);
-        pair<node_pointer, bool> pr(search_hint(hint, p));
-        if (pr.second) {
-            return pair<node_pointer, bool>(pr.first, false);
-        } else {
-            attach_to(pr.first, p);
-            return pair<node_pointer, bool>(p, true);
-        }
+    pair<node_pointer, bool> search(node_pointer hint, node_pointer p) {
+        if (!is_nil(hint) && _comp(p->_data, hint->_data))
+            return search_at(hint, p);
+        else
+            return search_at(_root, p);
     }
 
 protected:
@@ -421,8 +399,7 @@ protected:
     ALA_HAS_MEM_VAL(first)
     ALA_HAS_MEM_VAL(comp)
 
-    static_assert(_has_first<value_type>::value ==
-                      _has_comp<value_compare>::value,
+    static_assert(_has_first<value_type>::value == _has_comp<value_compare>::value,
                   "key compare check failed");
 
     template<typename Dummy = value_type,
@@ -451,7 +428,7 @@ protected:
 
     node_pointer allocate_node() {
         node_pointer node = _nalloc.allocate(1);
-        node->_is_construct = false;
+        node->_is_nil = true;
         return node;
     }
 
@@ -460,12 +437,12 @@ protected:
         node_pointer node = _nalloc.allocate(1);
         _alloc.construct(ala::addressof(node->_data),
                          ala::forward<Args>(args)...);
-        node->_is_construct = true;
+        node->_is_nil = false;
         return node;
     }
 
     void destruct_node(node_pointer node) {
-        if (node->_is_construct)
+        if (!node->_is_nil)
             _alloc.destroy(ala::addressof(node->_data));
         _nalloc.deallocate(node, 1);
     }
@@ -480,13 +457,13 @@ protected:
 
     node_pointer copy_node(node_pointer other) {
         node_pointer node;
-        if (other->_is_construct)
-            node = construct_node(other->_data);
-        else
+        if (other->_is_nil) {
             node = allocate_node();
+            node->_nil_type = other->_nil_type;
+        }
+        else
+            node = construct_node(other->_data);
         node->_color = other->_color;
-        node->_is_nil = other->_is_nil;
-        node->_nil_type = other->_nil_type;
         return node;
     }
 
@@ -558,14 +535,12 @@ protected:
 
         _left_nil->_parent = _right_nil;
         _left_nil->_color = ALA_BLACK;
-        _left_nil->_is_nil = true;
         _left_nil->_nil_type = false;
         _left_nil->_left = nullptr;
         _left_nil->_right = nullptr;
 
         _right_nil->_parent = _left_nil;
         _right_nil->_color = ALA_BLACK;
-        _right_nil->_is_nil = true;
         _right_nil->_nil_type = true;
         _right_nil->_left = nullptr;
         _right_nil->_right = nullptr;
@@ -585,17 +560,6 @@ protected:
         }
     }
 
-    pair<node_pointer, bool> search(node_pointer p) {
-        return search_at(_root, p);
-    }
-
-    pair<node_pointer, bool> search_hint(node_pointer hint, node_pointer p) {
-        if (_comp(p->_data, hint->_data))
-            return search_at(hint, p);
-        else
-            return search_at(_root, p);
-    }
-
     pair<node_pointer, bool> search_at(node_pointer guard, node_pointer p) {
         using ret = pair<node_pointer, bool>;
         node_pointer current = nullptr;
@@ -611,24 +575,34 @@ protected:
                 break;
             }
         }
-        if (found)
-            return ret(current, true);
-        return ret(current, false);
+        return ret(current, found);
     }
 
+    template<bool Rebalance = true>
     void attach_to(node_pointer pos, node_pointer p) noexcept {
         p->_color = ALA_RED;
         p->_left = p->_right = nullptr;
-        p->_is_nil = false;
         p->_parent = pos;
-        if (pos == nullptr) // empty tree
+        if (pos == nullptr) { // empty tree
             _root = p;
-        else if (_comp(p->_data, pos->_data))
+            _left_nil->_parent = _right_nil->_parent = p;
+            p->_left = _left_nil;
+            p->_right = _right_nil;
+        } else if (_comp(p->_data, pos->_data)) {
             pos->_left = p;
-        else
+            if (pos->_left == _left_nil) { // fix nil
+                p->_left = _left_nil;
+                _left_nil->_parent = p;
+            }
+        } else {
             pos->_right = p;
+            if (pos->_right == _right_nil) { // fix nil
+                p->_right = _right_nil;
+                _right_nil->_parent = p;
+            }
+        }
         ++_size;
-        fix_nil();
+        ALA_CONST_IF(Rebalance)
         rebalance_for_attach(p);
     }
 
@@ -636,9 +610,6 @@ protected:
         node_pointer parent, grandp, uncle;
         while (is_red(parent = current->_parent)) {
             grandp = parent->_parent;
-            /*if (grandp == nullptr)
-                break;
-            else */
             if (parent == grandp->_left) {
                 uncle = grandp->_right;
                 if (is_red(uncle)) {
@@ -674,8 +645,6 @@ protected:
     void detach(node_pointer current) noexcept {
         node_pointer child, parent, temp = current;
         bool color;
-        if (is_nil(current))
-            return;
         if (is_nil(current->_left)) {
             color = current->_color;
             child = current->_right;
@@ -703,14 +672,14 @@ protected:
             current->_left->_parent = current;
             current->_color = temp->_color;
         }
-        if (Rebalance && color == ALA_BLACK)
-            rebalance_for_detach(child, parent);
-        fix_nil();
+        fix_nil_detach(temp);
         --_size;
+        ALA_CONST_IF(Rebalance)
+        if (color == ALA_BLACK)
+            rebalance_for_detach(child, parent);
     }
 
-    void rebalance_for_detach(node_pointer current,
-                              node_pointer parent) noexcept {
+    void rebalance_for_detach(node_pointer current, node_pointer parent) noexcept {
         node_pointer brother;
         while (current != _root && is_black(current)) {
             if (parent->_left == current) {
@@ -773,6 +742,19 @@ protected:
         }
         if (!is_nil(current))
             current->_color = ALA_BLACK;
+    }
+
+    void fix_nil_detach(node_pointer current) noexcept {
+        if (current == _root) {
+            _left_nil->_parent = _right_nil;
+            _right_nil->_parent = _left_nil;
+        } else if (current->_left == _left_nil) {
+            current->_parent->_left = _left_nil;
+            _left_nil->_parent = current->_parent;
+        } else if (current->_right == _right_nil) {
+            current->_parent->_right = _right_nil;
+            _right_nil->_parent = current->_parent;
+        }
     }
 };
 

@@ -2,7 +2,6 @@
 #define _ALA_NUMERIC_LIMITS_H
 
 #include <ala/config.h>
-#include <ala/external/limits.h>
 
 #define MAKE_numeric_limits(_type_, _minV_, _maxV_, _lowestV_, _epsilonV_, \
                             _round_errorV_, _infinityV_, _quiet_NaNV_, \

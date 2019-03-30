@@ -13,6 +13,7 @@
 
 #pragma warning(push)
 #pragma warning(disable : 4180)
+int x(int p) {return p;}
 int main() {
     TEST(is_void)
     TEST(is_null_pointer)
@@ -85,7 +86,7 @@ int main() {
     TEST_NOVOID(is_trivially_move_assignable)
     TEST_NOVOID(is_nothrow_move_assignable)
 
-    #if !defined(_ALA_MSVC) || _MSC_VER >= 1910
+    #if _ALA_CPP_STD >= 17
     TEST_2(is_swappable_with)
     TEST(is_swappable)
     TEST_2(is_nothrow_swappable_with)
@@ -147,7 +148,9 @@ int main() {
     static_assert(ala::is_implicitly_default_constructible<A>::value, "oh");
     static_assert(!ala::is_implicitly_default_constructible<B>::value, "oh");
 
-    return 0;
+
+
+    return ala::invoke(x, 10086);;
 }
 
 #pragma warning(pop)

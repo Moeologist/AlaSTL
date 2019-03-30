@@ -1,32 +1,34 @@
+#define ALA_M_STR(x) #x
+
 #define TEST_CV(OP, TP) \
-static_assert(ala:: OP < TP >::value                   == std:: OP < TP >::value,"oh");\
-static_assert(ala:: OP < TP const>::value              == std:: OP < TP const>::value,"oh");\
-static_assert(ala:: OP < TP volatile>::value           == std:: OP < TP volatile>::value,"oh");\
-static_assert(ala:: OP < TP const volatile>::value     == std:: OP < TP const volatile>::value,"oh");
+static_assert(ala:: OP < TP >::value                   == std:: OP < TP >::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP const>::value              == std:: OP < TP const>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP volatile>::value           == std:: OP < TP volatile>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP const volatile>::value     == std:: OP < TP const volatile>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));
 
 #define TEST_STAR(OP, TP) \
-static_assert(ala:: OP < TP *>::value                  == std:: OP < TP *>::value,"oh");\
-static_assert(ala:: OP < TP const*>::value             == std:: OP < TP const*>::value,"oh");\
-static_assert(ala:: OP < TP volatile*>::value          == std:: OP < TP volatile*>::value,"oh");\
-static_assert(ala:: OP < TP const volatile*>::value    == std:: OP < TP const volatile*>::value,"oh");
+static_assert(ala:: OP < TP *>::value                  == std:: OP < TP *>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP const*>::value             == std:: OP < TP const*>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP volatile*>::value          == std:: OP < TP volatile*>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP const volatile*>::value    == std:: OP < TP const volatile*>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));
 
 #define TEST_REF(OP, TP) \
-static_assert(ala:: OP < TP &>::value                  == std:: OP < TP &>::value,"oh");\
-static_assert(ala:: OP < TP const&>::value             == std:: OP < TP const&>::value,"oh");\
-static_assert(ala:: OP < TP volatile&>::value          == std:: OP < TP volatile&>::value,"oh");\
-static_assert(ala:: OP < TP const volatile&>::value    == std:: OP < TP const volatile&>::value,"oh");
+static_assert(ala:: OP < TP &>::value                  == std:: OP < TP &>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP const&>::value             == std:: OP < TP const&>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP volatile&>::value          == std:: OP < TP volatile&>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP const volatile&>::value    == std:: OP < TP const volatile&>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));
 
 #define TEST_RREF(OP, TP) \
-static_assert(ala:: OP < TP &&>::value                 == std:: OP < TP &&>::value,"oh");\
-static_assert(ala:: OP < TP const&&>::value            == std:: OP < TP const&&>::value,"oh");\
-static_assert(ala:: OP < TP volatile&&>::value         == std:: OP < TP volatile&&>::value,"oh");\
-static_assert(ala:: OP < TP const volatile&&>::value   == std:: OP < TP const volatile&&>::value,"oh");
+static_assert(ala:: OP < TP &&>::value                 == std:: OP < TP &&>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP const&&>::value            == std:: OP < TP const&&>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP volatile&&>::value         == std:: OP < TP volatile&&>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP const volatile&&>::value   == std:: OP < TP const volatile&&>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));
 
 #define TEST_EXT(OP, TP) \
-static_assert(ala:: OP < TP [8]>::value                == std:: OP < TP [8]>::value,"oh");\
-static_assert(ala:: OP < TP const [8]>::value          == std:: OP < TP const [8]>::value,"oh");\
-static_assert(ala:: OP < TP volatile [8]>::value       == std:: OP < TP volatile [8]>::value,"oh");\
-static_assert(ala:: OP < TP const volatile [8]>::value == std:: OP < TP const volatile [8]>::value,"oh");
+static_assert(ala:: OP < TP [8]>::value                == std:: OP < TP [8]>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP const [8]>::value          == std:: OP < TP const [8]>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP volatile [8]>::value       == std:: OP < TP volatile [8]>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP const volatile [8]>::value == std:: OP < TP const volatile [8]>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));
 
 #define TEST_ALL(OP, TP) \
 TEST_CV(OP, TP)\
@@ -85,19 +87,19 @@ TEST_STAR(OP, void)\
 TEST_NOVOID(OP)
 
 #define TEST_CONS_SUB(OP, TP) \
-static_assert(ala:: OP < TP >::value == std:: OP < TP >::value,"oh");\
-static_assert(ala:: OP < TP, int, float>::value == std:: OP < TP, int, float>::value,"oh");\
-static_assert(ala:: OP < TP, TP>::value == std:: OP < TP, TP>::value,"oh");\
-static_assert(ala:: OP < TP, TP&>::value == std:: OP < TP, TP&>::value,"oh");\
-static_assert(ala:: OP < TP, TP&>::value == std:: OP < TP, TP&>::value,"oh");\
-static_assert(ala:: OP < TP, TP&&>::value == std:: OP < TP, TP&&>::value,"oh");\
-static_assert(ala:: OP < TP, TP*>::value == std:: OP < TP, TP*>::value,"oh");\
-static_assert(ala:: OP < TP, int, int>::value == std:: OP < TP, int, int>::value,"oh");\
-static_assert(ala:: OP < TP, int, int>::value == std:: OP < TP, int, int>::value,"oh");\
-static_assert(ala:: OP < TP, int>::value == std:: OP < TP, int>::value,"oh");\
-static_assert(ala:: OP < TP, double>::value == std:: OP < TP, double>::value,"oh");\
-static_assert(ala:: OP < TP, void>::value == std:: OP < TP, void>::value,"oh");\
-static_assert(ala:: OP < TP, TP, TP>::value == std:: OP < TP, TP, TP>::value,"oh");
+static_assert(ala:: OP < TP >::value == std:: OP < TP >::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, int, float>::value == std:: OP < TP, int, float>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, TP>::value == std:: OP < TP, TP>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, TP&>::value == std:: OP < TP, TP&>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, TP&>::value == std:: OP < TP, TP&>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, TP&&>::value == std:: OP < TP, TP&&>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, TP*>::value == std:: OP < TP, TP*>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, int, int>::value == std:: OP < TP, int, int>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, int, int>::value == std:: OP < TP, int, int>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, int>::value == std:: OP < TP, int>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, double>::value == std:: OP < TP, double>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, void>::value == std:: OP < TP, void>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, TP, TP>::value == std:: OP < TP, TP, TP>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));
 
 #define TEST_CONS(OP) \
 TEST_CONS_SUB(OP, C0)\
@@ -117,15 +119,15 @@ TEST_CONS_SUB(OP, X5)\
 TEST_CONS_SUB(OP, X6)
 
 #define TEST_2_SUB(OP, TP) \
-static_assert(ala:: OP < TP, int>::value == std:: OP < TP, int>::value,"oh");\
-static_assert(ala:: OP < TP, TP>::value == std:: OP < TP, TP>::value,"oh");\
-static_assert(ala:: OP < TP, TP&>::value == std:: OP < TP, TP&>::value,"oh");\
-static_assert(ala:: OP < TP, TP&>::value == std:: OP < TP, TP&>::value,"oh");\
-static_assert(ala:: OP < TP, TP&&>::value == std:: OP < TP, TP&&>::value,"oh");\
-static_assert(ala:: OP < TP, TP*>::value == std:: OP < TP, TP*>::value,"oh");\
-static_assert(ala:: OP < TP, int>::value == std:: OP < TP, int>::value,"oh");\
-static_assert(ala:: OP < TP, double>::value == std:: OP < TP, double>::value,"oh");\
-static_assert(ala:: OP < TP, void>::value == std:: OP < TP, void>::value,"oh");
+static_assert(ala:: OP < TP, int>::value == std:: OP < TP, int>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, TP>::value == std:: OP < TP, TP>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, TP&>::value == std:: OP < TP, TP&>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, TP&>::value == std:: OP < TP, TP&>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, TP&&>::value == std:: OP < TP, TP&&>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, TP*>::value == std:: OP < TP, TP*>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, int>::value == std:: OP < TP, int>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, double>::value == std:: OP < TP, double>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(ala:: OP < TP, void>::value == std:: OP < TP, void>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));
 
 #define TEST_2(OP) \
 TEST_2_SUB(OP, C0)\
@@ -146,34 +148,34 @@ TEST_2_SUB(OP, X6)
 
 
 #define TYPETEST_CV(OP, TP) \
-static_assert(std::is_same<ala:: OP ## _t< TP >                   , std:: OP < TP >::type>::value,"oh");\
-static_assert(std::is_same<ala:: OP ## _t< TP const>              , std:: OP < TP const>::type>::value,"oh");\
-static_assert(std::is_same<ala:: OP ## _t< TP volatile>           , std:: OP < TP volatile>::type>::value,"oh");\
-static_assert(std::is_same<ala:: OP ## _t< TP const volatile>     , std:: OP < TP const volatile>::type>::value,"oh");
+static_assert(std::is_same<ala:: OP ## _t< TP >                   , std:: OP < TP >::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(std::is_same<ala:: OP ## _t< TP const>              , std:: OP < TP const>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(std::is_same<ala:: OP ## _t< TP volatile>           , std:: OP < TP volatile>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(std::is_same<ala:: OP ## _t< TP const volatile>     , std:: OP < TP const volatile>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));
 
 #define TYPETEST_STAR(OP, TP) \
-static_assert(std::is_same<ala:: OP ## _t< TP *>                  , std:: OP < TP *>::type>::value,"oh");\
-static_assert(std::is_same<ala:: OP ## _t< TP const*>             , std:: OP < TP const*>::type>::value,"oh");\
-static_assert(std::is_same<ala:: OP ## _t< TP volatile*>          , std:: OP < TP volatile*>::type>::value,"oh");\
-static_assert(std::is_same<ala:: OP ## _t< TP const volatile*>    , std:: OP < TP const volatile*>::type>::value,"oh");
+static_assert(std::is_same<ala:: OP ## _t< TP *>                  , std:: OP < TP *>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(std::is_same<ala:: OP ## _t< TP const*>             , std:: OP < TP const*>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(std::is_same<ala:: OP ## _t< TP volatile*>          , std:: OP < TP volatile*>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(std::is_same<ala:: OP ## _t< TP const volatile*>    , std:: OP < TP const volatile*>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));
 
 #define TYPETEST_REF(OP, TP) \
-static_assert(std::is_same<ala:: OP ## _t< TP &>                  , std:: OP < TP &>::type>::value,"oh");\
-static_assert(std::is_same<ala:: OP ## _t< TP const&>             , std:: OP < TP const&>::type>::value,"oh");\
-static_assert(std::is_same<ala:: OP ## _t< TP volatile&>          , std:: OP < TP volatile&>::type>::value,"oh");\
-static_assert(std::is_same<ala:: OP ## _t< TP const volatile&>    , std:: OP < TP const volatile&>::type>::value,"oh");
+static_assert(std::is_same<ala:: OP ## _t< TP &>                  , std:: OP < TP &>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(std::is_same<ala:: OP ## _t< TP const&>             , std:: OP < TP const&>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(std::is_same<ala:: OP ## _t< TP volatile&>          , std:: OP < TP volatile&>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(std::is_same<ala:: OP ## _t< TP const volatile&>    , std:: OP < TP const volatile&>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));
 
 #define TYPETEST_RREF(OP, TP) \
-static_assert(std::is_same<ala:: OP ## _t< TP &&>                 , std:: OP < TP &&>::type>::value,"oh");\
-static_assert(std::is_same<ala:: OP ## _t< TP const&&>            , std:: OP < TP const&&>::type>::value,"oh");\
-static_assert(std::is_same<ala:: OP ## _t< TP volatile&&>         , std:: OP < TP volatile&&>::type>::value,"oh");\
-static_assert(std::is_same<ala:: OP ## _t< TP const volatile&&>   , std:: OP < TP const volatile&&>::type>::value,"oh");
+static_assert(std::is_same<ala:: OP ## _t< TP &&>                 , std:: OP < TP &&>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(std::is_same<ala:: OP ## _t< TP const&&>            , std:: OP < TP const&&>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(std::is_same<ala:: OP ## _t< TP volatile&&>         , std:: OP < TP volatile&&>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(std::is_same<ala:: OP ## _t< TP const volatile&&>   , std:: OP < TP const volatile&&>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));
 
 #define TYPETEST_EXT(OP, TP) \
-static_assert(std::is_same<ala:: OP ## _t< TP [8]>                , std:: OP < TP [8]>::type>::value,"oh");\
-static_assert(std::is_same<ala:: OP ## _t< TP const [8]>          , std:: OP < TP const [8]>::type>::value,"oh");\
-static_assert(std::is_same<ala:: OP ## _t< TP volatile [8]>       , std:: OP < TP volatile [8]>::type>::value,"oh");\
-static_assert(std::is_same<ala:: OP ## _t< TP const volatile [8]> , std:: OP < TP const volatile [8]>::type>::value,"oh");
+static_assert(std::is_same<ala:: OP ## _t< TP [8]>                , std:: OP < TP [8]>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(std::is_same<ala:: OP ## _t< TP const [8]>          , std:: OP < TP const [8]>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(std::is_same<ala:: OP ## _t< TP volatile [8]>       , std:: OP < TP volatile [8]>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));\
+static_assert(std::is_same<ala:: OP ## _t< TP const volatile [8]> , std:: OP < TP const volatile [8]>::type>::value,ALA_M_STR(OP) "," ALA_M_STR(TP));
 
 #define TYPETEST_ALL(OP, TP) \
 TYPETEST_CV(OP, TP)\

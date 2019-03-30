@@ -6,23 +6,9 @@
 // #include <stdexcept>
 // #include <cassert>
 
-namespace std {
 
-template<typename Head, typename... Tail>
-struct tuple_element<0, ala::tuple<Head, Tail...>> {
-    typedef Head type;
-};
-
-template<size_t I, typename Head, typename... Tail>
-struct tuple_element<I, ala::tuple<Head, Tail...>>
-    : tuple_element<I - 1, ala::tuple<Tail...>> {
-    static_assert(I <= sizeof...(Tail), "out of range");
-};
-
-template<typename... Ts>
-struct tuple_size<ala::tuple<Ts...>>: integral_constant<size_t, sizeof...(Ts)> {};
-
-} // namespace std
+template<typename ... >
+struct FK;
 
 int main() {
     ala::tuple tp{1, 2, 1.3};
@@ -42,13 +28,17 @@ int main() {
     static_assert(ala::tuple{1, 2, 1} < ala::tuple{1, 2});
     static_assert(ala::tuple{1, 2, 1.0} == ala::tuple{1, 2, 1});
     static_assert(!(ala::tuple{1, 2, 1.0} < ala::tuple{1, 2, 1}));
-    static_assert(ala::tuple() < ala::tuple{1, 2, 1});
-    static_assert(!(ala::tuple() < ala::tuple{}));
-    static_assert(ala::tuple() == ala::tuple{});
-    static_assert(!(ala::tuple() == ala::tuple{1, 2, 1}));
+    static_assert(ala::tuple{} < ala::tuple{1, 2, 1});
+    static_assert(!(ala::tuple{} < ala::tuple{}));
+    static_assert(ala::tuple{} == ala::tuple{});
+    static_assert(!(ala::tuple{} == ala::tuple{1, 2, 1}));
     static_assert(!(ala::tuple{1, 2, 1} == ala::tuple{}));
     float x{};
     char y{};
     int z{};
+    // FK<decltype(ala::tuple<float &, char &&, int>(x, ala::move(y), z))> fk;
+    static_assert(ala::tuple_size<ala::tuple<float &, char &&, int>>::value==3);
+    // static_assert(std::tuple_size<const std::tuple<float &, char &&, int>>::value==3);
+    // static_assert(std::tuple_size<std::tuple<float &, char &&, int>>::value==3);
     const auto &[a, b, c] = ala::tuple<float &, char &&, int>(x, ala::move(y), z);
 }

@@ -1,9 +1,9 @@
 #ifndef _ALA_TUPLE_H
 #define _ALA_TUPLE_H
 
-#include <ala/type_traits.h>
 #include <ala/detail/integer_sequence.h>
 #include <ala/detail/pair.h>
+#include <ala/type_traits.h>
 
 namespace ala {
 
@@ -42,8 +42,12 @@ public:
         ala::swap(value, tb.value);
     }
 
-    constexpr T &get() noexcept { return value; }
-    constexpr const T &get() const noexcept { return value; }
+    constexpr T &get() noexcept {
+        return value;
+    }
+    constexpr const T &get() const noexcept {
+        return value;
+    }
 };
 
 // empty class optimize from libc++
@@ -74,8 +78,12 @@ public:
         ala::swap(get(), tb.get());
     }
 
-    constexpr T &get() { return static_cast<T &>(*this); }
-    constexpr const T &get() const { return static_cast<const T &>(*this); }
+    constexpr T &get() {
+        return static_cast<T &>(*this);
+    }
+    constexpr const T &get() const {
+        return static_cast<const T &>(*this);
+    }
 };
 
 template<typename... Ts>
@@ -84,19 +92,24 @@ struct tuple;
 template<typename T>
 struct tuple_size;
 
+template<typename Tuple, typename = void>
+struct _tuple_size_helper {};
+
+template<typename Tuple>
+struct _tuple_size_helper<Tuple, void_t<decltype(tuple_size<Tuple>::value)>>
+    : tuple_size<Tuple> {};
+
 template<typename... Ts>
 struct tuple_size<tuple<Ts...>>: integral_constant<size_t, sizeof...(Ts)> {};
 
 template<typename T>
-struct tuple_size<const T>: integral_constant<size_t, tuple_size<T>::value> {};
+struct tuple_size<const T>: _tuple_size_helper<T> {};
 
 template<typename T>
-struct tuple_size<volatile T>: integral_constant<size_t, tuple_size<T>::value> {
-};
+struct tuple_size<volatile T>: _tuple_size_helper<T> {};
 
 template<typename T>
-struct tuple_size<const volatile T>
-    : integral_constant<size_t, tuple_size<T>::value> {};
+struct tuple_size<const volatile T>: _tuple_size_helper<T> {};
 
 template<size_t I, typename T>
 struct tuple_element;
@@ -132,15 +145,6 @@ ALA_VAR_INLINE constexpr size_t tuple_size_v = tuple_size<T>::value;
 
 template<size_t I, typename T>
 using tuple_element_t = typename tuple_element<I, T>::type;
-
-template<typename Tuple>
-struct _is_tuple_helper: false_type {};
-
-template<typename... Ts>
-struct _is_tuple_helper<tuple<Ts...>>: true_type {};
-
-template<typename Tuple>
-struct is_tuple: _is_tuple_helper<remove_cvref_t<Tuple>> {};
 
 template<size_t I, typename... Ts>
 constexpr tuple_element_t<I, tuple<Ts...>> &get(tuple<Ts...> &tp) noexcept {
@@ -178,9 +182,9 @@ struct _tuple_impl;
 template<size_t... Idx, typename... Ts>
 struct _tuple_impl<index_sequence<Idx...>, Ts...>: _tuple_base<Idx, Ts>... {
     template<typename Tuple>
-    struct _is_tuple : false_type {};
+    struct _is_tuple: false_type {};
     template<typename... TArgs>
-    struct _is_tuple<tuple<TArgs...>> : true_type {};
+    struct _is_tuple<tuple<TArgs...>>: true_type {};
 
     constexpr _tuple_impl() noexcept(
         _and_<is_nothrow_default_constructible<Ts>...>::value) {}
@@ -190,7 +194,8 @@ struct _tuple_impl<index_sequence<Idx...>, Ts...>: _tuple_base<Idx, Ts>... {
         _and_<is_nothrow_constructible<Ts, Us>...>::value)
         : _tuple_base<Idx, Ts>(ala::forward<Us>(us))... {}
 
-    template<typename Tuple, typename = enable_if_t<_is_tuple<remove_cvref<Tuple>>::value>>
+    template<typename Tuple,
+             typename = enable_if_t<_is_tuple<remove_cvref<Tuple>>::value>>
     constexpr _tuple_impl(Tuple &&tp) noexcept(
         _and_<is_nothrow_constructible<
             Ts, tuple_element_t<Idx, remove_reference_t<Tuple>>>...>::value)
@@ -240,7 +245,6 @@ struct tuple {
 private:
     typedef _tuple_impl<index_sequence_for<Ts...>, Ts...> impl_type;
     impl_type _impl;
-
     template<size_t Sz, typename... Us>
     friend constexpr typename tuple_element<Sz, tuple<Us...>>::type &
     get(tuple<Us...> &) noexcept;
@@ -382,17 +386,17 @@ public:
         return *this;
     }
 
-    template<typename Dummy = true_type, typename = enable_if_t<_and_<Dummy, is_copy_assignable<Ts>...>::value>>
-    constexpr tuple &
-    operator=(const tuple &tp) noexcept(
+    template<typename Dummy = true_type,
+             typename = enable_if_t<_and_<Dummy, is_copy_assignable<Ts>...>::value>>
+    constexpr tuple &operator=(const tuple &tp) noexcept(
         _and_<is_nothrow_copy_assignable<Ts>...>::value) {
         _impl.operator=(tp._impl);
         return *this;
     }
 
-    template<typename Dummy = true_type, typename = enable_if_t<_and_<Dummy, is_move_assignable<Ts>...>::value>>
-    constexpr tuple &
-    operator=(tuple &&tp) {
+    template<typename Dummy = true_type,
+             typename = enable_if_t<_and_<Dummy, is_move_assignable<Ts>...>::value>>
+    constexpr tuple &operator=(tuple &&tp) {
         _impl.operator=(ala::move(tp._impl));
         return *this;
     }
@@ -400,6 +404,11 @@ public:
     constexpr void
     swap(tuple &tp) noexcept(_and_<is_nothrow_swappable<Ts>...>::value) {
         _impl.swap(tp._impl);
+    }
+
+    template<size_t Sz>
+    decltype(auto) get() const {
+        return ala::get<Sz>(*this);
     }
 };
 
@@ -641,8 +650,10 @@ constexpr const T &&get(const tuple<Ts...> &&t) noexcept {
 //          size_t Cur, typename T1, typename... Ts, size_t... SIs>
 // struct _type_pick_impl<Tplt, Cur, index_sequence<SIs...>, T1, Ts...> {
 //     typedef conditional_t<Tplt<T1>::value,
-//                           typename _type_to_index_impl<template Tplt, Cur + 1, index_sequence<SIs..., Cur>, Ts...>::type,
-//                           typename _type_to_index_impl<template Tplt, Cur + 1, index_sequence<SIs...>, Ts...>::type>
+//                           typename _type_to_index_impl<template Tplt, Cur +
+//                           1, index_sequence<SIs..., Cur>, Ts...>::type,
+//                           typename _type_to_index_impl<template Tplt, Cur +
+//                           1, index_sequence<SIs...>, Ts...>::type>
 //         type;
 // };
 
@@ -653,7 +664,8 @@ constexpr const T &&get(const tuple<Ts...> &&t) noexcept {
 // };
 
 // template<template<typename> class Tplt, typename... Ts>
-// using type_pick_t = typename _type_pick_impl<Tplt, 0, index_sequence<>, Ts...>::type;
+// using type_pick_t = typename _type_pick_impl<Tplt, 0, index_sequence<>,
+// Ts...>::type;
 
 template<size_t... Is, typename... Ts>
 constexpr auto choice(const tuple<Ts...> &t) {
@@ -692,8 +704,8 @@ constexpr auto choice(const tuple<Ts...> &&t) {
 template<class T1, class T2>
 template<class... Args1, class... Args2, size_t... I1, size_t... I2>
 constexpr pair<T1, T2>::pair(piecewise_construct_t, tuple<Args1...> &first_args,
-                   tuple<Args2...> &second_args, index_sequence<I1...>,
-                   index_sequence<I2...>)
+                             tuple<Args2...> &second_args,
+                             index_sequence<I1...>, index_sequence<I2...>)
     : first(ala::forward<Args1>(ala::get<I1>(first_args))...),
       second(ala::forward<Args2>(ala::get<I2>(second_args))...) {}
 
@@ -703,5 +715,51 @@ tuple(Ts...)->tuple<Ts...>;
 #endif
 
 } // namespace ala
+
+#if _ALA_ENABLE_CPP_MACRO && __cpp_structured_bindings >= 201606L || \
+    (defined(_ALA_MSVC) && _MSC_VER >= 1911)
+
+namespace std {
+
+template<size_t I, typename Tuple>
+struct tuple_element;
+
+template<typename Tuple>
+struct tuple_size;
+
+template<size_t I, typename... Ts>
+struct tuple_element<I, ala::tuple<Ts...>>
+    : ala::tuple_element<I, ala::tuple<Ts...>> {};
+
+template<size_t I, typename... Ts>
+struct tuple_element<I, const ala::tuple<Ts...>>
+    : ala::tuple_element<I, const ala::tuple<Ts...>> {};
+
+template<size_t I, typename... Ts>
+struct tuple_element<I, volatile ala::tuple<Ts...>>
+    : ala::tuple_element<I, volatile ala::tuple<Ts...>> {};
+
+template<size_t I, typename... Ts>
+struct tuple_element<I, const volatile ala::tuple<Ts...>>
+    : ala::tuple_element<I, const volatile ala::tuple<Ts...>> {};
+
+template<typename... Ts>
+struct tuple_size<ala::tuple<Ts...>>: ala::tuple_size<ala::tuple<Ts...>> {};
+
+template<typename... Ts>
+struct tuple_size<const ala::tuple<Ts...>>: ala::tuple_size<ala::tuple<Ts...>> {
+};
+
+template<typename... Ts>
+struct tuple_size<volatile ala::tuple<Ts...>>
+    : ala::tuple_size<ala::tuple<Ts...>> {};
+
+template<typename... Ts>
+struct tuple_size<const volatile ala::tuple<Ts...>>
+    : ala::tuple_size<ala::tuple<Ts...>> {};
+
+} // namespace std
+
+#endif
 
 #endif // HEAD

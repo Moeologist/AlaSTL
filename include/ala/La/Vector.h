@@ -23,6 +23,11 @@ template<class T, size_t Size>
 struct vector {
     typedef T value_type;
     typedef size_t size_type;
+    constexpr static size_t size = Size;
+    T _m[Size];
+
+    static_assert(Size >= 2, "vector size must >= 2");
+
     template<class Cast>
     constexpr vector<Cast, Size> cast() noexcept {
         vector<Cast, Size> tmp;
@@ -177,13 +182,13 @@ struct vector {
     constexpr T &operator[](int index) noexcept {
         if (index < 0)
             index = Size + index;
-        assert(index > 0 && index < Size) return _m[index];
+        assert(index > 0 && index < Size);return _m[index];
     }
 
     constexpr const T &operator[](int index) const noexcept {
         if (index < 0)
             index = Size + index;
-        assert(index > 0 && index < Size) return _m[index];
+        assert(index > 0 && index < Size); return _m[index];
     }
 
     constexpr T *data() noexcept {
@@ -192,12 +197,6 @@ struct vector {
     constexpr T *const data() const noexcept {
         return _m;
     }
-
-    static_assert(Size >= 2, "vector size must >= 2");
-    using size_type = size_t;
-    using value_type = T;
-    constexpr static size_t size = Size;
-    T _m[Size];
 };
 
 template<class T, size_t Size, class U>
@@ -209,7 +208,7 @@ operator+(const U &lhs, const vector<T, Size> &rhs) {
 template<class T, size_t Size, class U>
 constexpr enable_if_t<is_assignable<T &, U>::value, vector<T, Size>>
 operator-(const U &lhs, const vector<T, Size> &rhs) {
-    vector<T, Size> tmp;
+    vector<T, Size> tmp{};
     return tmp.fill(lhs) -= rhs;
 }
 
@@ -222,7 +221,7 @@ operator*(const U &lhs, const vector<T, Size> &rhs) {
 template<class T, size_t Size, class U>
 constexpr enable_if_t<is_assignable<T &, U>::value, vector<T, Size>>
 operator/(const U &lhs, const vector<T, Size> &rhs) {
-    vector<T, Size> tmp;
+    vector<T, Size> tmp{};
     return tmp.fill(lhs) /= rhs;
 }
 

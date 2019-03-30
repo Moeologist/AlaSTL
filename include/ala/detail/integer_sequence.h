@@ -1,6 +1,8 @@
 #ifndef _ALA_DETAIL_INTEGER_SEQUENCE_H
 #define _ALA_DETAIL_INTEGER_SEQUENCE_H
 
+#include <ala/type_traits.h>
+
 namespace ala {
 
 template<typename Int, Int... Is>
