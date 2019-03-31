@@ -499,6 +499,12 @@ protected:
         return x;
     }
 
+    /*---------------------------------
+    |      up     trans     up        |
+    |       \     ====>      \        |
+    |        u                v       |
+    ---------------------------------*/
+
     void transplant(node_pointer u, node_pointer v) noexcept {
         node_pointer uparent = u->_parent;
         if (uparent == nullptr)
@@ -588,11 +594,20 @@ protected:
         rebalance_for_attach(p);
     }
 
+    /*---------------------------------------------------------------------------------
+    |     G(B)                  G(B)                  G(B)                  P(B)      |
+    |     / \       U.c=B       / \       RotL(P)     / \       RotR(G)     / \       |
+    |  P(R) U(R)    ====>?   P(R) U(B)    ====>    P(R) U(B)    ====>    X(R) G(R)    |
+    |  / \          loop(X)  / \          P<->X    / \          P.c=B         / \     |
+    |    X(R)                  X(R)              X(R)           G.c=R           U(B)  |
+    ---------------------------------------------------------------------------------*/
+    // remove continuous red
+
     void rebalance_for_attach(node_pointer current) noexcept {
         node_pointer parent, grandp, uncle;
         while (is_red(parent = current->_parent)) {
             grandp = parent->_parent;
-            if (parent == grandp->_left) {
+            if (parent == grandp->_left) { // see graph
                 uncle = grandp->_right;
                 if (is_red(uncle)) {
                     parent->_color = uncle->_color = ALA_BLACK;
@@ -600,12 +615,12 @@ protected:
                     current = grandp;
                 } else {
                     if (parent->_right == current)
-                        rotate_left(current = parent);
-                    current->_parent->_color = ALA_BLACK;
-                    current->_parent->_parent->_color = ALA_RED;
+                        parent = rotate_left(current = parent);
+                    parent->_color = ALA_BLACK;
+                    grandp->_color = ALA_RED;
                     rotate_right(grandp);
                 }
-            } else {
+            } else { // symmetrical
                 uncle = grandp->_left;
                 if (is_red(uncle)) {
                     parent->_color = uncle->_color = ALA_BLACK;
@@ -613,9 +628,9 @@ protected:
                     current = grandp;
                 } else {
                     if (parent->_left == current)
-                        rotate_right(current = parent);
-                    current->_parent->_color = ALA_BLACK;
-                    current->_parent->_parent->_color = ALA_RED;
+                        parent = rotate_right(current = parent);
+                    parent->_color = ALA_BLACK;
+                    grandp->_color = ALA_RED;
                     rotate_left(grandp);
                 }
             }
@@ -650,7 +665,6 @@ protected:
                 transplant(subs, child);
                 subs->_right = current->_right;
                 subs->_right->_parent = subs;
-                // fix_nil_detach(current, child);
             }
             transplant(current, subs);
             subs->_left = current->_left;
@@ -660,12 +674,18 @@ protected:
         }
         --_size;
         ALA_CONST_IF(Rebalance)
-        if (_root!=nullptr&&color == ALA_BLACK)
+        if (_root != nullptr && color == ALA_BLACK)
             rebalance_for_detach(child, parent);
-        // fix_nil();
-        // if (fix)
-        //     fix_nil_detach(fix);
     }
+
+    /*----------------------------------------------------------------------------------------------------
+    |     P(B)      P.c<->B.c   P(?)                  P(?)      B.l.c=B     P(?)      B.c=P.c     B(?)   |
+    |     / \       RotL(P)     / \       B.c=R       / \       B.c=R       / \       P.c=B       / \    |
+    |  X(B) B(R)    ====>^   X(B) B(B)    ====>?   X(B) B(B)    ====>    X(B) B(B)    ====>    P(B) (B)  |
+    |       / \     B=P.r         / \     loop(X)       / \     RotR(B)       / \     B.r.c=B  /         |
+    |      $B       fork        (B) (B)               (R) (B)   B=P.r          ~B(R)  RotL(B) X          |
+    ----------------------------------------------------------------------------------------------------*/
+    // make brother black-height -1
 
     void rebalance_for_detach(node_pointer current, node_pointer parent) noexcept {
         node_pointer brother;
@@ -695,7 +715,7 @@ protected:
                     if (!is_nil(brother->_right))
                         brother->_right->_color = ALA_BLACK;
                     rotate_left(parent);
-                    current = _root;
+                    current = _root; // make root black
                     break;
                 }
             } else {
