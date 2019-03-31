@@ -1,7 +1,6 @@
 #ifndef _ALA_SET_H
 #define _ALA_SET_H
 
-#include <ala/tuple.h>
 #include <ala/detail/allocator.h>
 #include <ala/detail/functional_base.h>
 #include <ala/detail/rb_tree.h>
@@ -9,8 +8,7 @@
 
 namespace ala {
 
-template<class Key, class Comp = less<Key>,
-         class Alloc = allocator<const Key>>
+template<class Key, class Comp = less<Key>, class Alloc = allocator<const Key>>
 class set {
 public:
     typedef Key key_type;
@@ -54,8 +52,9 @@ protected:
             }
             if (nh._ptr != nullptr) {
                 _ptr = ala::move(nh._ptr);
-                ALA_CONST_IF (allocator_type::propagate_on_container_move_assignment::value)
-                    _a = ala::move(nh._ptr);
+                ALA_CONST_IF(
+                    allocator_type::propagate_on_container_move_assignment::value)
+                _a = ala::move(nh._ptr);
             }
             nh._ptr = nullptr;
         }
@@ -307,12 +306,15 @@ public:
 
     template<class Comp1>
     void merge(set<key_type, key_compare, allocator_type> &source) {
-        tree.merge(source);
+        for (auto i = source.begin(); i != source.end();) {
+            auto tmp = i++;
+            tree.transfer(source.tree, tmp._ptr);
+        }
     }
 
     template<class Comp1>
     void merge(set<key_type, key_compare, allocator_type> &&source) {
-        tree.merge(ala::move(source));
+        this->merge(source);
     }
 
     iterator erase(iterator position) {
@@ -400,7 +402,7 @@ public:
     }
 
     const_iterator lower_bound(const key_type &k) const {
-        return const_cast<set*>(this)->lower_bound(k);
+        return const_cast<set *>(this)->lower_bound(k);
     }
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
@@ -414,7 +416,7 @@ public:
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     const_iterator lower_bound(const K &k) const {
-        return const_cast<set*>(this)->lower_bound(k);
+        return const_cast<set *>(this)->lower_bound(k);
     }
 
     iterator upper_bound(const key_type &k) {
@@ -426,7 +428,7 @@ public:
     }
 
     const_iterator upper_bound(const key_type &k) const {
-        return const_cast<set*>(this)->upper_bound(k);
+        return const_cast<set *>(this)->upper_bound(k);
     }
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
@@ -440,7 +442,7 @@ public:
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     const_iterator upper_bound(const K &k) const {
-        return const_cast<set*>(this)->upper_bound(k);
+        return const_cast<set *>(this)->upper_bound(k);
     }
 
     pair<iterator, iterator> equal_range(const key_type &k) {
@@ -448,7 +450,7 @@ public:
     }
 
     pair<const_iterator, const_iterator> equal_range(const key_type &k) const {
-        return const_cast<set*>(this)->equal_range(k);
+        return const_cast<set *>(this)->equal_range(k);
     }
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
@@ -458,7 +460,7 @@ public:
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     pair<const_iterator, const_iterator> equal_range(const K &k) const {
-        return const_cast<set*>(this)->equal_range(k);
+        return const_cast<set *>(this)->equal_range(k);
     }
 };
 

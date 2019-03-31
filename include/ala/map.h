@@ -67,8 +67,9 @@ protected:
             }
             if (nh._ptr != nullptr) {
                 _ptr = ala::move(nh._ptr);
-                ALA_CONST_IF(allocator_type::propagate_on_container_move_assignment::value)
-                    _a = ala::move(nh._ptr);
+                ALA_CONST_IF(
+                    allocator_type::propagate_on_container_move_assignment::value)
+                _a = ala::move(nh._ptr);
             }
             nh._ptr = nullptr;
         }
@@ -113,7 +114,7 @@ protected:
         typedef NodePtr node_pointer;
         node_pointer _ptr;
         allocator_type _a;
-        _node_adaptor(node_pointer p) : _ptr(p), _a() {
+        _node_adaptor(node_pointer p): _ptr(p), _a() {
             if (p->_is_nil)
                 p = nullptr;
         }
@@ -323,12 +324,12 @@ public:
     template<class It>
     void insert(It first, It last) {
         for (It i = first; i != last; ++i)
-            this -> insert(*i);
+            this->insert(*i);
     }
 
     void insert(initializer_list<value_type> il) {
         for (auto i = il.begin(); i != il.end(); ++i)
-            this -> insert(*i);
+            this->insert(*i);
     }
 
     insert_return_type insert(node_type &&nh) {
@@ -376,18 +377,22 @@ public:
     }
 
     template<class Comp1>
-    void merge(map<key_type, mapped_type, key_compare, allocator_type> &source) {
-        tree.merge(source);
+    void merge(map<key_type, mapped_type, Comp1, allocator_type> &source) {
+        for (auto i = source.begin(); i != source.end();) {
+            auto tmp = i++;
+            tree.transfer(source.tree, tmp._ptr);
+        }
     }
 
     template<class Comp1>
-    void merge(map<key_type, mapped_type, key_compare, allocator_type> &&source) {
-        tree.merge(ala::move(source));
+    void merge(map<key_type, mapped_type, Comp1, allocator_type> &&source) {
+        this->merge(source);
     }
 
     template<class... Args>
     pair<iterator, bool> try_emplace(const key_type &k, Args &&... args) {
-        return tree.emplace(nullptr, ala::piecewise_construct, ala::forward_as_tuple(k),
+        return tree.emplace(nullptr, ala::piecewise_construct,
+                            ala::forward_as_tuple(k),
                             ala::forward_as_tuple(ala::forward<Args>(args)...));
     }
 
@@ -400,25 +405,24 @@ public:
 
     template<class... Args>
     iterator try_emplace(const_iterator hint, const key_type &k, Args &&... args) {
-        return tree.emplace(hint, ala::piecewise_construct,
-                                 ala::forward_as_tuple(k),
-                                 ala::forward_as_tuple(
-                                     ala::forward<Args>(args)...)).first;
+        return tree
+            .emplace(hint, ala::piecewise_construct, ala::forward_as_tuple(k),
+                     ala::forward_as_tuple(ala::forward<Args>(args)...))
+            .first;
     }
 
     template<class... Args>
     iterator try_emplace(const_iterator hint, key_type &&k, Args &&... args) {
-        return tree.emplace(hint, ala::piecewise_construct,
-                                 ala::forward_as_tuple(k),
-                                 ala::forward_as_tuple(
-                                     ala::forward<Args>(args)...)).first;
+        return tree
+            .emplace(hint, ala::piecewise_construct, ala::forward_as_tuple(k),
+                     ala::forward_as_tuple(ala::forward<Args>(args)...))
+            .first;
     }
 
     iterator erase(iterator position) {
-        iterator ret = position;
-        ++ret;
-        tree.remove(position._ptr);
-        return ret;
+        iterator tmp = position++;
+        tree.remove(tmp._ptr);
+        return position;
     }
 
     size_type erase(const key_type &k) {
@@ -500,7 +504,7 @@ public:
     }
 
     const_iterator lower_bound(const key_type &k) const {
-        return const_cast<map*>(this)->lower_bound(k);
+        return const_cast<map *>(this)->lower_bound(k);
     }
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
@@ -514,7 +518,7 @@ public:
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     const_iterator lower_bound(const K &k) const {
-        return const_cast<map*>(this)->lower_bound(k);
+        return const_cast<map *>(this)->lower_bound(k);
     }
 
     iterator upper_bound(const key_type &k) {
@@ -526,7 +530,7 @@ public:
     }
 
     const_iterator upper_bound(const key_type &k) const {
-        return const_cast<map*>(this)->upper_bound(k);
+        return const_cast<map *>(this)->upper_bound(k);
     }
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
@@ -540,7 +544,7 @@ public:
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     const_iterator upper_bound(const K &k) const {
-        return const_cast<map*>(this)->upper_bound(k);
+        return const_cast<map *>(this)->upper_bound(k);
     }
 
     pair<iterator, iterator> equal_range(const key_type &k) {
@@ -548,7 +552,7 @@ public:
     }
 
     pair<const_iterator, const_iterator> equal_range(const key_type &k) const {
-        return const_cast<map*>(this)->equal_range(k);
+        return const_cast<map *>(this)->equal_range(k);
     }
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
@@ -558,7 +562,7 @@ public:
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     pair<const_iterator, const_iterator> equal_range(const K &k) const {
-        return const_cast<map*>(this)->equal_range(k);
+        return const_cast<map *>(this)->equal_range(k);
     }
 };
 

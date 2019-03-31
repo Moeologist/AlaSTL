@@ -255,9 +255,9 @@ public:
         return _comp;
     }
 
-    void swap(rb_tree &other) noexcept(
-        allocator_type::is_always_equal::value
-            &&is_nothrow_swappable<value_compare>::value) {
+    void
+    swap(rb_tree &other) noexcept(allocator_type::is_always_equal::value &&
+                                      is_nothrow_swappable<value_compare>::value) {
         ala::swap(_comp, other._comp);
         ala::swap(_root, other._root);
         ala::swap(_left_nil, other._left_nil);
@@ -269,28 +269,10 @@ public:
         ala::swap(_nalloc, other._nalloc);
     }
 
-    template<class RBTree, bool ReBalance = true>
-    void merge_tree(RBTree &tree, node_pointer other) {
-        if (!is_nil(other->_left))
-            merge_tree(tree, other->_left);
-        if (!is_nil(other->_right))
-            merge_tree(tree, other->_right);
-        pair<node_pointer, bool> pr(search(nullptr, other));
-        if (!pr.second) {
-            tree.detach<ReBalance>(other);
-            attach_to(pr.first, other);
-        }
-    }
-
-    template<class Comp1>
-    void merge(rb_tree<value_type, Comp1, allocator_type> &source) {
-        merge_tree<true>(source, source._root);
-    }
-
-    template<class Comp1>
-    void merge(rb_tree<value_type, Comp1, allocator_type> &&source) {
-        merge_tree<false>(source, source._root);
-        source.clear();
+    template<class RBTree>
+    void transfer(RBTree &other, node_pointer p) {
+        other.detach(p);
+        insert(nullptr, p);
     }
 
     template<class K>
@@ -441,13 +423,14 @@ protected:
         return node;
     }
 
-    void destruct_node(node_pointer node) {
+    void destruct_node(node_pointer &node) {
         if (!node->_is_nil)
             _alloc.destroy(ala::addressof(node->_data));
         _nalloc.deallocate(node, 1);
+        node = nullptr;
     }
 
-    void destruct_tree(node_pointer node) {
+    void destruct_tree(node_pointer &node) {
         if (is_nil(node))
             return;
         destruct_tree(node->_left);
@@ -460,8 +443,7 @@ protected:
         if (other->_is_nil) {
             node = allocate_node();
             node->_nil_type = other->_nil_type;
-        }
-        else
+        } else
             node = construct_node(other->_data);
         node->_color = other->_color;
         return node;
@@ -589,17 +571,17 @@ protected:
             p->_left = _left_nil;
             p->_right = _right_nil;
         } else if (_comp(p->_data, pos->_data)) {
-            pos->_left = p;
             if (pos->_left == _left_nil) { // fix nil
                 p->_left = _left_nil;
                 _left_nil->_parent = p;
             }
+            pos->_left = p;
         } else {
-            pos->_right = p;
             if (pos->_right == _right_nil) { // fix nil
                 p->_right = _right_nil;
                 _right_nil->_parent = p;
             }
+            pos->_right = p;
         }
         ++_size;
         ALA_CONST_IF(Rebalance)
@@ -643,40 +625,46 @@ protected:
 
     template<bool Rebalance = true>
     void detach(node_pointer current) noexcept {
-        node_pointer child, parent, temp = current;
+        node_pointer child, parent, subs, fix = nullptr;
         bool color;
         if (is_nil(current->_left)) {
             color = current->_color;
             child = current->_right;
             parent = current->_parent;
             transplant(current, child);
+            fix_nil_detach(current, child);
         } else if (is_nil(current->_right)) {
             color = current->_color;
             child = current->_left;
             parent = current->_parent;
             transplant(current, child);
+            fix_nil_detach(current, child);
         } else {
-            current = left_leaf(current->_right);
-            color = current->_color;
-            child = current->_right;
-            parent = current->_parent;
-            if (current->_parent == temp)
-                parent = current;
-            else {
-                transplant(current, child);
-                current->_right = temp->_right;
-                current->_right->_parent = current;
+            subs = left_leaf(current->_right);
+            color = subs->_color;
+            child = subs->_right;
+            parent = subs->_parent;
+            if (parent == current) {
+                parent = subs;
+            } else {
+                transplant(subs, child);
+                subs->_right = current->_right;
+                subs->_right->_parent = subs;
+                // fix_nil_detach(current, child);
             }
-            transplant(temp, current);
-            current->_left = temp->_left;
-            current->_left->_parent = current;
-            current->_color = temp->_color;
+            transplant(current, subs);
+            subs->_left = current->_left;
+            subs->_left->_parent = subs;
+            subs->_color = current->_color;
+            fix = subs;
         }
-        fix_nil_detach(temp);
         --_size;
         ALA_CONST_IF(Rebalance)
-        if (color == ALA_BLACK)
+        if (_root!=nullptr&&color == ALA_BLACK)
             rebalance_for_detach(child, parent);
+        // fix_nil();
+        // if (fix)
+        //     fix_nil_detach(fix);
     }
 
     void rebalance_for_detach(node_pointer current, node_pointer parent) noexcept {
@@ -744,16 +732,22 @@ protected:
             current->_color = ALA_BLACK;
     }
 
-    void fix_nil_detach(node_pointer current) noexcept {
-        if (current == _root) {
+    void fix_nil_detach(node_pointer current, node_pointer subs) noexcept {
+        if (subs == _root && subs->_is_nil) {
             _left_nil->_parent = _right_nil;
             _right_nil->_parent = _left_nil;
-        } else if (current->_left == _left_nil) {
-            current->_parent->_left = _left_nil;
-            _left_nil->_parent = current->_parent;
-        } else if (current->_right == _right_nil) {
-            current->_parent->_right = _right_nil;
-            _right_nil->_parent = current->_parent;
+            _root = nullptr;
+        } else {
+            if (current->_left == _left_nil) {
+                if (!is_nil(subs))
+                    subs->_left = _left_nil;
+                _left_nil->_parent = subs;
+            }
+            if (current->_right == _right_nil) {
+                if (!is_nil(subs))
+                    subs->_right = _right_nil;
+                _right_nil->_parent = subs;
+            }
         }
     }
 };
