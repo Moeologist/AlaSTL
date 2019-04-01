@@ -23,4 +23,5 @@
         typedef typename _type::mem type; \
     }; \
     typedef typename _get_##mem<cls>::type mem;
+
 #endif

@@ -4,6 +4,7 @@
 
 #include <ala/type_traits.h>
 #include <ala/detail/allocator.h>
+#include <ala/detail/pair.h>
 #include <ala/detail/macro.h>
 #include <ala/iterator.h>
 
@@ -16,9 +17,7 @@ template<class Data>
 struct rb_node {
     Data _data;
     rb_node *_left, *_right, *_parent;
-    bool _color;
-    bool _nil_type;
-    bool _is_nil;
+    bool _color, _is_nil, _nil_type;
 };
 
 template<class Data>
@@ -149,7 +148,9 @@ public:
     static_assert(is_same<node_pointer, node_type *>::value,
                   "ala node-based container use raw pointer");
 
-    rb_tree(const value_compare &cmp, const allocator_type &a)
+    rb_tree(const value_compare &cmp, const allocator_type &a) noexcept(
+        is_nothrow_default_constructible<allocator_type>::value
+            &&is_nothrow_default_constructible<value_compare>::value)
         : _comp(cmp), _alloc(a), _nalloc(), _size(0), _root(nullptr) {
         initializer_nil();
     }
@@ -211,15 +212,15 @@ public:
 
     ~rb_tree() {
         destruct_tree(_root);
-        destruct_node(_left_nil);
-        destruct_node(_right_nil);
+        // destruct_node(_left_nil);
+        // destruct_node(_right_nil);
     }
 
-    node_pointer begin() const {
+    node_pointer begin() const noexcept {
         return _left_nil->_parent;
     }
 
-    node_pointer end() const {
+    node_pointer end() const noexcept {
         return _right_nil;
     }
 
@@ -229,7 +230,7 @@ public:
         fix_nil();
     }
 
-    size_t size() const {
+    size_t size() const noexcept {
         return _size;
     }
 
@@ -240,7 +241,7 @@ public:
         }
     }
 
-    void extract(node_pointer position) {
+    void extract(node_pointer position) noexcept {
         if (!is_nil(position)) {
             detach(position);
             position->_left = position->_right = position->_parent = nullptr;
@@ -372,7 +373,11 @@ public:
     }
 
 protected:
-    node_pointer _root, _left_nil, _right_nil;
+    node_pointer _root;
+    unsigned char _nil_mem[sizeof(rb_node<value_type>) * 2];
+    const node_pointer _left_nil = reinterpret_cast<node_pointer>(_nil_mem);
+    const node_pointer _right_nil = reinterpret_cast<node_pointer>(_nil_mem + sizeof(rb_node<Data>));
+
     size_t _size;
     allocator_type _alloc;
     node_allocator_type _nalloc;
@@ -385,24 +390,24 @@ protected:
                   "key compare check failed");
 
     template<typename Dummy = value_type,
-             typename Ret = decltype(declval<value_type>().first)>
-    const Ret &get_key(const value_type &v) const {
+             typename = enable_if_t<_has_first<Dummy>::value>>
+    const auto &get_key(const value_type &v) const {
         return v.first;
     }
 
-    template<typename Dummy = value_type, typename = void,
+    template<typename Dummy = value_type,
              typename = enable_if_t<!_has_first<Dummy>::value>>
     const value_type &get_key(const value_type &v) const {
         return v;
     }
 
     template<typename Dummy = value_compare,
-             typename Ret = decltype(declval<value_compare>().comp)>
-    const Ret &get_key_comp() const {
+             typename = enable_if_t<_has_comp<Dummy>::value>>
+    const auto &get_key_comp() const {
         return _comp.comp;
     }
 
-    template<typename Dummy = value_compare, typename = void,
+    template<typename Dummy = value_compare,
              typename = enable_if_t<!_has_comp<Dummy>::value>>
     const value_compare &get_key_comp() const {
         return _comp;
@@ -518,15 +523,19 @@ protected:
     }
 
     void initializer_nil() {
-        _left_nil = allocate_node();
-        _right_nil = allocate_node();
+        // _left_nil = allocate_node();
+        // _right_nil = allocate_node();
+        // _left_nil =  reinterpret_cast<node_pointer>(_nil_mem);
+        // _right_nil =  reinterpret_cast<node_pointer>(_nil_mem + sizeof(rb_node<Data>));
 
+        _left_nil->_is_nil = true;
         _left_nil->_parent = _right_nil;
         _left_nil->_color = ALA_BLACK;
         _left_nil->_nil_type = false;
         _left_nil->_left = nullptr;
         _left_nil->_right = nullptr;
 
+        _right_nil->_is_nil = true;
         _right_nil->_parent = _left_nil;
         _right_nil->_color = ALA_BLACK;
         _right_nil->_nil_type = true;
@@ -647,13 +656,13 @@ protected:
             child = current->_right;
             parent = current->_parent;
             transplant(current, child);
-            fix_nil_detach(current, child);
+            fix = child == nullptr ? parent : child;
         } else if (is_nil(current->_right)) {
             color = current->_color;
             child = current->_left;
             parent = current->_parent;
             transplant(current, child);
-            fix_nil_detach(current, child);
+            fix = child == nullptr ? parent : child;
         } else {
             subs = left_leaf(current->_right);
             color = subs->_color;
@@ -676,6 +685,8 @@ protected:
         ALA_CONST_IF(Rebalance)
         if (_root != nullptr && color == ALA_BLACK)
             rebalance_for_detach(child, parent);
+        if (fix)
+            fix_nil_detach(current, fix);
     }
 
     /*----------------------------------------------------------------------------------------------------
@@ -753,24 +764,21 @@ protected:
     }
 
     void fix_nil_detach(node_pointer current, node_pointer subs) noexcept {
-        if (subs == _root && subs->_is_nil) {
-            _left_nil->_parent = _right_nil;
-            _right_nil->_parent = _left_nil;
-            _root = nullptr;
-        } else {
-            if (current->_left == _left_nil) {
-                if (!is_nil(subs))
-                    subs->_left = _left_nil;
+        if (current->_left == _left_nil) {
+            if (current->_right == _right_nil) {
+                _left_nil->_parent = _right_nil;
+                _right_nil->_parent = _left_nil;
+                _root = nullptr;
+            } else {
+                subs->_left = _left_nil;
                 _left_nil->_parent = subs;
             }
-            if (current->_right == _right_nil) {
-                if (!is_nil(subs))
-                    subs->_right = _right_nil;
-                _right_nil->_parent = subs;
-            }
+        } else if (current->_right == _right_nil) {
+            subs->_right = _right_nil;
+            _right_nil->_parent = subs;
         }
     }
-};
+}; // namespace ala
 
 } // namespace ala
 

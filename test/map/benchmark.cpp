@@ -1,15 +1,15 @@
 #include <ala/map.h>
 #include <ala/set.h>
 #include <map>
-#include <ala/detail/xorshift.h>
+#include <ala/random.h>
 #include <ala/timer.h>
 #include <iostream>
 
-ala::detail::xoshiro128p x{10086};
-ala::detail::xoshiro128p y{10086};
-ala::detail::xoshiro<int, 1, 2, true, 0> xx;
+ala::xoshiro128p x{10086};
+ala::xoshiro128p y{10086};
+ala::xoshiro<int, 1, 2, true, 0> xx;
 
-constexpr auto sz = 100;
+constexpr auto sz = 1000;
 
 void test() {
     // ala::map<int, char> mx;
@@ -20,15 +20,16 @@ void test() {
 
     ala::map<int, char> m, n;
     for (int k = 0; k < sz; ++k) {
-    for (int i = 0; i < k; ++i)
-        m[i] = 'L';
-    // for (int i = 0; i < sz; ++i)
-    //     m[i] = 'L';
-    // for (int i = 0; i < sz; ++i)
-    //     n[x()] = 'L';
+        for (int i = 0; i < k; ++i)
+            m[i] = 'L';
+        // for (int i = 0; i < sz; ++i)
+        //     m[i] = 'L';
+        // for (int i = 0; i < sz; ++i)
+        //     n[x()] = 'L';
 
-    for (int i = 0; i < k; ++i)
-        m.erase(i);}
+        for (int i = 0; i < k; ++i)
+            m.erase(i);
+    }
     std::cout << m.size() << std::endl;
     for (auto i = m.begin(); i != m.end();)
         i = m.erase(i);
@@ -63,13 +64,45 @@ void test1() {
 //@build_type=dbg
 
 // cflags=-fsanitize=address
-int main() {
-    std::cout << ala::timer(test);
-    std::cout << ala::timer(test1);
-    // ala::map<int, int> m;
-    // ala::map<int, int> n;
-    // for (int i = 0; i < 5; ++i)
-    //     m[i] = n[i + 10] = 0;
 
+int t() {
+    ala::xoshiro256p x;
+    auto s = .0;
+    for (int i = 0; i < 100000000; ++i)
+        s = ala::generate_real(x);
+    return s;
+}
+
+int t1() {
+    ala::xoshiro256p x;
+    auto s = 0;
+    for (int i = 0; i < 100000000; ++i)
+        s = x();
+    return s;
+}
+
+int t2() {
+    ala::xoshiro256ss x;
+    auto s = 0;
+    for (int i = 0; i < 100000000; ++i)
+        s += x();
+    return s;
+}
+
+int t3() {
+    ala::minstd_rand x;
+    auto s = 0;
+    for (int i = 0; i < 100000000; ++i)
+        s += x();
+    return s;
+}
+int main() {
+    std::cout << ala::timer(t);
+    std::cout << ala::timer(t1);
+    std::cout << ala::timer(t2);
+    std::cout << ala::timer(t3);
+    // std::cout << ala::timer(test);
+    // std::cout << ala::timer(test1);
+    ala::set<int> st;
     return 0;
 }

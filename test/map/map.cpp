@@ -221,7 +221,7 @@ void test5() {
 void test6() {
     ala::map<int, int> numbers;
     std::cout << "Initially, numbers.empty(): " << numbers.empty() << '\n';
-    std::cout << "Initially" << (numbers.begin() == numbers.end()) << '\n';
+    std::cout << "`ially" << (numbers.begin() == numbers.end()) << '\n';
 
     numbers.emplace(42, 13);
     numbers.insert(ala::make_pair(13317, 123));

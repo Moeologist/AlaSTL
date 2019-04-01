@@ -6,7 +6,6 @@
 #include <ala/detail/functional_base.h>
 #include <ala/detail/pair.h>
 #include <ala/detail/rb_tree.h>
-#include <ala/numeric_limits.h>
 
 namespace ala {
 
@@ -201,7 +200,8 @@ public:
 
     // iterators:
     iterator begin() noexcept {
-        return iterator(tree.begin());
+        auto x = tree.begin();
+        return iterator(x);
     }
 
     const_iterator begin() const noexcept {
@@ -209,7 +209,8 @@ public:
     }
 
     iterator end() noexcept {
-        return iterator(tree.end());
+        auto x = tree.end();
+        return iterator(x);
     }
 
     const_iterator end() const noexcept {
@@ -336,7 +337,7 @@ public:
         auto pr(tree.insert(nullptr, nh._ptr));
         if (!pr.second)
             return {iterator(pr.first), pr.second, ala::move(nh)};
-        nh._empty = true;
+        nh._ptr = nullptr;
         return {iterator(pr.first), pr.second, node_type()};
     }
 

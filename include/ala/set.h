@@ -4,7 +4,6 @@
 #include <ala/detail/allocator.h>
 #include <ala/detail/functional_base.h>
 #include <ala/detail/rb_tree.h>
-#include <ala/numeric_limits.h>
 
 namespace ala {
 
