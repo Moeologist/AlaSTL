@@ -1,5 +1,5 @@
-#ifndef _ALA_DETAIL_CONFIG_FEATURE_H
-#define _ALA_DETAIL_CONFIG_FEATURE_H
+#ifndef _ALA_DETAIL_CONFIG_SUPPORT_H
+#define _ALA_DETAIL_CONFIG_SUPPORT_H
 
 #if !defined(_ALA_CLANG) && !defined(__is_identifier)
 #define __is_identifier(x) 0
@@ -63,6 +63,13 @@
 #define _ALA_ENABLE_NOEXCEPT_TYPE 1
 #else
 #define _ALA_ENABLE_NOEXCEPT_TYPE 0
+#endif
+
+#if _ALA_ENABLE_CPP_MACRO && __cpp_structured_bindings >= 201606L || \
+    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_CPP_STD >= 17)
+#define _ALA_ENABLE_STRUCT_BIND 1
+#else
+#define _ALA_ENABLE_STRUCT_BIND 0
 #endif
 
 #ifdef _ALA_DEBUG

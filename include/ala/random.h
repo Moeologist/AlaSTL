@@ -2,11 +2,15 @@
 #define _ALA_RANDOM_H
 
 #include "ala/config.h"
-#include "ala/detail/xorshift.h"
-#include "ala/detail/intrin.h"
+#if defined(_ALA_X86) && \
+    ((defined(__RDSEED__) && defined(__RDRND__)) || defined(_ALA_MSVC))
+#include <ala/detail/intrin.h>
+#endif
 
 namespace ala {
 
+#if defined(_ALA_X86) && \
+    ((defined(__RDSEED__) && defined(__RDRND__)) || defined(_ALA_MSVC))
 template<class UInt>
 constexpr int rdseed(UInt *p) {
     ALA_CONST_IF(sizeof(UInt) == 2)
@@ -50,6 +54,8 @@ struct random_device_adaptor {
         throw exception{};
     }
 };
+using random_device = random_device_adaptor<uint_fast32_t>;
+#endif
 
 // http://xoshiro.di.unimi.it/
 template<typename UInt>
@@ -67,12 +73,12 @@ struct _xoshiro_jump<uint64_t> {
     // equivalent to 2^128 calls to next()
 
     /*
-    static constexpr uint64_t jmp[] = {0x76e15d3efefdcbbf,
-                                        0xc5004e441c522fb3,
-                                        0x77710069854ee241,
-                                        0x39109bb02acbe635};
-    equivalent to 2^192 calls to next()
-    */
+  static constexpr uint64_t jmp[] = {0x76e15d3efefdcbbf,
+                                      0xc5004e441c522fb3,
+                                      0x77710069854ee241,
+                                      0x39109bb02acbe635};
+  equivalent to 2^192 calls to next()
+  */
 };
 
 template<>
@@ -197,7 +203,6 @@ using xorshift32 = xorshift<uint_fast32_t, 13, 17, 5>;
 using xorshift64 = xorshift<uint_fast64_t, 13, 7, 17>;
 
 using minstd_rand = linear_congruential_engine<uint_fast32_t, 48271, 0, 2147483647>;
-using random_device = random_device_adaptor<uint_fast32_t>;
 
 template<typename T, size_t Sz = sizeof(T)>
 struct _generate_real_traits;
@@ -223,7 +228,7 @@ struct _generate_real_traits<T, 8> {
 };
 
 template<class Gen, class UInt = typename Gen::result_type>
-auto generate_real(Gen &g) {
+constexpr auto generate_real(Gen &g) {
     typedef _generate_real_traits<UInt> _traits;
     typedef typename _traits::value_type Real;
     constexpr UInt I = sizeof(UInt) * 8;

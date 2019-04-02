@@ -825,9 +825,7 @@ struct aligned_union {
 
 template<typename T>
 struct decay {
-private:
     typedef remove_reference_t<T> U;
-public:
     typedef conditional_t<is_array<U>::value,
                           remove_extent_t<U> *,
                           conditional_t<is_function<U>::value,

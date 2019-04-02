@@ -1,5 +1,0 @@
-#ifndef _ALA_DETAIL_CONFIG_USER_H
-#define _ALA_DETAIL_CONFIG_USER_H
-
-
-#endif // HEAD

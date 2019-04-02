@@ -3,6 +3,7 @@
 
 #include <ala/type_traits.h>
 #include <ala/detail/integer_sequence.h>
+#include <ala/detail/tuple_operator.h>
 
 namespace ala {
 
@@ -32,11 +33,10 @@ struct pair {
     constexpr pair(): first(), second() {}
 
     template<typename U1 = T1, typename U2 = T2, typename = void,
-             typename =
-                 enable_if_t<is_default_constructible<U1>::value &&
-                             is_default_constructible<U2>::value &&
-                             !(is_implicitly_default_constructible<U1>::value &&
-                               is_implicitly_default_constructible<U2>::value)>>
+             typename = enable_if_t<is_default_constructible<U1>::value &&
+                                    is_default_constructible<U2>::value &&
+                                    !(is_implicitly_default_constructible<U1>::value &&
+                                      is_implicitly_default_constructible<U2>::value)>>
     explicit constexpr pair(): first(), second() {}
 
     template<typename U1 = T1, typename U2 = T2,
@@ -70,11 +70,10 @@ struct pair {
         : first(ala::forward<U1>(a)), second(ala::forward<U2>(b)) {}
 
     template<typename U1, typename U2,
-             typename =
-                 enable_if_t<is_constructible<first_type, const U1 &>::value &&
-                             is_constructible<second_type, const U2 &>::value &&
-                             is_convertible<const U1 &, first_type>::value &&
-                             is_convertible<const U2 &, second_type>::value>>
+             typename = enable_if_t<is_constructible<first_type, const U1 &>::value &&
+                                    is_constructible<second_type, const U2 &>::value &&
+                                    is_convertible<const U1 &, first_type>::value &&
+                                    is_convertible<const U2 &, second_type>::value>>
     constexpr pair(const pair<U1, U2> &p): first(p.first), second(p.second) {}
 
     template<typename U1, typename U2, typename = void,
@@ -92,8 +91,7 @@ struct pair {
                                     is_convertible<U1 &&, first_type>::value &&
                                     is_convertible<U2 &&, second_type>::value>>
     constexpr pair(pair<U1, U2> &&p)
-        : first(ala::forward<U1>(p.first)), second(ala::forward<U2>(p.second)) {
-    }
+        : first(ala::forward<U1>(p.first)), second(ala::forward<U2>(p.second)) {}
 
     template<typename U1, typename U2, typename = void,
              typename = enable_if_t<is_constructible<first_type, U1 &&>::value &&
@@ -101,8 +99,7 @@ struct pair {
                                     !(is_convertible<U1 &&, first_type>::value &&
                                       is_convertible<U2 &&, second_type>::value)>>
     explicit constexpr pair(pair<U1, U2> &&p)
-        : first(ala::forward<U1>(p.first)), second(ala::forward<U2>(p.second)) {
-    }
+        : first(ala::forward<U1>(p.first)), second(ala::forward<U2>(p.second)) {}
 
     template<typename... Args1, typename... Args2>
     constexpr pair(piecewise_construct_t pct, tuple<Args1...> first_args,
@@ -208,6 +205,99 @@ constexpr enable_if_t<is_swappable<T1>::value && is_swappable<T2>::value>
 swap(pair<T1, T2> &x, pair<T1, T2> &y) noexcept(
     is_nothrow_swappable<T1>::value &&is_nothrow_swappable<T2>::value) {
     x.swap(y);
+}
+
+template<size_t I, typename T1, typename T2>
+struct tuple_element<I, pair<T1, T2>> {
+    static_assert(I < 2, "pair has only 2 elements!");
+};
+
+template<typename T1, typename T2>
+struct tuple_element<0, pair<T1, T2>> {
+    using type = T1;
+};
+
+template<typename T1, typename T2>
+struct tuple_element<1, pair<T1, T2>> {
+    using type = T2;
+};
+
+template<size_t I, class T1, class T2>
+constexpr tuple_element_t<I, pair<T1, T2>> &get(pair<T1, T2> &p) noexcept {
+    static_assert(I == 0 || I == 1, "out of range");
+    return static_cast<tuple_element_t<I, pair<T1, T2>> &>(I == 0 ? p.first :
+                                                                    p.second);
+}
+
+template<size_t I, class T1, class T2>
+constexpr const tuple_element_t<I, pair<T1, T2>> &
+get(const pair<T1, T2> &p) noexcept {
+    static_assert(I == 0 || I == 1, "out of range");
+    return static_cast<const tuple_element_t<I, pair<T1, T2>> &>(
+        I == 0 ? p.first : p.second);
+}
+
+template<size_t I, class T1, class T2>
+constexpr tuple_element_t<I, pair<T1, T2>> &&get(pair<T1, T2> &&p) noexcept {
+    static_assert(I == 0 || I == 1, "out of range");
+    return static_cast<tuple_element_t<I, pair<T1, T2>> &&>(I == 0 ? p.first :
+                                                                     p.second);
+}
+
+template<size_t I, class T1, class T2>
+constexpr const tuple_element_t<I, pair<T1, T2>> &&
+get(const pair<T1, T2> &&p) noexcept {
+    static_assert(I == 0 || I == 1, "out of range");
+    return static_cast<const tuple_element_t<I, pair<T1, T2>> &&>(
+        I == 0 ? p.first : p.second);
+}
+
+template<class T, class U>
+constexpr T &get(pair<T, U> &p) noexcept {
+    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    return static_cast<T &>(p.first);
+}
+
+template<class T, class U>
+constexpr const T &get(const pair<T, U> &p) noexcept {
+    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    return static_cast<const T &>(p.first);
+}
+
+template<class T, class U>
+constexpr T &&get(pair<T, U> &&p) noexcept {
+    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    return static_cast<T &&>(p.first);
+}
+
+template<class T, class U>
+constexpr const T &&get(const pair<T, U> &&p) noexcept {
+    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    return static_cast<const T &&>(p.first);
+}
+
+template<class T, class U>
+constexpr T &get(pair<U, T> &p) noexcept {
+    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    return static_cast<T &>(p.second);
+}
+
+template<class T, class U>
+constexpr const T &get(const pair<U, T> &p) noexcept {
+    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    return static_cast<const T &>(p.second);
+}
+
+template<class T, class U>
+constexpr T &&get(pair<U, T> &&p) noexcept {
+    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    return static_cast<T &&>(p.second);
+}
+
+template<class T, class U>
+constexpr const T &&get(const pair<U, T> &&p) noexcept {
+    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    return static_cast<const T &&>(p.second);
 }
 
 #if _ALA_ENABLE_DEDUCTION_GUIDES

@@ -1,5 +1,5 @@
-#ifndef _ALA_DETAIL_CONFIG_CONFIG_H
-#define _ALA_DETAIL_CONFIG_CONFIG_H
+#ifndef _ALA_DETAIL_CONFIG_PLATFORM_H
+#define _ALA_DETAIL_CONFIG_PLATFORM_H
 
 #if defined(_MSC_VER) // msvc or clang (msvc target)
 #if defined(__clang__) && defined(__clang_major__)

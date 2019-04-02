@@ -567,33 +567,6 @@ public:
     }
 };
 
-#if _ALA_ENABLE_DEDUCTION_GUIDES
-template<class It,
-         class Comp = less<typename iterator_traits<It>::value_type::first_type>,
-         class Alloc = allocator<
-             pair<add_const_t<typename iterator_traits<It>::value_type::first_type>,
-                  typename iterator_traits<It>::value_type::second_type>>>
-map(It, It, Comp = Comp(), Alloc = Alloc())
-    ->map<typename iterator_traits<It>::value_type::first_type,
-          typename iterator_traits<It>::value_type::second_type, Comp, Alloc>;
-
-template<class Key, class T, class Comp = less<Key>,
-         class Alloc = allocator<pair<const Key, T>>>
-map(initializer_list<pair<const Key, T>>, Comp = Comp(), Alloc = Alloc())
-    ->map<Key, T, Comp, Alloc>;
-
-template<class It, class Alloc>
-map(It, It, Alloc)
-    ->map<typename iterator_traits<It>::value_type::first_type,
-          typename iterator_traits<It>::value_type::second_type,
-          less<typename iterator_traits<It>::value_type::first_type>, Alloc>;
-
-template<class Key, class T, class Allocator>
-map(initializer_list<pair<const Key, T>>, Allocator)
-    ->map<Key, T, less<Key>, Allocator>;
-
-#endif
-
 } // namespace ala
 
 #endif // HEAD

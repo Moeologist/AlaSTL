@@ -69,7 +69,7 @@ int t() {
     ala::xoshiro256p x;
     auto s = .0;
     for (int i = 0; i < 100000000; ++i)
-        s = ala::generate_real(x);
+        s += ala::generate_real(x);
     return s;
 }
 
@@ -96,11 +96,17 @@ int t3() {
         s += x();
     return s;
 }
+//@cflags=-mrdrnd -mrdseed
+
 int main() {
     std::cout << ala::timer(t);
     std::cout << ala::timer(t1);
     std::cout << ala::timer(t2);
     std::cout << ala::timer(t3);
+    ala::random_device rd;
+    rd();
+    rd();
+    rd();
     // std::cout << ala::timer(test);
     // std::cout << ala::timer(test1);
     ala::set<int> st;
