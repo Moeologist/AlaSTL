@@ -127,14 +127,18 @@ struct rb_iterator {
     }
 
 protected:
-    template<typename, typename, typename, typename>
-    friend struct map;
-    template<typename, typename, typename>
-    friend struct set;
+    template<class, class, class, class>
+    friend class map;
+    template<class, class, class, class>
+    friend class multimap;
+    template<class, class, class>
+    friend class set;
+    template<class, class, class>
+    friend class multiset;
     Ptr _ptr;
 };
 
-template<class Data, class Comp, class Alloc,
+template<class Data, class Comp, class Alloc, bool Uniq = true,
          class NAlloc = typename Alloc::template rebind<rb_node<Data>>::other>
 class rb_tree {
 public:
@@ -291,9 +295,8 @@ public:
     }
 
     template<class K>
-    size_t count(const K &key) const {
+    size_t count(const K &key, node_pointer current) const {
         decltype(auto) comp = get_key_comp();
-        node_pointer current = _root;
         size_t eql = 0;
         while (!is_nil(current)) {
             if (comp(key, get_key(current->_data)))
@@ -301,11 +304,16 @@ public:
             else if (comp(get_key(current->_data), key))
                 current = current->_right;
             else {
-                current = current->_left;
-                ++eql;
+                return 1 + count(key, current->_left) +
+                       count(key, current->_right);
             }
         }
         return eql;
+    }
+
+    template<class K>
+    size_t count(const K &key) const {
+        return count(key, _root);
     }
 
     template<class K>
@@ -323,60 +331,47 @@ public:
     }
 
     template<class K>
-    size_t erase(const K &key) {
+    bool erase(const K &key) {
         decltype(auto) comp = get_key_comp();
         node_pointer current = _root;
-        size_t eql = 0;
         while (!is_nil(current)) {
             if (comp(key, get_key(current->_data)))
                 current = current->_left;
             else if (comp(get_key(current->_data), key))
                 current = current->_right;
             else {
-                node_pointer temp = current->_left;
                 remove(current);
-                current = temp;
-                ++eql;
+                return true;
             }
         }
-        return eql;
+        return false;
     }
 
-    template<class... Args>
-    pair<node_pointer, bool> emplace(node_pointer hint, Args &&... args) {
-        using ret = pair<node_pointer, bool>;
-        node_pointer new_node = construct_node(ala::forward<Args>(args)...);
-        pair<node_pointer, bool> pr(search(hint, new_node));
-        if (pr.second) {
-            destruct_node(new_node);
-            return ret(pr.first, false);
-        } else {
-            attach_to(pr.first, new_node);
-            return ret(new_node, true);
-        }
-    }
-
-    pair<node_pointer, bool> insert(node_pointer hint, node_pointer p) {
+    auto insert(node_pointer hint, node_pointer p) {
         if (is_nil(p))
             return pair<node_pointer, bool>(end(), false);
-        pair<node_pointer, bool> pr(search(hint, p));
+        pair<node_pointer, bool> pr = search(hint, p);
         if (!pr.second)
             attach_to(pr.first, p);
         return pair<node_pointer, bool>(p, !pr.second);
     }
 
-    pair<node_pointer, bool> search(node_pointer hint, node_pointer p) {
-        if (!is_nil(hint) && _comp(p->_data, hint->_data))
-            return search_at(hint, p);
-        else
-            return search_at(_root, p);
+    template<class... Args>
+    auto emplace(node_pointer hint, Args &&... args) {
+        return Uniq ? emplace_uniq(hint, ala::forward<Args>(args)...) :
+                      emplace_multi(hint, ala::forward<Args>(args)...);
+    }
+
+    auto search(node_pointer hint, node_pointer p) {
+        return Uniq ? search_uniq(hint, p) : search_multi(hint, p);
     }
 
 protected:
     node_pointer _root;
     unsigned char _nil_mem[sizeof(rb_node<value_type>) * 2];
     const node_pointer _left_nil = reinterpret_cast<node_pointer>(_nil_mem);
-    const node_pointer _right_nil = reinterpret_cast<node_pointer>(_nil_mem + sizeof(rb_node<Data>));
+    const node_pointer _right_nil = reinterpret_cast<node_pointer>(
+        _nil_mem + sizeof(rb_node<Data>));
 
     size_t _size;
     allocator_type _alloc;
@@ -388,6 +383,69 @@ protected:
 
     static_assert(_has_first<value_type>::value == _has_comp<value_compare>::value,
                   "key compare check failed");
+
+    template<class... Args>
+    pair<node_pointer, bool> emplace_multi(node_pointer hint, Args &&... args) {
+        using ret = pair<node_pointer, bool>;
+        node_pointer new_node = construct_node(ala::forward<Args>(args)...);
+        pair<node_pointer, bool> pr = search(hint, new_node);
+        attach_to(pr.first, new_node);
+        return ret(new_node, true);
+    }
+
+    template<class... Args>
+    pair<node_pointer, bool> emplace_uniq(node_pointer hint, Args &&... args) {
+        using ret = pair<node_pointer, bool>;
+        node_pointer new_node = construct_node(ala::forward<Args>(args)...);
+        pair<node_pointer, bool> pr = search(hint, new_node);
+        if (pr.second) {
+            destruct_node(new_node);
+            return ret(pr.first, false);
+        } else {
+            attach_to(pr.first, new_node);
+            return ret(new_node, true);
+        }
+    }
+
+    pair<node_pointer, bool> search_uniq(node_pointer hint, node_pointer p) {
+        node_pointer guard, current = nullptr;
+        bool found = false;
+        if (!is_nil(hint) && !_comp(hint->_data, p->_data))
+            guard = hint;
+        else
+            guard = _root;
+        while (!is_nil(guard)) {
+            current = guard;
+            if (_comp(p->_data, guard->_data))
+                guard = guard->_left;
+            else if (_comp(guard->_data, p->_data))
+                guard = guard->_right;
+            else {
+                found = true;
+                break;
+            }
+        }
+        return pair<node_pointer, bool>(current, found);
+    }
+
+    pair<node_pointer, bool> search_multi(node_pointer hint, node_pointer p) {
+        node_pointer guard, current = nullptr;
+        if (!is_nil(hint) && !_comp(hint->_data, p->_data))
+            guard = hint;
+        else
+            guard = _root;
+        while (!is_nil(guard)) {
+            current = guard;
+            if (_comp(p->_data, guard->_data))
+                guard = guard->_left;
+            else if (_comp(guard->_data, p->_data))
+                guard = guard->_right;
+            else {
+                guard = guard->_left;
+            }
+        }
+        return pair<node_pointer, bool>(current, true);
+    }
 
     template<typename Dummy = value_type,
              typename = enable_if_t<_has_first<Dummy>::value>>
@@ -557,24 +615,6 @@ protected:
         }
     }
 
-    pair<node_pointer, bool> search_at(node_pointer guard, node_pointer p) {
-        using ret = pair<node_pointer, bool>;
-        node_pointer current = nullptr;
-        bool found = false;
-        while (!is_nil(guard)) {
-            current = guard;
-            if (_comp(p->_data, guard->_data))
-                guard = guard->_left;
-            else if (_comp(guard->_data, p->_data))
-                guard = guard->_right;
-            else {
-                found = true;
-                break;
-            }
-        }
-        return ret(current, found);
-    }
-
     template<bool Rebalance = true>
     void attach_to(node_pointer pos, node_pointer p) noexcept {
         p->_color = ALA_RED;
@@ -585,7 +625,7 @@ protected:
             _left_nil->_parent = _right_nil->_parent = p;
             p->_left = _left_nil;
             p->_right = _right_nil;
-        } else if (_comp(p->_data, pos->_data)) {
+        } else if (!_comp(pos->_data, p->_data)) {
             if (pos->_left == _left_nil) { // fix nil
                 p->_left = _left_nil;
                 _left_nil->_parent = p;

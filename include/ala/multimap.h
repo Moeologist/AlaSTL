@@ -1,5 +1,5 @@
-#ifndef _ALA_MAP_H
-#define _ALA_MAP_H
+#ifndef _ALA_MULTIMAP_H
+#define _ALA_MULTIMAP_H
 
 #include <ala/tuple.h>
 #include <ala/detail/allocator.h>
@@ -9,9 +9,12 @@
 
 namespace ala {
 
+template<class, class, class, class>
+class map;
+
 template<class Key, class T, class Comp = less<Key>,
          class Alloc = allocator<pair<const Key, T>>>
-class map {
+class multimap {
 public:
     typedef Key key_type;
     typedef T mapped_type;
@@ -31,23 +34,23 @@ public:
         }
 
     private:
-        friend class map<key_type, mapped_type, key_compare, allocator_type>;
-        friend class rb_tree<value_type, value_compare, allocator_type>;
+        friend class multimap<key_type, mapped_type, key_compare, allocator_type>;
+        friend class rb_tree<value_type, value_compare, allocator_type, false>;
         key_compare comp;
         value_compare(key_compare c): comp(c) {}
     };
 
 protected:
-    typedef rb_tree<value_type, value_compare, allocator_type> tree_type;
+    typedef rb_tree<value_type, value_compare, allocator_type, false> tree_type;
     tree_type tree;
 
     template<class NodePtr,
-             class NAlloc = typename map::allocator_type::template rebind<
+             class NAlloc = typename multimap::allocator_type::template rebind<
                  typename pointer_traits<NodePtr>::element_type>::other>
     struct _node_adaptor {
-        typedef map::key_type key_type;
-        typedef map::mapped_type mapped_type;
-        typedef map::allocator_type allocator_type;
+        typedef multimap::key_type key_type;
+        typedef multimap::mapped_type mapped_type;
+        typedef multimap::allocator_type allocator_type;
 
         constexpr _node_adaptor() noexcept: _ptr(nullptr) {}
 
@@ -109,7 +112,7 @@ protected:
         }
 
     private:
-        friend class map<key_type, mapped_type, key_compare, allocator_type>;
+        friend class multimap<key_type, mapped_type, key_compare, allocator_type>;
         typedef NodePtr node_pointer;
         node_pointer _ptr;
         allocator_type _a;
@@ -119,72 +122,67 @@ protected:
         }
     };
 
-    template<class It, class NodeType>
-    struct _insert_return_adaptor {
-        It position;
-        bool inserted;
-        NodeType node;
-    };
-
 public:
     typedef rb_iterator<typename tree_type::node_pointer> iterator;
     typedef ala::const_iterator<iterator> const_iterator;
     typedef ala::reverse_iterator<iterator> reverse_iterator;
     typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
     typedef _node_adaptor<typename tree_type::node_pointer> node_type;
-    typedef _insert_return_adaptor<iterator, node_type> insert_return_type;
 
     // construct/copy/destroy:
-    map() noexcept(is_nothrow_default_constructible<allocator_type>::value
-                       &&is_nothrow_default_constructible<key_compare>::value)
+    multimap() noexcept(is_nothrow_default_constructible<allocator_type>::value &&
+                            is_nothrow_default_constructible<key_compare>::value)
         : tree(value_compare(key_compare()), allocator_type()) {}
 
-    explicit map(const key_compare &comp,
-                 const allocator_type &a = allocator_type())
+    explicit multimap(const key_compare &comp,
+                      const allocator_type &a = allocator_type())
         : tree(value_compare(comp), a) {}
 
-    explicit map(const allocator_type &a)
+    explicit multimap(const allocator_type &a)
         : tree(value_compare(key_compare()), a) {}
 
-    map(const map &m): tree(m.tree) {}
+    multimap(const multimap &m): tree(m.tree) {}
 
-    map(map &&m) noexcept(is_nothrow_move_constructible<allocator_type>::value &&
-                              is_nothrow_move_constructible<key_compare>::value)
+    multimap(multimap &&m) noexcept(
+        is_nothrow_move_constructible<allocator_type>::value
+            &&is_nothrow_move_constructible<key_compare>::value)
         : tree(ala::move(m.tree)) {}
 
-    map(const map &m, const allocator_type &a): tree(m.tree, a) {}
+    multimap(const multimap &m, const allocator_type &a): tree(m.tree, a) {}
 
-    map(map &&m, const allocator_type &a): tree(ala::move(m.tree), a) {}
+    multimap(multimap &&m, const allocator_type &a)
+        : tree(ala::move(m.tree), a) {}
 
     template<class It>
-    map(It first, It last, const key_compare &comp = key_compare(),
-        const allocator_type &a = allocator_type())
+    multimap(It first, It last, const key_compare &comp = key_compare(),
+             const allocator_type &a = allocator_type())
         : tree(value_compare(comp), a) {
         this->insert(first, last);
     }
 
     template<class It>
-    map(It first, It last, const allocator_type &a)
-        : map(first, last, key_compare(), a) {}
+    multimap(It first, It last, const allocator_type &a)
+        : multimap(first, last, key_compare(), a) {}
 
-    map(initializer_list<value_type> il, const key_compare &comp = key_compare(),
-        const allocator_type &a = allocator_type())
+    multimap(initializer_list<value_type> il,
+             const key_compare &comp = key_compare(),
+             const allocator_type &a = allocator_type())
         : tree(value_compare(comp), a) {
         this->insert(il);
     }
 
-    map(initializer_list<value_type> il, const allocator_type &a)
-        : map(il, key_compare(), a) {}
+    multimap(initializer_list<value_type> il, const allocator_type &a)
+        : multimap(il, key_compare(), a) {}
 
-    ~map() {}
+    ~multimap() {}
 
     // assignment
-    map &operator=(const map &m) {
+    multimap &operator=(const multimap &m) {
         tree = m.tree;
         return *this;
     }
 
-    map &operator=(map &&m) noexcept(
+    multimap &operator=(multimap &&m) noexcept(
         allocator_type::propagate_on_container_move_assignment::value
             &&is_nothrow_move_assignable<allocator_type>::value
                 &&is_nothrow_move_assignable<key_compare>::value) {
@@ -192,7 +190,7 @@ public:
         return *this;
     }
 
-    map &operator=(initializer_list<value_type> il) {
+    multimap &operator=(initializer_list<value_type> il) {
         tree.clear();
         this->insert(il);
         return *this;
@@ -234,19 +232,19 @@ public:
     }
 
     const_iterator cbegin() const noexcept {
-        return const_iterator(const_cast<map *>(this)->begin());
+        return const_iterator(const_cast<multimap *>(this)->begin());
     }
 
     const_iterator cend() const noexcept {
-        return const_iterator(const_cast<map *>(this)->end());
+        return const_iterator(const_cast<multimap *>(this)->end());
     }
 
     const_reverse_iterator crbegin() const noexcept {
-        return const_iterator(const_cast<map *>(this)->rbegin());
+        return const_iterator(const_cast<multimap *>(this)->rbegin());
     }
 
     const_reverse_iterator crend() const noexcept {
-        return const_iterator(const_cast<map *>(this)->rend());
+        return const_iterator(const_cast<multimap *>(this)->rend());
     }
 
     // capacity:
@@ -262,33 +260,10 @@ public:
         return numeric_limits<difference_type>::max();
     }
 
-    // element access:
-    mapped_type &operator[](const key_type &k) {
-        return this->try_emplace(k).first->second;
-    }
-
-    mapped_type &operator[](key_type &&k) {
-        return this->try_emplace(ala::move(k)).first->second;
-    }
-
-    mapped_type &at(const key_type &k) {
-        iterator it = iterator(tree.find(k));
-        if (!it.first)
-            throw out_of_range{};
-        return it->second;
-    }
-
-    const mapped_type &at(const key_type &k) const {
-        const_iterator it = const_iterator(iterator(tree.find(k)));
-        if (!it.first)
-            throw out_of_range{};
-        return it->second;
-    }
-
     // modifiers:
     template<class... Args>
-    pair<iterator, bool> emplace(Args &&... args) {
-        return tree.emplace(nullptr, ala::forward<Args>(args)...);
+    iterator emplace(Args &&... args) {
+        return tree.emplace(nullptr, ala::forward<Args>(args)...).first;
     }
 
     template<class... Args>
@@ -296,17 +271,17 @@ public:
         return tree.emplace(position._ptr, ala::forward<Args>(args)...).first;
     }
 
-    pair<iterator, bool> insert(const value_type &v) {
-        return tree.emplace(nullptr, v);
+    iterator insert(const value_type &v) {
+        return tree.emplace(nullptr, v).first;
     }
 
-    pair<iterator, bool> insert(value_type &&v) {
-        return tree.emplace(nullptr, ala::move(v));
+    iterator insert(value_type &&v) {
+        return tree.emplace(nullptr, ala::move(v)).first;
     }
 
     template<class P, typename = enable_if_t<is_constructible<value_type, P &&>::value>>
-    pair<iterator, bool> insert(P &&p) {
-        return tree.emplace(nullptr, ala::forward<P>(p));
+    iterator insert(P &&p) {
+        return tree.emplace(nullptr, ala::forward<P>(p)).first;
     }
 
     iterator insert(const_iterator position, const value_type &v) {
@@ -333,7 +308,7 @@ public:
             this->insert(*i);
     }
 
-    insert_return_type insert(node_type &&nh) {
+    iterator insert(node_type &&nh) {
         auto pr(tree.insert(nullptr, nh._ptr));
         if (!pr.second)
             return {iterator(pr.first), pr.second, ala::move(nh)};
@@ -348,26 +323,6 @@ public:
         return pr.first;
     }
 
-    template<class M>
-    pair<iterator, bool> insert_or_assign(const key_type &k, M &&m) {
-        return tree.emplace(nullptr, k, ala::forward<M>(m));
-    }
-
-    template<class M>
-    pair<iterator, bool> insert_or_assign(key_type &&k, M &&m) {
-        return tree.emplace(nullptr, ala::move(k), ala::forward<M>(m));
-    }
-
-    template<class M>
-    iterator insert_or_assign(const_iterator hint, const key_type &k, M &&m) {
-        return tree.emplace(nullptr, k, ala::forward<M>(m)).first;
-    }
-
-    template<class M>
-    iterator insert_or_assign(const_iterator hint, key_type &&k, M &&m) {
-        return tree.emplace(nullptr, ala::move(k), ala::forward<M>(m)).first;
-    }
-
     node_type extract(const_iterator position) {
         tree.extract(position._ptr);
         return node_type(position._ptr);
@@ -375,6 +330,19 @@ public:
 
     node_type extract(const key_type &k) {
         return extract(this->find(k));
+    }
+
+    template<class Comp1>
+    void merge(multimap<key_type, mapped_type, Comp1, allocator_type> &source) {
+        for (auto i = source.begin(); i != source.end();) {
+            auto tmp = i++;
+            tree.transfer(source.tree, tmp._ptr);
+        }
+    }
+
+    template<class Comp1>
+    void merge(multimap<key_type, mapped_type, Comp1, allocator_type> &&source) {
+        this->merge(source);
     }
 
     template<class Comp1>
@@ -390,36 +358,6 @@ public:
         this->merge(source);
     }
 
-    template<class... Args>
-    pair<iterator, bool> try_emplace(const key_type &k, Args &&... args) {
-        return tree.emplace(nullptr, ala::piecewise_construct,
-                            ala::forward_as_tuple(k),
-                            ala::forward_as_tuple(ala::forward<Args>(args)...));
-    }
-
-    template<class... Args>
-    pair<iterator, bool> try_emplace(key_type &&k, Args &&... args) {
-        return tree.emplace(nullptr, ala::piecewise_construct,
-                            ala::forward_as_tuple(ala::move(k)),
-                            ala::forward_as_tuple(ala::forward<Args>(args)...));
-    }
-
-    template<class... Args>
-    iterator try_emplace(const_iterator hint, const key_type &k, Args &&... args) {
-        return tree
-            .emplace(hint, ala::piecewise_construct, ala::forward_as_tuple(k),
-                     ala::forward_as_tuple(ala::forward<Args>(args)...))
-            .first;
-    }
-
-    template<class... Args>
-    iterator try_emplace(const_iterator hint, key_type &&k, Args &&... args) {
-        return tree
-            .emplace(hint, ala::piecewise_construct, ala::forward_as_tuple(k),
-                     ala::forward_as_tuple(ala::forward<Args>(args)...))
-            .first;
-    }
-
     iterator erase(iterator position) {
         iterator tmp = position++;
         tree.remove(tmp._ptr);
@@ -427,22 +365,28 @@ public:
     }
 
     size_type erase(const key_type &k) {
-        return tree.erase(k);
+        auto pr = this->equal_range(k);
+        const_iterator i = pr.first;
+        size_type r = 0;
+        for (; i != pr.second;) {
+            i = this->erase(i);
+            ++r;
+        }
+        return r;
     }
 
     iterator erase(const_iterator first, const_iterator last) {
-        iterator ret;
-        for (const_iterator i = first; i != last; ++i)
-            ret = tree.erase(i->_ptr);
-        return ret;
+        const_iterator i = first for (; i != last;) i = this->erase(i);
+        return i;
     }
 
     void clear() noexcept {
         tree.clear();
     }
 
-    void swap(map &m) noexcept(allocator_traits<allocator_type>::is_always_equal::value
-                                   &&is_nothrow_swappable<key_compare>::value) {
+    void swap(multimap &m) noexcept(
+        allocator_traits<allocator_type>::is_always_equal::value
+            &&is_nothrow_swappable<key_compare>::value) {
         tree.swap(m.tree);
     }
 
@@ -459,13 +403,13 @@ public:
         return tree.value_comp();
     }
 
-    // map operations:
+    //  multimap operations:
     iterator find(const key_type &k) {
         return tree.template find<key_type>(k);
     }
 
     const_iterator find(const key_type &k) const {
-        return const_cast<map *>(this)->find(k);
+        return const_cast<multimap *>(this)->find(k);
     }
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
@@ -479,7 +423,7 @@ public:
     }
 
     size_type count(const key_type &k) const {
-        return tree.count(k);
+        return tree.template count<key_type>(k);
     }
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
@@ -505,7 +449,7 @@ public:
     }
 
     const_iterator lower_bound(const key_type &k) const {
-        return const_cast<map *>(this)->lower_bound(k);
+        return const_cast<multimap *>(this)->lower_bound(k);
     }
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
@@ -519,7 +463,7 @@ public:
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     const_iterator lower_bound(const K &k) const {
-        return const_cast<map *>(this)->lower_bound(k);
+        return const_cast<multimap *>(this)->lower_bound(k);
     }
 
     iterator upper_bound(const key_type &k) {
@@ -531,7 +475,7 @@ public:
     }
 
     const_iterator upper_bound(const key_type &k) const {
-        return const_cast<map *>(this)->upper_bound(k);
+        return const_cast<multimap *>(this)->upper_bound(k);
     }
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
@@ -545,7 +489,7 @@ public:
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     const_iterator upper_bound(const K &k) const {
-        return const_cast<map *>(this)->upper_bound(k);
+        return const_cast<multimap *>(this)->upper_bound(k);
     }
 
     pair<iterator, iterator> equal_range(const key_type &k) {
@@ -553,7 +497,7 @@ public:
     }
 
     pair<const_iterator, const_iterator> equal_range(const key_type &k) const {
-        return const_cast<map *>(this)->equal_range(k);
+        return const_cast<multimap *>(this)->equal_range(k);
     }
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
@@ -563,7 +507,7 @@ public:
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     pair<const_iterator, const_iterator> equal_range(const K &k) const {
-        return const_cast<map *>(this)->equal_range(k);
+        return const_cast<multimap *>(this)->equal_range(k);
     }
 };
 

@@ -1,5 +1,7 @@
 #include <ala/map.h>
+#include <ala/multimap.h>
 #include <ala/set.h>
+#include <ala/multiset.h>
 #include <map>
 #include <ala/random.h>
 #include <ala/timer.h>
@@ -9,106 +11,66 @@ ala::xoshiro128p x{10086};
 ala::xoshiro128p y{10086};
 ala::xoshiro<int, 1, 2, true, 0> xx;
 
-constexpr auto sz = 1000;
+constexpr auto bp = 10;
 
 void test() {
-    // ala::map<int, char> mx;
-    // for (int i = 0; i < 5; ++i)
-    //     mx[i] = 'L';
-    // for (auto i = mx.begin(); i != mx.end();)
-    //     i = mx.erase(i);
-
     ala::map<int, char> m, n;
-    for (int k = 0; k < sz; ++k) {
-        for (int i = 0; i < k; ++i)
+    for (int sz = 0; sz < bp; ++sz) {
+        for (int i = 0; i < sz; ++i)
+            m[x()] = 'L';
+        for (int i = 0; i < sz; ++i)
             m[i] = 'L';
-        // for (int i = 0; i < sz; ++i)
-        //     m[i] = 'L';
-        // for (int i = 0; i < sz; ++i)
-        //     n[x()] = 'L';
-
-        for (int i = 0; i < k; ++i)
+        for (int i = 0; i < sz; ++i)
+            n[x()] = 'L';
+        std::cout << "sz:" << m.size() + n.size() << "\n";
+        // m.merge(n);
+        // m.merge(ala::map<int, char>{});
+        std::cout << "sz:" << m.size() + n.size() << "\n";
+        for (int i = 0; i < sz; ++i)
             m.erase(i);
+        for (auto i = m.begin(); i != m.end();)
+            i = m.erase(i);
+        std::cout << m.size() << std::endl;
     }
-    std::cout << m.size() << std::endl;
-    for (auto i = m.begin(); i != m.end();)
-        i = m.erase(i);
-    std::cout << m.size() << std::endl;
-
-    // size_t sz = m.size() + n.size();
-    // m.merge(n);
-    // m.merge(ala::map<int, char>{});
-    // std::cout << (sz == m.size() + n.size());
 }
 
 void test1() {
     std::map<int, char> m, n;
-    int r = 0;
-    for (int i = 0; i < sz; ++i)
-        m[y()] = 'L';
-    for (int i = 0; i < sz; ++i)
-        m[i] = 'L';
-    for (int i = 0; i < sz; ++i)
-        n[y()] = 'L';
-
-    for (int i = 0; i < sz; ++i)
-        m.erase(i);
-    for (auto i = m.begin(); i != m.end();)
-        i = m.erase(i);
-    std::cout << m.size() << std::endl;
-
-    // size_t sz = m.size() + n.size();
-    // m.merge(n);
-    // std::cout << (sz == m.size() + n.size());
+    for (int sz = 0; sz < bp; ++sz) {
+        for (int i = 0; i < sz; ++i)
+            m[y()] = 'L';
+        for (int i = 0; i < sz; ++i)
+            m[i] = 'L';
+        for (int i = 0; i < sz; ++i)
+            n[y()] = 'L';
+        std::cout << "sz:" << m.size() + n.size() << "\n";
+        // m.merge(n);
+        // m.merge(ala::map<int, char>{});
+        std::cout << "sz:" << m.size() + n.size() << "\n";
+        for (int i = 0; i < sz; ++i)
+            m.erase(i);
+        for (auto i = m.begin(); i != m.end();)
+            i = m.erase(i);
+        std::cout << m.size() << std::endl;
+    }
 }
 //@build_type=dbg
 
 // cflags=-fsanitize=address
 
-int t() {
-    ala::xoshiro256p x;
-    auto s = .0;
-    for (int i = 0; i < 100000000; ++i)
-        s += ala::generate_real(x);
-    return s;
-}
-
-int t1() {
-    ala::xoshiro256p x;
-    auto s = 0;
-    for (int i = 0; i < 100000000; ++i)
-        s = x();
-    return s;
-}
-
-int t2() {
-    ala::xoshiro256ss x;
-    auto s = 0;
-    for (int i = 0; i < 100000000; ++i)
-        s += x();
-    return s;
-}
-
-int t3() {
-    ala::minstd_rand x;
-    auto s = 0;
-    for (int i = 0; i < 100000000; ++i)
-        s += x();
-    return s;
-}
-//@cflags=-mrdrnd -mrdseed
-
 int main() {
-    std::cout << ala::timer(t);
-    std::cout << ala::timer(t1);
-    std::cout << ala::timer(t2);
-    std::cout << ala::timer(t3);
-    ala::random_device rd;
-    rd();
-    rd();
-    rd();
-    // std::cout << ala::timer(test);
-    // std::cout << ala::timer(test1);
+    std::cout << ala::timer(test);
+    std::cout << ala::timer(test1);
     ala::set<int> st;
+    ala::multimap<int, char> mmp;
+    mmp.insert(ala::pair(123, 'c'));
+    mmp.insert(ala::pair(123, 'c'));
+    mmp.insert(ala::pair(123, 'c'));
+    mmp.insert(ala::pair(123, 'c'));
+    mmp.insert(ala::pair(123, 'c'));
+    mmp.insert(ala::pair(001, 'c'));
+    assert(mmp.count(123) == 5);
+    assert((mmp.equal_range(123) == ala::pair(++mmp.begin(), mmp.end())));
+    auto s = mmp.erase(123);
     return 0;
 }

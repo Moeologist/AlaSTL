@@ -9,7 +9,7 @@
 template<typename...>
 struct FK;
 
-// cflags=-stdlib=libc++
+//@cflags=-stdlib=libc++
 int main() {
     static_assert(ala::get<double>(ala::tuple{1, 2, 1.0}) == 1);
     static_assert(!(ala::tuple{1, 2} == ala::tuple{1, 2, 1}));

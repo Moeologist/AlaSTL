@@ -265,7 +265,7 @@ public:
     }
 
     iterator insert(const_iterator position, value_type &&v) {
-        return tree.emplace(position._ptr, ala::move(v));
+        return tree.emplace(position._ptr, ala::move(v)).first;
     }
 
     template<class It>
@@ -316,6 +316,19 @@ public:
         this->merge(source);
     }
 
+    template<class Comp1>
+    void merge(multiset<key_type, key_compare, allocator_type> &source) {
+        for (auto i = source.begin(); i != source.end();) {
+            auto tmp = i++;
+            tree.transfer(source.tree, tmp._ptr);
+        }
+    }
+
+    template<class Comp1>
+    void merge(multiset<key_type, key_compare, allocator_type> &&source) {
+        this->merge(source);
+    }
+
     iterator erase(iterator position) {
         iterator ret = position;
         ++ret;
@@ -328,10 +341,10 @@ public:
     }
 
     iterator erase(const_iterator first, const_iterator last) {
-        iterator ret;
-        for (const_iterator i = first; i != last; ++i)
-            ret = tree.erase(i->_ptr);
-        return ret;
+        const_iterator i = first
+        for (; i != last;)
+            i = this->erase(i);
+        return i;
     }
 
     void clear() noexcept {
@@ -376,12 +389,12 @@ public:
     }
 
     size_type count(const key_type &k) const {
-        return tree.template count<key_type>(k);
+        return this->contains(k);
     }
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     size_type count(const K &k) const {
-        return tree.count(k);
+        return this->contains(k);
     }
 
     bool contains(const key_type &k) const {
