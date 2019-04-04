@@ -3,7 +3,6 @@
 
 #ifdef _ALA_X86
 
-
 #if defined(_ALA_MSVC)
 
 #ifdef __cplusplus

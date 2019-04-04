@@ -8,7 +8,9 @@ namespace ala {
 template<typename Int, Int... Is>
 struct integer_sequence {
     typedef Int value_type;
-    static constexpr size_t size() noexcept { return sizeof...(Is); }
+    static constexpr size_t size() noexcept {
+        return sizeof...(Is);
+    }
 };
 
 template<size_t... Is>
@@ -42,7 +44,8 @@ struct _reverse_integer_sequence_impl;
 
 template<typename Int, Int I, Int... Is, Int... SIs>
 struct _reverse_integer_sequence_impl<Int, integer_sequence<Int, SIs...>, I, Is...> {
-    typedef typename _reverse_integer_sequence_impl<Int, integer_sequence<Int, I, SIs...>, Is...>::type type;
+    typedef typename _reverse_integer_sequence_impl<
+        Int, integer_sequence<Int, I, SIs...>, Is...>::type type;
 };
 
 template<typename Int, Int... SIs>
@@ -55,20 +58,21 @@ struct _reverse_integer_sequence_helper;
 
 template<typename Int, Int... Is>
 struct _reverse_integer_sequence_helper<integer_sequence<Int, Is...>> {
-    typedef typename _reverse_integer_sequence_impl<Int, integer_sequence<Int>, Is...>::type type;
+    typedef typename _reverse_integer_sequence_impl<Int, integer_sequence<Int>,
+                                                    Is...>::type type;
 };
 
 template<typename IntSeq>
-using reverse_integer_sequence = typename _reverse_integer_sequence_helper<IntSeq>::type;
+using reverse_integer_sequence =
+    typename _reverse_integer_sequence_helper<IntSeq>::type;
 
 // [start, end]
 template<typename Int, Int Start, Int End, int Step, typename IntSeq>
 struct _make_int_range_impl;
 
 template<typename Int, Int Start, Int End, int Step, Int... Is>
-struct _make_int_range_impl<Int, Start, End, Step,
-                            integer_sequence<Int, Is...>> {
-    static_assert(Start != End, "error");
+struct _make_int_range_impl<Int, Start, End, Step, integer_sequence<Int, Is...>> {
+    static_assert(Start != End, "internal error");
     static constexpr Int Next = Start > End ? Start - Step : Start + Step;
     typedef typename _make_int_range_impl<
         Int, Next, End, Step, integer_sequence<Int, Is..., Start>>::type type;
@@ -114,6 +118,7 @@ using make_integer_range =
 // struct _make_integer_sequence_impl<Int, 0, integer_sequence<Int, Is...>> {
 //     typedef integer_sequence<Int, Is...> type;
 // };
+
 template<typename Int, Int N>
 using make_integer_sequence = make_integer_range<Int, 0, N>;
 

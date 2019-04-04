@@ -7,6 +7,9 @@
 
 namespace ala {
 
+template<class, class, class>
+class multiset;
+
 template<class Key, class Comp = less<Key>, class Alloc = allocator<const Key>>
 class set {
 public:
@@ -341,9 +344,7 @@ public:
     }
 
     iterator erase(const_iterator first, const_iterator last) {
-        const_iterator i = first
-        for (; i != last;)
-            i = this->erase(i);
+        const_iterator i = first for (; i != last;) i = this->erase(i);
         return i;
     }
 
@@ -475,6 +476,71 @@ public:
         return const_cast<set *>(this)->equal_range(k);
     }
 };
+
+template<class Key, class Compare, class Alloc>
+bool operator==(const set<Key, Compare, Alloc> &lhs,
+                const set<Key, Compare, Alloc> &rhs) {
+    if (lhs.size() == rhs.size())
+        return equal(lhs.begin(), lhs.end(), rhs.begin());
+    return false;
+}
+
+template<class Key, class Compare, class Alloc>
+bool operator!=(const set<Key, Compare, Alloc> &lhs,
+                const set<Key, Compare, Alloc> &rhs) {
+    return !(lhs == rhs);
+}
+
+template<class Key, class Compare, class Alloc>
+bool operator<(const set<Key, Compare, Alloc> &lhs,
+               const set<Key, Compare, Alloc> &rhs) {
+    return lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
+                                   rhs.end());
+}
+
+template<class Key, class Compare, class Alloc>
+bool operator<=(const set<Key, Compare, Alloc> &lhs,
+                const set<Key, Compare, Alloc> &rhs) {
+    return !(rhs < lhs);
+}
+
+template<class Key, class Compare, class Alloc>
+bool operator>(const set<Key, Compare, Alloc> &lhs,
+               const set<Key, Compare, Alloc> &rhs) {
+    return rhs < lhs;
+}
+
+template<class Key, class Compare, class Alloc>
+bool operator>=(const set<Key, Compare, Alloc> &lhs,
+                const set<Key, Compare, Alloc> &rhs) {
+    return !(lhs < rhs);
+}
+
+template<class Key, class Compare, class Alloc>
+void swap(set<Key, Compare, Alloc> &lhs,
+          set<Key, Compare, Alloc> &rhs) noexcept(noexcept(lhs.swap(rhs))) {
+    lhs.swap(rhs);
+}
+
+#if _ALA_ENABLE_DEDUCTION_GUIDES
+
+template<class It, class Comp = less<typename iterator_traits<It>::value_type>,
+         class Alloc = allocator<typename iterator_traits<It>::value_type>>
+set(It, It, Comp = Comp(), Alloc = Alloc())
+    ->set<typename iterator_traits<It>::value_type, Comp, Alloc>;
+
+template<class Key, class Comp = less<Key>, class Alloc = allocator<Key>>
+set(initializer_list<Key>, Comp = Comp(), Alloc = Alloc())->set<Key, Comp, Alloc>;
+
+template<class It, class Alloc>
+set(It, It, Alloc)
+    ->set<typename iterator_traits<It>::value_type,
+          less<typename iterator_traits<It>::value_type>, Alloc>;
+
+template<class Key, class Alloc>
+set(initializer_list<Key>, Alloc)->set<Key, less<Key>, Alloc>;
+
+#endif
 
 } // namespace ala
 

@@ -1,11 +1,15 @@
-#ifndef _ALA_SET_H
-#define _ALA_SET_H
+#ifndef _ALA_MULTISET_H
+#define _ALA_MULTISET_H
 
 #include <ala/detail/allocator.h>
 #include <ala/detail/functional_base.h>
+#include <ala/detail/algorithm_base.h>
 #include <ala/detail/rb_tree.h>
 
 namespace ala {
+
+template<class, class, class>
+class set;
 
 template<class Key, class Comp = less<Key>, class Alloc = allocator<const Key>>
 class multiset {
@@ -116,12 +120,12 @@ public:
     typedef _insert_return_adaptor<iterator, node_type> insert_return_type;
 
     // construct/copy/destroy:
-    multiset() noexcept(is_nothrow_default_constructible<allocator_type>::value
-                       &&is_nothrow_default_constructible<key_compare>::value)
+    multiset() noexcept(is_nothrow_default_constructible<allocator_type>::value &&
+                            is_nothrow_default_constructible<key_compare>::value)
         : tree(value_compare(key_compare()), allocator_type()) {}
 
     explicit multiset(const key_compare &comp,
-                 const allocator_type &a = allocator_type())
+                      const allocator_type &a = allocator_type())
         : tree(value_compare(comp), a) {}
 
     explicit multiset(const allocator_type &a)
@@ -129,17 +133,19 @@ public:
 
     multiset(const multiset &m): tree(m.tree) {}
 
-    multiset(multiset &&m) noexcept(is_nothrow_move_constructible<allocator_type>::value &&
-                              is_nothrow_move_constructible<key_compare>::value)
+    multiset(multiset &&m) noexcept(
+        is_nothrow_move_constructible<allocator_type>::value
+            &&is_nothrow_move_constructible<key_compare>::value)
         : tree(ala::move(m.tree)) {}
 
     multiset(const multiset &m, const allocator_type &a): tree(m.tree, a) {}
 
-    multiset(multiset &&m, const allocator_type &a): tree(ala::move(m.tree), a) {}
+    multiset(multiset &&m, const allocator_type &a)
+        : tree(ala::move(m.tree), a) {}
 
     template<class It>
     multiset(It first, It last, const key_compare &comp = key_compare(),
-        const allocator_type &a = allocator_type())
+             const allocator_type &a = allocator_type())
         : tree(value_compare(comp), a) {
         this->insert(first, last);
     }
@@ -148,8 +154,9 @@ public:
     multiset(It first, It last, const allocator_type &a)
         : multiset(first, last, key_compare(), a) {}
 
-    multiset(initializer_list<value_type> il, const key_compare &comp = key_compare(),
-        const allocator_type &a = allocator_type())
+    multiset(initializer_list<value_type> il,
+             const key_compare &comp = key_compare(),
+             const allocator_type &a = allocator_type())
         : tree(value_compare(comp), a) {
         this->insert(il);
     }
@@ -317,7 +324,7 @@ public:
     }
 
     template<class Comp1>
-    void merge(set<key_type, mapped_type, Comp1, allocator_type> &source) {
+    void merge(set<key_type, key_compare, allocator_type> &source) {
         for (auto i = source.begin(); i != source.end();) {
             auto tmp = i++;
             tree.transfer(source.tree, tmp._ptr);
@@ -325,7 +332,7 @@ public:
     }
 
     template<class Comp1>
-    void merge(set<key_type, mapped_type, Comp1, allocator_type> &&source) {
+    void merge(set<key_type, key_compare, allocator_type> &&source) {
         this->merge(source);
     }
 
@@ -341,9 +348,7 @@ public:
     }
 
     iterator erase(const_iterator first, const_iterator last) {
-        const_iterator i = first
-        for (; i != last;)
-            i = this->erase(i);
+        const_iterator i = first for (; i != last;) i = this->erase(i);
         return i;
     }
 
@@ -351,8 +356,9 @@ public:
         tree.clear();
     }
 
-    void swap(multiset &m) noexcept(allocator_traits<allocator_type>::is_always_equal::value
-                                   &&is_nothrow_swappable<key_compare>::value) {
+    void swap(multiset &m) noexcept(
+        allocator_traits<allocator_type>::is_always_equal::value
+            &&is_nothrow_swappable<key_compare>::value) {
         tree.swap(m.tree);
     }
 
@@ -475,6 +481,72 @@ public:
         return const_cast<multiset *>(this)->equal_range(k);
     }
 };
+
+template<class Key, class Compare, class Alloc>
+bool operator==(const multiset<Key, Compare, Alloc> &lhs,
+                const multiset<Key, Compare, Alloc> &rhs) {
+    if (lhs.size() == rhs.size())
+        return equal(lhs.begin(), lhs.end(), rhs.begin());
+    return false;
+}
+
+template<class Key, class Compare, class Alloc>
+bool operator!=(const multiset<Key, Compare, Alloc> &lhs,
+                const multiset<Key, Compare, Alloc> &rhs) {
+    return !(lhs == rhs);
+}
+
+template<class Key, class Compare, class Alloc>
+bool operator<(const multiset<Key, Compare, Alloc> &lhs,
+               const multiset<Key, Compare, Alloc> &rhs) {
+    return lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
+                                   rhs.end());
+}
+
+template<class Key, class Compare, class Alloc>
+bool operator<=(const multiset<Key, Compare, Alloc> &lhs,
+                const multiset<Key, Compare, Alloc> &rhs) {
+    return !(rhs < lhs);
+}
+
+template<class Key, class Compare, class Alloc>
+bool operator>(const multiset<Key, Compare, Alloc> &lhs,
+               const multiset<Key, Compare, Alloc> &rhs) {
+    return rhs < lhs;
+}
+
+template<class Key, class Compare, class Alloc>
+bool operator>=(const multiset<Key, Compare, Alloc> &lhs,
+                const multiset<Key, Compare, Alloc> &rhs) {
+    return !(lhs < rhs);
+}
+
+template<class Key, class Compare, class Alloc>
+void swap(multiset<Key, Compare, Alloc> &lhs,
+          multiset<Key, Compare, Alloc> &rhs) noexcept(noexcept(lhs.swap(rhs))) {
+    lhs.swap(rhs);
+}
+
+#if _ALA_ENABLE_DEDUCTION_GUIDES
+
+template<class It, class Comp = less<typename iterator_traits<It>::value_type>,
+         class Alloc = allocator<typename iterator_traits<It>::value_type>>
+multiset(It, It, Comp = Comp(), Alloc = Alloc())
+    ->multiset<typename iterator_traits<It>::value_type, Comp, Alloc>;
+
+template<class Key, class Comp = less<Key>, class Alloc = allocator<Key>>
+multiset(initializer_list<Key>, Comp = Comp(), Alloc = Alloc())
+    ->multiset<Key, Comp, Alloc>;
+
+template<class It, class Alloc>
+multiset(It, It, Alloc)
+    ->multiset<typename iterator_traits<It>::value_type,
+               less<typename iterator_traits<It>::value_type>, Alloc>;
+
+template<class Key, class Alloc>
+multiset(initializer_list<Key>, Alloc)->multiset<Key, less<Key>, Alloc>;
+
+#endif
 
 } // namespace ala
 

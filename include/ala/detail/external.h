@@ -16,6 +16,7 @@
 
 namespace ala {
 using std::exception;
+using std::length_error;
 using std::out_of_range;
 
 using std::initializer_list;
