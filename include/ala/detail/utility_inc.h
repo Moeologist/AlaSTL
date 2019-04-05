@@ -13,17 +13,17 @@ constexpr typename remove_reference<T>::type &&move(T &&x) noexcept {
     return static_cast<typename remove_reference<T>::type &&>(x);
 }
 
-template<typename Tp>
-constexpr Tp &&forward(remove_reference_t<Tp> &t) noexcept {
-    return static_cast<Tp &&>(t);
+template<typename T>
+constexpr T &&forward(remove_reference_t<T> &t) noexcept {
+    return static_cast<T &&>(t);
 }
 
-template<typename Tp>
-constexpr Tp &&forward(remove_reference_t<Tp> &&t) noexcept {
+template<typename T>
+constexpr T &&forward(remove_reference_t<T> &&t) noexcept {
     static_assert(
-        !is_lvalue_reference<Tp>::value,
+        !is_lvalue_reference<T>::value,
         "template argument substituting T is an lvalue reference type");
-    return static_cast<Tp &&>(t);
+    return static_cast<T &&>(t);
 }
 
 template<class T>

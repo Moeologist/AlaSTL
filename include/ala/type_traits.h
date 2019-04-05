@@ -66,12 +66,12 @@ struct reference_wrapper;
 template<typename...> struct _or_;
 template<> struct _or_<> : false_type {};
 template<typename B1> struct _or_<B1> : B1 {};
-template<typename B1, typename... B> struct _or_<B1, B...> : conditional_t<bool(B1::value), B1, _or_<B...>> {};
+template<typename B1, typename... Bs> struct _or_<B1, Bs...> : conditional_t<bool(B1::value), B1, _or_<Bs...>> {};
 
 template<typename...> struct _and_;
 template<> struct _and_<> : true_type {};
 template<typename B1> struct _and_<B1> : B1 {};
-template<typename B1, typename... B> struct _and_<B1, B...> : conditional_t<bool(B1::value), _and_<B...>, B1> {};
+template<typename B1, typename... Bs> struct _and_<B1, Bs...> : conditional_t<bool(B1::value), _and_<Bs...>, B1> {};
 
 template<typename B>
 struct _not_ : bool_constant<!bool(B::value)> {};
@@ -244,21 +244,13 @@ template<typename T, bool = is_arithmetic<T>::value> struct _is_signed_helper : 
 template<typename T>                                 struct _is_signed_helper<T, false> : false_type {};
 template<typename T> struct is_signed : _is_signed_helper<T> {};
 
-template<typename T>
-struct _is_array_known_bounds : _and_<is_array<T>,
-                                      bool_constant<(extent<T, 0>::value > 0)>> {};
-
-template<typename T>
-struct _is_array_unknown_bounds : _and_<is_array<T>,
-                                        _not_<bool_constant<(extent<T, 0>::value > 0)>>> {};
-
 // destructible
 template<typename, typename = void_t<>>
 struct _is_destructible_impl : false_type {};
 template<typename T>
 struct _is_destructible_impl<T, void_t<decltype(declval<T &>().~T())>> : true_type {};
 
-template<typename T, bool = _or_<is_void<T>, _is_array_unknown_bounds<T>, is_function<T>>::value,
+template<typename T, bool = _or_<is_void<T>, is_bounded_array<T>, is_function<T>>::value,
                      bool = _or_<is_reference<T>, is_scalar<T>>::value>
 struct _is_destructible_helper : false_type {};
 
@@ -297,7 +289,7 @@ template<typename T, bool = is_array<T>::value>
 struct _is_default_constructible_helper: _and_<_not_<is_void<T>>,
                                                _is_default_constructible_impl<T>> {};
 template<typename T>
-struct _is_default_constructible_helper<T, true> : _and_<_is_array_known_bounds<T>,
+struct _is_default_constructible_helper<T, true> : _and_<is_bounded_array<T>,
                                                          _is_default_constructible_impl<remove_all_extents_t<T>>> {};
 
 template<typename T>
@@ -306,7 +298,7 @@ struct is_default_constructible : _is_default_constructible_helper<T> {};
 template<typename T, bool = is_array<T>::value>
 struct _is_nt_default_constructible_helper : bool_constant<noexcept(T())> {};
 template<typename T>
-struct _is_nt_default_constructible_helper<T, true> : _and_<_is_array_known_bounds<T>,
+struct _is_nt_default_constructible_helper<T, true> : _and_<is_bounded_array<T>,
                                                             bool_constant<noexcept(remove_all_extents_t<T>())>> {};
 
 template<typename T>
@@ -705,10 +697,40 @@ template<typename T> struct enable_if<true, T> { typedef T type; };
 template<bool B, typename T, typename F> struct conditional      { typedef T type; };
 template<typename T, typename F> struct conditional<false, T, F> { typedef F type; };
 
-template<typename... T> struct common_type;
-template<typename T> struct common_type<T> { typedef decay_t<T> type; };
-template<typename T, typename U> struct common_type<T, U> { typedef decay_t<decltype(true ? declval<T>() : declval<U>())> type; };
-template<typename T, typename U, typename... V> struct common_type<T, U, V...> { typedef common_type_t<common_type_t<T, U>, V...> type; };
+template<typename T1, typename T2, typename = void_t<>>
+struct _common_type_2_sf_helper {};
+
+template<typename T1, typename T2>
+struct _common_type_2_sf_helper<T1, T2, void_t<decay_t<decltype(false ? declval<const T1 &>() : declval<const T2 &>())>>>
+{ typedef decay_t<decltype(false ? declval<const T1 &>() : declval<const T2 &>())> type; };
+
+template<typename T1, typename T2, typename = void_t<>>
+struct _common_type_2_sfinae : _common_type_2_sf_helper<T1, T2> {};
+
+template<typename T1, typename T2>
+struct _common_type_2_sfinae<T1, T2, void_t<decay_t<decltype(false ? declval<T1>() : declval<T2>())>>>
+{ typedef decay_t<decltype(false ? declval<T1>() : declval<T2>())> type; };
+
+template<typename T1, typename T2>
+struct _common_type_2 : conditional_t<is_same<T1, decay_t<T1>>::value && is_same<T2, decay_t<T2>>::value,
+                                      _common_type_2_sfinae<T1, T2>,
+                                      common_type<decay_t<T1>, decay_t<T2>>> {};
+
+template<typename, typename T1, typename T2, typename... Ts>
+struct _common_type_n_sfinae {};
+
+template<typename T1, typename T2, typename... Ts>
+struct _common_type_n_sfinae<void_t<common_type_t<T1, T2>>, T1, T2, Ts...> : common_type<common_type_t<T1, T2>, Ts...> {};
+
+template<typename T1, typename T2, typename... Ts>
+struct _common_type_n : _common_type_n_sfinae<void, T1, T2, Ts...> {};
+
+template<typename... Ts> struct common_type {};
+template<> struct common_type<> {};
+template<typename T> struct common_type<T> : common_type<T, T> {};
+template<typename T1, typename T2> struct common_type<T1, T2> : _common_type_2<T1, T2> {};
+template<typename T1, typename T2, typename... Ts>
+struct common_type<T1, T2, Ts...> : _common_type_n<T1, T2, Ts...> {};
 
 template<typename T, bool = is_enum<T>::value> struct _underlying_type_helper {};
 template<typename T> struct _underlying_type_helper<T, true> { typedef __underlying_type(T) type; };
@@ -785,14 +807,23 @@ enum class endian {
 };
 
 template<typename T> struct type_identity { typedef T type; };
-template<typename T> using type_identity_t = typename type_identity<T>::type;
 
 template<typename T> struct unwrap_reference { using type = T; };
 template<typename T> struct unwrap_reference<reference_wrapper<T>> { using type = T&; };
-template<typename T> using unwrap_reference_t = typename unwrap_reference<T>::type;
 
 template<typename T> struct unwrap_ref_decay : unwrap_reference<decay_t<T>> {};
-template<typename T> using unwrap_ref_decay_t = typename unwrap_ref_decay<T>::type;
+
+template<typename T>
+struct is_bounded_array: false_type {};
+
+template<typename T, size_t N>
+struct is_bounded_array<T[N]> : true_type {};
+
+template<typename T>
+struct is_unbounded_array: false_type {};
+
+template<typename T>
+struct is_unbounded_array<T[]> : true_type {};
 
 } // namespace ala
 

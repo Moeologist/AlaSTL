@@ -1,6 +1,13 @@
 #ifndef _ALA_ITERATOR_H
 #define _ALA_ITERATOR_H
 
+struct input_iterator_tag {};
+struct output_iterator_tag {};
+struct forward_iterator_tag {};
+struct bidirectional_iterator_tag {};
+struct random_access_iterator_tag {};
+struct contiguous_iterator_tag {};
+
 namespace ala {
 template<typename It>
 struct iterator_traits {
@@ -12,22 +19,23 @@ struct iterator_traits<const It> {
     using value_type = typename It::value_type;
 };
 
-template<typename It>
-struct iterator_traits<It *> {
-    using value_type = It;
+template<typename T>
+struct iterator_traits<T *> {
+    using difference_type = ptrdiff_t;
+    using value_type = T;
+    using pointer = T *;
+    using reference = T &;
+    using iterator_category = random_access_iterator_tag;
 };
 
-template<typename It>
-struct iterator_traits<const It *> {
-    using value_type = It;
+template<typename T>
+struct iterator_traits<const T *> {
+    using difference_type = ptrdiff_t;
+    using value_type = T;
+    using pointer = const T *;
+    using reference = const T &;
+    using iterator_category = random_access_iterator_tag;
 };
-
-struct input_iterator_tag {};
-struct output_iterator_tag {};
-struct forward_iterator_tag {};
-struct bidirectional_iterator_tag {};
-struct random_access_iterator_tag {};
-struct contiguous_iterator_tag {};
 
 template<class It>
 struct reverse_iterator {
@@ -61,24 +69,24 @@ struct reverse_iterator {
 
     constexpr reference operator*() const {
         It tmp = current;
-        return (--tmp).operator *();
+        return (--tmp).operator*();
     }
 
     constexpr pointer operator->() const {
         It tmp = current;
-        return (--tmp).operator ->();
+        return (--tmp).operator->();
     }
 
     constexpr reference operator[](difference_type n) const;
 
     constexpr reverse_iterator &operator++() {
         --current;
-        return  *this;
+        return *this;
     }
 
     constexpr reverse_iterator &operator--() {
         ++current;
-        return  *this;
+        return *this;
     }
 
     constexpr reverse_iterator operator++(int) {

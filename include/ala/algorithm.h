@@ -5,8 +5,8 @@
 
 namespace ala {
 
-template<class LIt, class RIt>
-inline void iter_swap(LIt a, RIt b) {
+template<class It1, class It2>
+inline void iter_swap(It1 a, It2 b) {
     ala::swap(*a, *b);
 }
 

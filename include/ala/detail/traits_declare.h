@@ -285,7 +285,26 @@ template<typename... B> ALA_VAR_INLINE constexpr bool conjunction_v = conjunctio
 template<typename... B> ALA_VAR_INLINE constexpr bool disjunction_v = disjunction<B...>::value;
 template<typename B>    ALA_VAR_INLINE constexpr bool negation_v    = negation<B>::value;
 
+template<typename T> struct type_identity;
+template<typename T> using type_identity_t = typename type_identity<T>::type;
 
+template<typename T> struct unwrap_reference;
+template<typename T> using unwrap_reference_t = typename unwrap_reference<T>::type;
+
+template<typename T> struct unwrap_ref_decay;
+template<typename T> using unwrap_ref_decay_t = typename unwrap_ref_decay<T>::type;
+
+template<typename T>
+struct is_bounded_array;
+
+template<typename T>
+ALA_VAR_INLINE constexpr bool is_bounded_array_v = is_bounded_array<T>::value;
+
+template<typename T>
+struct is_unbounded_array;
+
+template<typename T>
+ALA_VAR_INLINE constexpr bool is_unbounded_array_v = is_bounded_array<T>::value;
 
 // clang-format on
 
