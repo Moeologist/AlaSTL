@@ -147,7 +147,7 @@ template<typename T> using add_pointer_t    = typename add_pointer<T>::type;
 
 // other transformations:
 template<size_t Len, size_t Align>      struct aligned_storage;
-template<size_t Len, typename... Types> struct aligned_union;
+template<size_t Len, typename... Ts> struct aligned_union;
 template<typename T>                    struct decay;
 template<typename T>                    struct remove_cvref;
 template<bool, typename T = void>       struct enable_if;
@@ -281,9 +281,9 @@ template<typename Fn, typename... Args>             ALA_VAR_INLINE constexpr boo
 template<typename R, typename Fn, typename... Args> ALA_VAR_INLINE constexpr bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<R, Fn, Args...>::value;
 
 // logical operator traits:
-template<typename... B> ALA_VAR_INLINE constexpr bool conjunction_v = conjunction<B...>::value;
-template<typename... B> ALA_VAR_INLINE constexpr bool disjunction_v = disjunction<B...>::value;
-template<typename B>    ALA_VAR_INLINE constexpr bool negation_v    = negation<B>::value;
+template<typename... Bs> ALA_VAR_INLINE constexpr bool conjunction_v = conjunction<Bs...>::value;
+template<typename... Bs> ALA_VAR_INLINE constexpr bool disjunction_v = disjunction<Bs...>::value;
+template<typename B>     ALA_VAR_INLINE constexpr bool negation_v    = negation<B>::value;
 
 template<typename T> struct type_identity;
 template<typename T> using type_identity_t = typename type_identity<T>::type;
@@ -305,6 +305,15 @@ struct is_unbounded_array;
 
 template<typename T>
 ALA_VAR_INLINE constexpr bool is_unbounded_array_v = is_bounded_array<T>::value;
+
+template<typename...>
+struct common_reference;
+
+template<typename... T>
+using common_reference_t = typename common_reference<T...>::type;
+
+template<typename, typename, template<typename> class, template<typename> class UQual>
+struct basic_common_reference;
 
 // clang-format on
 

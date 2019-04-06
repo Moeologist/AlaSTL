@@ -343,7 +343,7 @@ template<typename T, typename Arg, bool = is_reference<T>::value>
 struct _is_a_constructible : _and_<_is_static_castable_impl<Arg, T>,
                                    _not_<typename _is_base_to_derived_cast<T, Arg>::type>,
                                    _not_<typename _is_lvalue_to_rvalue_cast<T, Arg>::type>> {};
-// Clang version under 4.0 static_cast not work well
+// Clang version before 4.0 static_cast not work well
 
 template<typename T, typename Arg>
 struct _is_a_constructible<T, Arg, false> : _is_a_constructible_helper<T, Arg> {};
@@ -541,25 +541,13 @@ template<typename T> struct remove_reference      { typedef T type; };
 template<typename T> struct remove_reference<T&>  { typedef T type; };
 template<typename T> struct remove_reference<T&&> { typedef T type; };
 
-template<typename T> struct add_lvalue_reference                      { typedef T&                  type; };
-template<typename T> struct add_lvalue_reference<T&>                  { typedef T&                  type; };
-// template<typename T> struct add_lvalue_reference<const T&>            { typedef T&                  type; };
-// template<typename T> struct add_lvalue_reference<volatile T&>         { typedef T&                  type; };
-// template<typename T> struct add_lvalue_reference<const volatile T&>   { typedef T&                  type; };
-template<>           struct add_lvalue_reference<void>                { typedef void                type; };
-template<>           struct add_lvalue_reference<const void>          { typedef const void          type; };
-template<>           struct add_lvalue_reference<volatile void>       { typedef volatile void       type; };
-template<>           struct add_lvalue_reference<const volatile void> { typedef const volatile void type; };
+template<typename T, typename = void_t<>> struct _add_lvalue_reference_helper { typedef T  type; };
+template<typename T> struct _add_lvalue_reference_helper<T, void_t<T&>>       { typedef T& type; };
+template<typename T> struct add_lvalue_reference : _add_lvalue_reference_helper<T> {};
 
-template<typename T> struct add_rvalue_reference                      { typedef T&&                 type; };
-template<typename T> struct add_rvalue_reference<T&>                  { typedef T&                  type; };
-// template<typename T> struct add_rvalue_reference<const T&>            { typedef T&                  type; };
-// template<typename T> struct add_rvalue_reference<volatile T&>         { typedef T&                  type; };
-// template<typename T> struct add_rvalue_reference<const volatile T&>   { typedef T&                  type; };
-template<>           struct add_rvalue_reference<void>                { typedef void                type; };
-template<>           struct add_rvalue_reference<const void>          { typedef const void          type; };
-template<>           struct add_rvalue_reference<volatile void>       { typedef volatile void       type; };
-template<>           struct add_rvalue_reference<const volatile void> { typedef const volatile void type; };
+template<typename T, typename = void_t<>> struct _add_rvalue_reference_helper { typedef T   type; };
+template<typename T> struct _add_rvalue_reference_helper<T, void_t<T&&>>      { typedef T&& type; };
+template<typename T> struct add_rvalue_reference : _add_rvalue_reference_helper<T> {};
 
 template<typename T> struct make_signed                          { typedef T                               type; };
 template<> struct make_signed<unsigned char>                     { typedef signed char                     type; };
@@ -657,10 +645,10 @@ template<typename T, typename... Args>    struct _add_pointer_helper<T(Args...),
 template<typename T, typename... Args>    struct _add_pointer_helper<T(Args..., ...), true> { typedef T(*type)(Args..., ...); };
 template<typename T> struct add_pointer : _add_pointer_helper<T, is_function<T>::value> {};
 
-template<size_t Len, size_t Align = 8>
+template<size_t Len, size_t Align = alignof(max_align_t)>
 struct aligned_storage {
     struct type {
-        alignas(Align) unsigned char data[Len];
+        alignas(Align) unsigned char _data[Len];
     };
 };
 
@@ -670,12 +658,10 @@ template<size_t Val>     struct _maximum<Val> : integral_constant<size_t, Val> {
 template<size_t First, size_t Second, size_t... Rest>
 struct _maximum<First, Second, Rest...> : _maximum<(First < Second ? Second : First), Rest...> {};
 
-template<size_t Len, typename... Types>
+template<size_t Len, typename... Ts>
 struct aligned_union {
-    constexpr static size_t alignment_value = _maximum<alignof(Types)...>::value;
-    struct type {
-        alignas(alignment_value) char _s[_maximum<Len, sizeof(Types)...>::value];
-    };
+    constexpr static size_t alignment_value = _maximum<alignof(Ts)...>::value;
+    typedef aligned_storage_t<_maximum<Len, sizeof(Ts)...>::value, alignment_value> type;
 };
 
 template<typename T>
@@ -697,19 +683,22 @@ template<typename T> struct enable_if<true, T> { typedef T type; };
 template<bool B, typename T, typename F> struct conditional      { typedef T type; };
 template<typename T, typename F> struct conditional<false, T, F> { typedef F type; };
 
+template<typename T1, typename T2>
+using _cm_tp_helper_t = decay_t<decltype(false ? declval<T1>() : declval<T2>())>;
+
 template<typename T1, typename T2, typename = void_t<>>
 struct _common_type_2_sf_helper {};
 
 template<typename T1, typename T2>
-struct _common_type_2_sf_helper<T1, T2, void_t<decay_t<decltype(false ? declval<const T1 &>() : declval<const T2 &>())>>>
-{ typedef decay_t<decltype(false ? declval<const T1 &>() : declval<const T2 &>())> type; };
+struct _common_type_2_sf_helper<T1, T2, void_t<_cm_tp_helper_t<const T1&, const T2&>>>
+{ typedef _cm_tp_helper_t<const T1&, const T2&> type; };
 
 template<typename T1, typename T2, typename = void_t<>>
 struct _common_type_2_sfinae : _common_type_2_sf_helper<T1, T2> {};
 
 template<typename T1, typename T2>
-struct _common_type_2_sfinae<T1, T2, void_t<decay_t<decltype(false ? declval<T1>() : declval<T2>())>>>
-{ typedef decay_t<decltype(false ? declval<T1>() : declval<T2>())> type; };
+struct _common_type_2_sfinae<T1, T2, void_t<_cm_tp_helper_t<T1, T2>>>
+{ typedef _cm_tp_helper_t<T1, T2> type; };
 
 template<typename T1, typename T2>
 struct _common_type_2 : conditional_t<is_same<T1, decay_t<T1>>::value && is_same<T2, decay_t<T2>>::value,
@@ -725,7 +714,7 @@ struct _common_type_n_sfinae<void_t<common_type_t<T1, T2>>, T1, T2, Ts...> : com
 template<typename T1, typename T2, typename... Ts>
 struct _common_type_n : _common_type_n_sfinae<void, T1, T2, Ts...> {};
 
-template<typename... Ts> struct common_type {};
+template<typename... Ts> struct common_type;
 template<> struct common_type<> {};
 template<typename T> struct common_type<T> : common_type<T, T> {};
 template<typename T1, typename T2> struct common_type<T1, T2> : _common_type_2<T1, T2> {};
@@ -824,6 +813,145 @@ struct is_unbounded_array: false_type {};
 
 template<typename T>
 struct is_unbounded_array<T[]> : true_type {};
+
+template<typename T1, typename T2,
+         bool = is_const<T1>::value || is_const<T2>::value,
+         bool = is_volatile<T1>::value || is_volatile<T2>::value>
+struct _combo_cv;
+
+template<typename T1, typename T2>
+struct _combo_cv<T1, T2, true, true> { typedef const volatile T1 tp1; typedef const volatile T2 tp2; };
+
+template<typename T1, typename T2>
+struct _combo_cv<T1, T2, true, false> { typedef const T1 tp1; typedef const T2 tp2; };
+
+template<typename T1, typename T2>
+struct _combo_cv<T1, T2, false, true> { typedef volatile T1 tp1; typedef volatile T2 tp2; };
+
+template<typename T1, typename T2>
+struct _combo_cv<T1, T2, false, false> { typedef T1 tp1; typedef T2 tp2; };
+
+template<typename T1, typename T2>
+using _combo_cv_t1 = typename _combo_cv<T1, T2>::tp1;
+
+template<typename T1, typename T2>
+using _combo_cv_t2 = typename _combo_cv<T1, T2>::tp2;
+
+template<typename T1, typename T2>
+using _scm_ref_helper_t = decltype(false ? declval<_combo_cv_t2<T1, T2>>() : declval<_combo_cv_t2<T1, T2>>());
+
+template<typename T1, typename T2, typename = void_t<>>
+struct _simple_common_lref {};
+
+template<typename T1, typename T2>
+struct _simple_common_lref<T1, T2, void_t<_scm_ref_helper_t<T1, T2>>>
+{ typedef _scm_ref_helper_t<T1, T2> type; };
+
+template<typename T1, typename T2, typename C, bool = is_convertible<T1, C>::value && is_convertible<T2, C>::value>
+struct _simple_common_rref_helper {};
+
+template<typename T1, typename T2, typename C>
+struct _simple_common_rref_helper<T1, T2, C, true> { typedef C type; };
+
+template<typename T1, typename T2, typename = void_t<>>
+struct _simple_common_rref {};
+
+template<typename T1, typename T2>
+struct _simple_common_rref<T1, T2, void_t<typename _simple_common_lref<T1&, T2&>::type>>
+    : _simple_common_rref_helper<T1, T2, typename _simple_common_lref<T1&, T2&>::type> {};
+
+template<typename T1, typename T2, typename C, bool = is_convertible<T2, C>::value>
+struct _simple_common_mix_sf_helper {};
+
+template<typename T1, typename T2, typename C>
+struct _simple_common_mix_sf_helper<T1, T2, C, true> { typedef C type; };
+
+template<typename T1, typename T2, typename = void_t<>>
+struct _simple_common_mix_sfinae {};
+
+template<typename T1, typename T2>
+struct _simple_common_mix_sfinae<T1, T2, void_t<typename _simple_common_lref<T1, const remove_reference_t<T2>&>::type>>
+    : _simple_common_mix_sf_helper<T1, T2, typename _simple_common_lref<T1, const remove_reference_t<T2>&>::type> {};
+
+template<typename T1, typename T2, bool = is_lvalue_reference<T1>::value && is_rvalue_reference<T2>::value>
+struct _simple_common_ref_mix {};
+
+template<typename T1, typename T2>
+struct _simple_common_ref_mix<T1, T2, true> : _simple_common_mix_sfinae<T1, T2> {};
+
+template<typename T1, typename T2>
+struct _simple_common_reference : conditional_t<
+    is_lvalue_reference<T1>::value && is_lvalue_reference<T2>::value,
+    _simple_common_lref<T1, T2>, conditional_t<
+        is_rvalue_reference<T1>::value && is_rvalue_reference<T2>::value,
+        _simple_common_rref<T1, T2>, conditional_t<
+            is_rvalue_reference<T1>::value && is_lvalue_reference<T2>::value,
+            _simple_common_ref_mix<T2, T1>, _simple_common_ref_mix<T1, T2>>>> {};
+
+template<typename T, bool = is_const<T>::value, bool = is_volatile<T>::value>
+struct _get_cv;
+
+template<typename T>
+struct _get_cv<T, false, false> { template<typename U> using _bind_t = T; };
+
+template<typename T>
+struct _get_cv<T, true, false> { template<typename U> using _bind_t = const U; };
+
+template<typename T>
+struct _get_cv<T, false, true> { template<typename U> using _bind_t = volatile U; };
+
+template<typename T>
+struct _get_cv<T, true, true> { template<typename U> using _bind_t = const volatile U; };
+
+template<typename T>
+T _val();
+
+template<typename T1, typename T2>
+using _cm_ref_helper_t = decltype(false ? _val<T1>() : _val<T2>());
+
+template<typename T1, typename T2, typename = void_t<>>
+struct _common_reference_sf_helper : common_type_t<T1, T2> {};
+
+template<typename T1, typename T2>
+struct _common_reference_sf_helper<T1, T2, void_t<_cm_ref_helper_t<T1, T2>>>
+{ typedef _cm_ref_helper_t<T1, T2> type; };
+
+template<typename, typename, template<typename> class, template<typename> class>
+struct basic_common_reference {};
+
+template<typename T1, typename T2>
+using _basic_common_ref_t = typename basic_common_reference<
+    remove_cvref_t<T1>, remove_cvref_t<T2>, _get_cv<T1>::template _bind_t, _get_cv<T2>::template _bind_t>::type;
+
+template<typename T1, typename T2, typename = void_t<>>
+struct _common_reference_sfinae : _common_reference_sf_helper<T1, T2> {};
+
+template<typename T1, typename T2>
+struct _common_reference_sfinae<T1, T2, void_t<_basic_common_ref_t<T1, T2>>>
+{ typedef _basic_common_ref_t<T1, T2> type; };
+
+template<typename T1, typename T2, bool = is_reference<T1>::value && is_reference<T2>::value, typename = void_t<>>
+struct _common_reference_2 : _common_reference_sfinae<T1, T2> {};
+
+template<typename T1, typename T2>
+struct _common_reference_2<T1, T2, true, void_t<typename _simple_common_reference<T1, T2>::type>>
+{ typedef typename _simple_common_reference<T1, T2>::type type; };
+
+template<typename, typename T1, typename T2, typename... Ts>
+struct _common_reference_n_sfinae {};
+
+template<typename T1, typename T2, typename... Ts>
+struct _common_reference_n_sfinae<void_t<common_reference_t<T1, T2>>, T1, T2, Ts...> : common_reference<common_reference_t<T1, T2>, Ts...> {};
+
+template<typename T1, typename T2, typename... Ts>
+struct _common_reference_n : _common_reference_n_sfinae<void, T1, T2, Ts...> {};
+
+template<typename... Ts> struct common_reference;
+template<> struct common_reference<> {};
+template<typename T> struct common_reference<T> { typedef T type; };
+template<typename T1, typename T2> struct common_reference<T1, T2> : _common_reference_2<T1, T2> {};
+template<typename T1, typename T2, typename... Ts>
+struct common_reference<T1, T2, Ts...> : _common_reference_n<T1, T2, Ts...> {};
 
 } // namespace ala
 

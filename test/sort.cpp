@@ -246,7 +246,21 @@ auto test_c_array(function f, int N) { //编译器推导T
 // 	return dTime;
 // }
 //@build_type=rel
+template<typename...> class FK;
 int main() {
+    typedef int * pint;
+    static_assert(is_same<const pint, int *const>::value);
+    static_assert(is_same<remove_pointer_t<const pint>, int>::value);
+    static_assert(is_same<remove_pointer_t<const int *>, const int>::value);
+    static_assert(is_same<const pint, const int *>::value);
+    FK<typename common_reference<const int&&,  int&&>::type> t;
+    // FK<typename _simple_common_reference<const int&,  int&&>::type> t2;
+    FK<typename common_reference<const int&,  int&&>::type> t1;
+    FK<typename common_reference<int&&,  int&&>::type> t2;
+    FK<typename common_reference<int&,  int&&>::type> t3;
+    FK<typename _simple_common_reference<int&,  int&&>::type> t33;
+    FK<typename common_reference<int&, const int&>::type> t4;
+
     std::cout << "Select:" << test_c_array(select_sort<C::iterator_type>, 10000)
               << std::endl;
     std::cout << "Insert:"

@@ -138,7 +138,7 @@ protected:
     Ptr _ptr;
 };
 
-template<class Data, class Comp, class Alloc, bool Uniq = true,
+template<class Data, class Comp, class Alloc, bool Uniq,
          class NAlloc = typename Alloc::template rebind<rb_node<Data>>::other>
 class rb_tree {
 public:
@@ -148,6 +148,7 @@ public:
     typedef rb_node<Data> node_type;
     typedef NAlloc node_allocator_type;
     typedef typename node_allocator_type::pointer node_pointer;
+    static constexpr bool is_uniq = Uniq;
 
     static_assert(is_same<node_pointer, node_type *>::value,
                   "ala node-based container use raw pointer");
@@ -347,7 +348,7 @@ public:
         return false;
     }
 
-    auto insert(node_pointer hint, node_pointer p) {
+    pair<node_pointer, bool> insert(node_pointer hint, node_pointer p) {
         if (is_nil(p))
             return pair<node_pointer, bool>(end(), false);
         pair<node_pointer, bool> pr = search(hint, p);
@@ -356,45 +357,9 @@ public:
         return pair<node_pointer, bool>(p, !pr.second);
     }
 
-    template<class... Args>
-    auto emplace(node_pointer hint, Args &&... args) {
-        return Uniq ? emplace_uniq(hint, ala::forward<Args>(args)...) :
-                      emplace_multi(hint, ala::forward<Args>(args)...);
-    }
-
-    auto search(node_pointer hint, node_pointer p) {
-        return Uniq ? search_uniq(hint, p) : search_multi(hint, p);
-    }
-
-protected:
-    node_pointer _root;
-    unsigned char _nil_mem[sizeof(rb_node<value_type>) * 2];
-    const node_pointer _left_nil = reinterpret_cast<node_pointer>(_nil_mem);
-    const node_pointer _right_nil = reinterpret_cast<node_pointer>(
-        _nil_mem + sizeof(rb_node<Data>));
-
-    size_t _size;
-    allocator_type _alloc;
-    node_allocator_type _nalloc;
-    value_compare _comp;
-
-    ALA_HAS_MEM_VAL(first)
-    ALA_HAS_MEM_VAL(comp)
-
-    static_assert(_has_first<value_type>::value == _has_comp<value_compare>::value,
-                  "key compare check failed");
-
-    template<class... Args>
-    pair<node_pointer, bool> emplace_multi(node_pointer hint, Args &&... args) {
-        using ret = pair<node_pointer, bool>;
-        node_pointer new_node = construct_node(ala::forward<Args>(args)...);
-        pair<node_pointer, bool> pr = search(hint, new_node);
-        attach_to(pr.first, new_node);
-        return ret(new_node, true);
-    }
-
-    template<class... Args>
-    pair<node_pointer, bool> emplace_uniq(node_pointer hint, Args &&... args) {
+    template<bool Dummy = is_uniq, class... Args>
+    enable_if_t<Dummy, pair<node_pointer, bool>> emplace(node_pointer hint,
+                                                          Args &&... args) {
         using ret = pair<node_pointer, bool>;
         node_pointer new_node = construct_node(ala::forward<Args>(args)...);
         pair<node_pointer, bool> pr = search(hint, new_node);
@@ -407,7 +372,19 @@ protected:
         }
     }
 
-    pair<node_pointer, bool> search_uniq(node_pointer hint, node_pointer p) {
+    template<bool Dummy = is_uniq, class... Args>
+    enable_if_t<!Dummy, pair<node_pointer, bool>> emplace(node_pointer hint,
+                                                           Args &&... args) {
+        using ret = pair<node_pointer, bool>;
+        node_pointer new_node = construct_node(ala::forward<Args>(args)...);
+        pair<node_pointer, bool> pr = search(hint, new_node);
+        attach_to(pr.first, new_node);
+        return ret(new_node, true);
+    }
+
+    template<bool Dummy = is_uniq>
+    enable_if_t<Dummy, pair<node_pointer, bool>> search(node_pointer hint,
+                                                          node_pointer p) {
         node_pointer guard, current = nullptr;
         bool found = false;
         if (!is_nil(hint) && !_comp(hint->_data, p->_data))
@@ -428,7 +405,9 @@ protected:
         return pair<node_pointer, bool>(current, found);
     }
 
-    pair<node_pointer, bool> search_multi(node_pointer hint, node_pointer p) {
+    template<bool Dummy = is_uniq>
+    enable_if_t<!Dummy, pair<node_pointer, bool>> search(node_pointer hint,
+                                                           node_pointer p) {
         node_pointer guard, current = nullptr;
         if (!is_nil(hint) && !_comp(hint->_data, p->_data))
             guard = hint;
@@ -446,6 +425,24 @@ protected:
         }
         return pair<node_pointer, bool>(current, true);
     }
+
+protected:
+    node_pointer _root;
+    unsigned char _nil_mem[sizeof(rb_node<value_type>) * 2];
+    const node_pointer _left_nil = reinterpret_cast<node_pointer>(_nil_mem);
+    const node_pointer _right_nil = reinterpret_cast<node_pointer>(
+        _nil_mem + sizeof(rb_node<Data>));
+
+    size_t _size;
+    allocator_type _alloc;
+    node_allocator_type _nalloc;
+    value_compare _comp;
+
+    ALA_HAS_MEM_VAL(first)
+    ALA_HAS_MEM_VAL(comp)
+
+    static_assert(_has_first<value_type>::value == _has_comp<value_compare>::value,
+                  "key compare check failed");
 
     template<typename Dummy = value_type,
              typename = enable_if_t<_has_first<Dummy>::value>>
