@@ -1,56 +1,92 @@
 #ifndef _ALA_ALGORITHM_H
 #define _ALA_ALGORITHM_H
 
-#include "ala/utility.h"
+#include <ala/utility.h>
+#include <ala/iterator.h>
+#include <ala/random.h>
+#include <ala/detail/algorithm_base.h>
 
 namespace ala {
 
-template<class It1, class It2>
-inline void iter_swap(It1 a, It2 b) {
-    ala::swap(*a, *b);
+template<typename RanIt>
+constexpr void shuffle(RanIt first, RanIt last) {
+    typename iterator_traits<RanIt>::difference_type dis = last - first;
+    xoshiro128p gen;
+    for (; first < last; ++first)
+        swap(*first, *(first + gen() % dis));
 }
 
-// template <typename It>
-// inline void shuffle(It m, It n) {
-// 	size_t num = limit - m;
-// 	for (size_t i = 0; i < n - m; ++i)
-// 		swap(*(m + i), *(m + xorgen() % num));
-// }
-
 template<typename ForIt>
-inline ForIt merge(ForIt first, ForIt last, ForIt f1, ForIt l1, ForIt out) {
-    while (first != last && f1 != l1)
-        *out++ = (*first < *f1 || *first == *f1) ? *first++ : *f1++;
+constexpr ForIt merge(ForIt first, ForIt last, ForIt first1, ForIt last1,
+                      ForIt out) {
+    while (first != last && first1 != last1)
+        *out++ = (!(*first1 < *first)) ? *first++ : *first1++;
     while (first != last)
         *out++ = *first++;
-    while (f1 != l1)
-        *out++ = *f1++;
+    while (first1 != last1)
+        *out++ = *first1++;
     return out;
 }
 
 template<class BiIt>
-bool next_permutation(BiIt first, BiIt last) {
+void reverse(BiIt first, BiIt last) {
+    while ((first != last) && (first != --last))
+        iter_swap(first++, last);
+}
+
+template<class BiIt, class Comp>
+constexpr bool prev_permutation(BiIt first, BiIt last, Comp comp) {
     if (first == last)
         return false;
-    BiIt i = first;
-    if (++i == last)
+    auto cur = last, pre = last;
+    if (--cur == first)
         return false;
-    while (true) {
-        BiIt i1, i2;
-        i1 = i;
-        if (*--i < *i1) {
-            i2 = last;
-            while (!(*i < *--i2))
-                ;
-            std::iter_swap(i, i2);
-            std::reverse(i1, last);
-            return true;
-        }
-        if (i == first) {
-            std::reverse(first, last);
-            return false;
-        }
+    ----pre;
+    while (cur != first && comp(*pre, *cur))
+        --cur, --pre;
+    if (cur == first) {
+        reverse(first, last);
+        return false;
     }
+    cur = last, --cur;
+    while (cur != first && comp(*pre, *cur))
+        --cur;
+    iter_swap(cur, pre);
+    reverse(++pre, last);
+    return true;
+}
+
+
+template<class BiIt>
+constexpr bool prev_permutation(BiIt first, BiIt last) {
+    return ala::prev_permutation(first, last, less<>());
+}
+
+template<class BiIt, class Comp>
+constexpr bool next_permutation(BiIt first, BiIt last, Comp comp) {
+    if (first == last)
+        return false;
+    auto cur = last, pre = last;
+    if (--cur == first)
+        return false;
+    ----pre;
+    while (cur != first && comp(*cur, *pre))
+        --cur, --pre;
+    if (cur == first) {
+        reverse(first, last);
+        return false;
+    }
+    cur = last, --cur;
+    while (cur != first && comp(*cur, *pre))
+        --cur;
+    iter_swap(cur, pre);
+    reverse(++pre, last);
+    return true;
+}
+
+template<class BiIt>
+constexpr bool next_permutation(BiIt first, BiIt last) {
+    return ala::next_permutation(first, last, less<>());
 }
 
 } // namespace ala

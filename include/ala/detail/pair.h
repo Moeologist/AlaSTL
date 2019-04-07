@@ -158,8 +158,8 @@ struct pair {
     constexpr void
     swap(pair &p) noexcept(is_nothrow_swappable<first_type>::value
                                &&is_nothrow_swappable<second_type>::value) {
-        swap(first, p.first);
-        swap(second, p.second);
+        ala::swap(first, p.first);
+        ala::swap(second, p.second);
     }
     // clang-format on
 };

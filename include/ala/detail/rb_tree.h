@@ -61,7 +61,7 @@ struct rb_iterator {
     typedef value_type *pointer;
     typedef value_type &reference;
 
-    constexpr rb_iterator(): _ptr(nullptr) {}
+    // constexpr rb_iterator(): _ptr(nullptr) {}
     constexpr rb_iterator(const rb_iterator &other): _ptr(other._ptr) {}
     constexpr rb_iterator(const Ptr &ptr): _ptr(ptr) {}
 

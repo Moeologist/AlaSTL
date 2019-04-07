@@ -147,7 +147,7 @@ template<typename T> using add_pointer_t    = typename add_pointer<T>::type;
 
 // other transformations:
 template<size_t Len, size_t Align>      struct aligned_storage;
-template<size_t Len, typename... Ts> struct aligned_union;
+template<size_t Len, typename... Ts>    struct aligned_union;
 template<typename T>                    struct decay;
 template<typename T>                    struct remove_cvref;
 template<bool, typename T = void>       struct enable_if;
@@ -312,7 +312,7 @@ struct common_reference;
 template<typename... T>
 using common_reference_t = typename common_reference<T...>::type;
 
-template<typename, typename, template<typename> class, template<typename> class UQual>
+template<typename, typename, template<typename> class, template<typename> class>
 struct basic_common_reference;
 
 // clang-format on

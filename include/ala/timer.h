@@ -16,13 +16,13 @@ namespace ala {
 
 #ifdef _ALA_WIN
 
-template<class Callable, class... Args>
-std::string timer(Callable callable, Args... args) {
+template<class Fn, class... Args>
+std::string timer(const Fn &fn, Args &&... args) {
     std::string units[] = {"ns", "us", "ms", "s"};
     LARGE_INTEGER before, after, frequency;
     QueryPerformanceFrequency(&frequency);
     QueryPerformanceCounter(&before);
-    callable(args...);
+    ala::forward<Fn>(fn)(ala::forward<Args>(args)...);
     QueryPerformanceCounter(&after);
     long long ns_time = (after.QuadPart - before.QuadPart) * 1000 /
                         (frequency.QuadPart / 1000000);
@@ -36,12 +36,12 @@ std::string timer(Callable callable, Args... args) {
 
 #elif defined _ALA_LINUX
 
-template<class Callable, class... Args>
-std::string timer(Callable callable, Args... args) {
+template<class Fn, class... Args>
+std::string timer(Fn &&fn, Args &&... args) {
     std::string units[] = {"ns", "us", "ms", "s"};
     struct timespec before, after;
     clock_gettime(CLOCK_MONOTONIC, &before);
-    callable(args...);
+    ala::forward<Fn>(fn)(ala::forward<Args>(args)...);
     clock_gettime(CLOCK_MONOTONIC, &after);
     long long ns_time = ((after.tv_nsec - before.tv_nsec) +
                          (after.tv_sec - before.tv_sec) * 1000000000);
@@ -55,14 +55,14 @@ std::string timer(Callable callable, Args... args) {
 
 #elif defined _ALA_MAC
 
-template<class Callable, class... Args>
-std::string timer(Callable callable, Args... args) {
+template<class Fn, class... Args>
+std::string timer(Fn &&fn, Args &&... args) {
     std::string units[] = {"ns", "us", "ms", "s"};
     uint64_t before, after;
     mach_timebase_info_data_t info;
     mach_timebase_info(&info);
     before = mach_absolute_time();
-    callable(args...);
+    ala::forward<Fn>(fn)(ala::forward<Args>(args)...);
     after = mach_absolute_time();
     long long ns_time = (after - before) * info.denom / info.numer;
     int unit_index = 0;

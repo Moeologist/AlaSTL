@@ -233,7 +233,7 @@ void quick_sort_impl(RanIt first, RanIt last) {
     quick_sort_impl(left, last);
 }
 
-// improved quick-sort, three-way partion
+// quick-sort with three-way partion
 template<typename RanIt>
 void quick_sort_impl3(RanIt first, RanIt last) {
     typedef typename iterator_traits<RanIt>::value_type T;
@@ -244,11 +244,11 @@ void quick_sort_impl3(RanIt first, RanIt last) {
     swap(*first, *iter_median(first, first + length / 2, last - 1));
     // T pivot = *first;
     RanIt left = first, i = first + 1, right = last;
-    // [first, left) < pivot, [left, right) == pivot, [i, right) > pivot
+    // [first, left) < pivot, [left, right) == pivot, [right, end) > pivot
     while (i < right) {
-        if (*i < *(i - 1))
+        if (*i < *left)
             iter_swap(left++, i++);
-        else if (*(i - 1) < *i)
+        else if (*left < *i)
             iter_swap(i, --right);
         else
             ++i;

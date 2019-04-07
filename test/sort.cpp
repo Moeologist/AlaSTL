@@ -32,202 +32,26 @@ struct function_traits<_Ret (*)(_Arg, _Arg)> {
     typedef _Arg params_type;
 };
 
-struct C {
-    int a;
-    // int mem[100];
-    C(unsigned int a_): a(a_) {}
-    C(): a(0) {}
-
-    bool operator<(const C &rhs) const {
-        return this->a < rhs.a;
-    }
-    bool operator>(const C &rhs) const {
-        return this->a > rhs.a;
-    }
-    bool operator==(const C &rhs) const {
-        return this->a == rhs.a;
-    }
-
-    struct fiterator_type {
-        typedef std::forward_iterator_tag iterator_category;
-        C *ptr;
-        typedef C value_type;
-
-        fiterator_type(C *p): ptr(p) {}
-        fiterator_type(): ptr(nullptr) {}
-        fiterator_type &operator++() {
-            ++ptr;
-            return *this;
-        }
-        fiterator_type operator++(int) {
-            fiterator_type temp(ptr);
-            ++ptr;
-            return temp;
-        }
-        bool operator==(const fiterator_type &rhs) const {
-            return ptr == rhs.ptr;
-        }
-        bool operator!=(const fiterator_type &rhs) const {
-            return ptr != rhs.ptr;
-        }
-        C &operator*() const {
-            return *ptr;
-        }
-    };
-    struct biterator_type {
-        typedef std::bidirectional_iterator_tag iterator_category;
-        C *ptr;
-        typedef C value_type;
-
-        biterator_type(C *p): ptr(p) {}
-        biterator_type(): ptr(nullptr) {}
-        biterator_type &operator++() {
-            ++ptr;
-            return *this;
-        }
-        biterator_type operator++(int) {
-            biterator_type temp(ptr);
-            ++ptr;
-            return temp;
-        }
-        biterator_type &operator--() {
-            --ptr;
-            return *this;
-        }
-        bool operator==(const biterator_type &rhs) const {
-            return ptr == rhs.ptr;
-        }
-        bool operator!=(const biterator_type &rhs) const {
-            return ptr != rhs.ptr;
-        }
-        C &operator*() const {
-            return *ptr;
-        }
-    };
-    struct riterator_type {
-        typedef std::random_access_iterator_tag iterator_category;
-        C *ptr;
-        typedef C value_type;
-
-        riterator_type(C *p): ptr(p) {}
-        riterator_type(): ptr(nullptr) {}
-        riterator_type &operator++() {
-            ++ptr;
-            return *this;
-        }
-        riterator_type operator++(int) {
-            riterator_type temp(ptr);
-            ++ptr;
-            return temp;
-        }
-        C operator[](ptrdiff_t offset) {
-            return ptr[offset];
-        }
-        riterator_type &operator--() {
-            --ptr;
-            return *this;
-        }
-        riterator_type operator--(int) {
-            auto tmp = *this;
-            --*this;
-            return tmp;
-        }
-        riterator_type operator+(const ptrdiff_t dif) {
-            return riterator_type(ptr + dif);
-        }
-        riterator_type operator-(const ptrdiff_t dif) {
-            return riterator_type(ptr - dif);
-        }
-        ptrdiff_t operator-(const riterator_type &rhs) const {
-            return ptr - rhs.ptr;
-        }
-        // riterator_type &operator+=(const ptrdiff_t dif) {
-        // 	ptr += dif;
-        // 	return *this;
-        // }
-        // riterator_type &operator-=(const ptrdiff_t dif){
-        // 	ptr -= dif;
-        // 	return *this;
-        // }
-        bool operator>(const riterator_type &rhs) const {
-            return ptr > rhs.ptr;
-        }
-        bool operator<(const riterator_type &rhs) const {
-            return ptr < rhs.ptr;
-        }
-        bool operator>=(const riterator_type &rhs) const {
-            return ptr >= rhs.ptr;
-        }
-        bool operator<=(const riterator_type &rhs) const {
-            return ptr <= rhs.ptr;
-        }
-        bool operator==(const riterator_type &rhs) const {
-            return ptr == rhs.ptr;
-        }
-        bool operator!=(const riterator_type &rhs) const {
-            return ptr != rhs.ptr;
-        }
-        C &operator*() const {
-            return *ptr;
-        }
-    };
-    typedef riterator_type iterator_type;
-};
-
-template<class function, class T = int>
-auto test_vector(function f, int N) { //编译器推导T
-    std::vector<int> v(N, 0);
-
-    xoshiro128p gen = {4564};
-    std::generate(v.begin(), v.end(), gen);
-
-    auto dTime = timer(f, v.begin(), v.end());
-
-    if (!std::all_of(v.begin(), v.end() - 1, [](T &x) { return x <= *(&x + 1); }))
-        std::cout << "buggy sort vec!\n";
-
-    return dTime;
-}
+template<typename...>
+class FK;
 
 template<class function>
 auto test_c_array(function f, int N) { //编译器推导T
     typedef remove_cvref_t<typename function_traits<function>::params_type> It;
     typedef typename iterator_traits<It>::value_type T;
 
-    T *a_ptr = new T[N];
+    It a_ptr = new T[N];
     It a = a_ptr, b = a_ptr + N;
     xoshiro128p gen = {4564};
     std::generate(a, b, [&]() { return gen(); });
 
-    T *ar_ptr = new T[N];
-    It ar = ar_ptr, br = ar_ptr + N;
-    xoshiro128p genr = {4564};
-    std::generate(ar, br, [&]() { return genr(); });
-
-    std::sort(ar_ptr, ar_ptr + N, std::less());
+    std::sort(a, b, std::less());
 
     timer(f, a, b);
-    auto dTime = timer(f, ar, br);
+    auto dTime = timer(f, a, b);
 
-    for (It i = a, bound = a, ir = ar; bound != b; ++i, ++ir) {
-        if (!(*i == *ir)) {
-            std::cout << "buggy sort array!\n";
-            break;
-        }
-        bound = i;
-        bound++;
-    }
-    // for (It i = a, next; next != b; ++i) {
-    // 	next = i;
-    // 	++next;
-    // 	if (!(*i < *next || *i == *next)) {
-    // 		std::cout << "buggy sort array!\n";
-    // 		break;
-    // 	}
-    // 	++next;
-    // }
+    assert(std::is_sorted(a, b));
     delete[] a_ptr;
-    delete[] ar_ptr;
     return dTime;
 }
 
@@ -246,55 +70,80 @@ auto test_c_array(function f, int N) { //编译器推导T
 // 	return dTime;
 // }
 //@build_type=rel
-template<typename...> class FK;
+
+void test() {
+    constexpr auto N = 10000000;
+    int *a_ptr = new int[N];
+    int *a = a_ptr, *b = a_ptr + N;
+    xoshiro128p gen = {4564};
+    std::generate(a, b, [&]() { return gen(); });
+    std::cout << timer([&]() {
+        bool ret;
+        for (int i = 0; i < 100000000; ++i)
+            ret = ala::next_permutation(a, a + N);
+        assert(a[0] != 1);
+    }) << std::endl;
+    delete[] a_ptr;
+}
+
 int main() {
-    typedef int * pint;
+    test();
+    typedef int *pint;
     static_assert(is_same<const pint, int *const>::value);
     static_assert(is_same<remove_pointer_t<const pint>, int>::value);
     static_assert(is_same<remove_pointer_t<const int *>, const int>::value);
-    static_assert(is_same<const pint, const int *>::value);
-    FK<typename common_reference<const int&&,  int&&>::type> t;
-    // FK<typename _simple_common_reference<const int&,  int&&>::type> t2;
-    FK<typename common_reference<const int&,  int&&>::type> t1;
-    FK<typename common_reference<int&&,  int&&>::type> t2;
-    FK<typename common_reference<int&,  int&&>::type> t3;
-    FK<typename _simple_common_reference<int&,  int&&>::type> t33;
-    FK<typename common_reference<int&, const int&>::type> t4;
+    // static_assert(is_same<const pint, const int *>::value);
+    // FK<typename common_reference<const int&&,  int&&>::type> t;
+    // FK<typename common_reference<const int&,  int&&>::type> t1;
+    // FK<typename common_reference<int&&,  int&&>::type> t2;
+    // FK<typename common_reference<int&,  int&&>::type> t3;
+    // FK<typename _simple_common_reference<int&,  int&&>::type> t33;
+    // FK<typename common_reference<int&, const int&>::type> t4;
 
-    std::cout << "Select:" << test_c_array(select_sort<C::iterator_type>, 10000)
+    int arr[] = {1, 2, 3, 4, 5};
+    // ala::prev_permutation(arr, arr + 5);
+    // bool r = true;
+    // for (int i = 0; r; ++i) {
+    //     r = ala::next_permutation(arr, arr + 5);
+    //     for (auto it : arr)
+    //         std::cout << it;
+    //     std::cout << "\n";
+    // }
+    std::cout << "Select:" << test_c_array(select_sort<uint64_t*>, 10000)
               << std::endl;
     std::cout << "Insert:"
-              << test_c_array(insertion_sort<C::biterator_type>, 10000)
+              << test_c_array(insertion_sort<uint64_t*>, 10000)
               << std::endl;
-    // std::cout << "Shell:" << test_c_array(shell_sort<C::riterator_type>, 10000000)
+    // std::cout << "Shell:" << test_c_array(shell_sort<uint64_t*>, 10000000)
     //           << std::endl;
 
-    std::cout << "Quick:" << test_c_array(quick_sort<C::riterator_type>, 10000000)
+    std::cout << "Quick:" << test_c_array(quick_sort<uint64_t *>, 10000000)
               << std::endl;
-    std::cout << "Merge:" << test_c_array(merge_sort<C::riterator_type>, 10000000)
+    std::cout << "Merge:" << test_c_array(merge_sort<uint64_t *>, 10000000)
               << std::endl;
-    std::cout << "Heap:" << test_c_array(heap_sort<C::riterator_type>, 10000000)
+    std::cout << "Heap:" << test_c_array(heap_sort<uint64_t *>, 10000000)
               << std::endl;
-    std::cout << "Heap:" << test_c_array(heap_sortx<C::riterator_type>, 10000000)
+    std::cout << "Heap:" << test_c_array(heap_sortx<uint64_t *>, 10000000)
               << std::endl;
 
-    std::cout << "Sort:" << test_c_array(sort<C *>, 10000000) << std::endl;
-    std::cout << "StableSort:" << test_c_array(stable_sort<C *>, 10000000)
+    std::cout << "Sort:" << test_c_array(sort<uint64_t *>, 10000000) << std::endl;
+    std::cout << "StableSort:" << test_c_array(stable_sort<uint64_t *>, 10000000)
               << std::endl;
-    std::cout << "stdsort:" << test_c_array(std::sort<C *>, 10000000)
+    std::cout << "stdsort:" << test_c_array(std::sort<uint64_t *>, 10000000)
               << std::endl;
-    // std::cout << "eastlsort:" << test_c_array(eastl::sort<C *>, 10000000)
+    // std::cout << "eastlsort:" << test_c_array(eastl::sort<uint64_t*>, 10000000)
     //           << std::endl;
 
-    std::cout << "ParallelSort:" << test_c_array(parallel_sort<C *>, 10000000)
-              << std::endl;
+    std::cout << "ParallelSort:"
+              << test_c_array(parallel_sort<uint64_t *>, 10000000) << std::endl;
     std::cout << "ParallelQSort:"
-              << test_c_array(parallel_quick_sort<C *>, 10000000) << std::endl;
+              << test_c_array(parallel_quick_sort<uint64_t *>, 10000000)
+              << std::endl;
 
-    // std::cout << "TBBSort:" << test_c_array_tbb<C *>(10000000) << std::endl;
+    // std::cout << "TBBSort:" << test_c_array_tbb<uint64_t*>(10000000) << std::endl;
 #ifdef _MSC_VER
     std::cout << "pplsort:"
-              << test_c_array(concurrency::parallel_sort<C *>, 10000000)
+              << test_c_array(concurrency::parallel_sort<uint64_t *>, 10000000)
               << std::endl;
 #endif
     getchar();
