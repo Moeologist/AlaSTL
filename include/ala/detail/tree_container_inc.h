@@ -1,3 +1,7 @@
+#ifndef _ALA_DETAIL_TREE_CONTAINER_INC
+#define _ALA_DETAIL_TREE_CONTAINER_INC
+#endif
+
 #include <ala/tuple.h>
 #include <ala/detail/allocator.h>
 #include <ala/detail/functional_base.h>
@@ -19,7 +23,7 @@ template<class, class, class>
 class multiset;
 
 #if !defined(IS_MAP) || !defined(IS_UNIQ) || defined(CONTAINER) || \
-    defined(OTHER_CONTAINER)
+    defined(O_CONTAINER)
 #error "internal error"
 #endif
 
@@ -27,20 +31,20 @@ class multiset;
 
 #if IS_UNIQ
 #define CONTAINER map
-#define OTHER_CONTAINER multimap
+#define O_CONTAINER multimap
 #else
 #define CONTAINER multimap
-#define OTHER_CONTAINER map
+#define O_CONTAINER map
 #endif
 
 #else
 
 #if IS_UNIQ
 #define CONTAINER set
-#define OTHER_CONTAINER multiset
+#define O_CONTAINER multiset
 #else
 #define CONTAINER multiset
-#define OTHER_CONTAINER set
+#define O_CONTAINER set
 #endif
 
 #endif
@@ -85,7 +89,7 @@ public:
     typedef key_compare value_compare;
 #endif
 protected:
-    typedef rb_tree<value_type, value_compare, allocator_type, (bool)IS_UNIQ> tree_type;
+    typedef rb_tree<value_type, value_compare, allocator_type, IS_UNIQ> tree_type;
     tree_type tree;
 
     template<class NodePtr,
@@ -498,7 +502,7 @@ public:
 
     template<class Comp1>
     void
-    merge(OTHER_CONTAINER<key_type, mapped_type, Comp1, allocator_type> &source) {
+    merge(O_CONTAINER<key_type, mapped_type, Comp1, allocator_type> &source) {
         for (auto i = source.begin(); i != source.end();) {
             auto tmp = i++;
             tree.transfer(source.tree, tmp._ptr);
@@ -507,7 +511,7 @@ public:
 
     template<class Comp1>
     void
-    merge(OTHER_CONTAINER<key_type, mapped_type, Comp1, allocator_type> &&source) {
+    merge(O_CONTAINER<key_type, mapped_type, Comp1, allocator_type> &&source) {
         this->merge(source);
     }
 #else
@@ -525,7 +529,7 @@ public:
     }
 
     template<class Comp1>
-    void merge(OTHER_CONTAINER<value_type, Comp1, allocator_type> &source) {
+    void merge(O_CONTAINER<value_type, Comp1, allocator_type> &source) {
         for (auto i = source.begin(); i != source.end();) {
             auto tmp = i++;
             tree.transfer(source.tree, tmp._ptr);
@@ -533,7 +537,7 @@ public:
     }
 
     template<class Comp1>
-    void merge(OTHER_CONTAINER<value_type, Comp1, allocator_type> &&source) {
+    void merge(O_CONTAINER<value_type, Comp1, allocator_type> &&source) {
         this->merge(source);
     }
 #endif
@@ -641,7 +645,7 @@ public:
 
     size_type count(const key_type &k) const {
 #if IS_UNIQ
-        return this->contains(k);
+        return static_cast<size_type>(this->contains(k));
 #else
         return tree.template count<key_type>(k);
 #endif
@@ -650,7 +654,7 @@ public:
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     size_type count(const K &k) const {
 #if IS_UNIQ
-        return this->contains(k);
+        return static_cast<size_type>(this->contains(k));
 #else
         return tree.count(k);
 #endif
@@ -781,7 +785,9 @@ void swap(CONTAINER<Key, T, Compare, Alloc> &lhs,
           CONTAINER<Key, T, Compare, Alloc> &rhs) noexcept(noexcept(lhs.swap(rhs))) {
     lhs.swap(rhs);
 }
+
 #else // IS_MAP
+
 template<class Key, class Compare, class Alloc>
 bool operator==(const CONTAINER<Key, Compare, Alloc> &lhs,
                 const CONTAINER<Key, Compare, Alloc> &rhs) {
@@ -877,4 +883,4 @@ CONTAINER(initializer_list<Key>, Alloc)->CONTAINER<Key, less<Key>, Alloc>;
 } // namespace ala
 
 #undef CONTAINER
-#undef OTHER_CONTAINER
+#undef O_CONTAINER

@@ -8,7 +8,7 @@
 #include "ala/utility.h"
 #include "ala/algorithm.h"
 
-// #include <EASTL/sort.h>
+#include <EASTL/sort.h>
 // #include <tbb/parallel_sort.h>
 
 #ifdef _MSC_VER
@@ -45,9 +45,8 @@ auto test_c_array(function f, int N) { //编译器推导T
     xoshiro128p gen = {4564};
     std::generate(a, b, [&]() { return gen(); });
 
-    std::sort(a, b, std::less());
+    // std::sort(a, b, std::less<>());
 
-    timer(f, a, b);
     auto dTime = timer(f, a, b);
 
     assert(std::is_sorted(a, b));
@@ -123,16 +122,14 @@ int main() {
               << std::endl;
     std::cout << "Heap:" << test_c_array(heap_sort<uint64_t *>, 10000000)
               << std::endl;
-    std::cout << "Heap:" << test_c_array(heap_sortx<uint64_t *>, 10000000)
-              << std::endl;
 
     std::cout << "Sort:" << test_c_array(sort<uint64_t *>, 10000000) << std::endl;
     std::cout << "StableSort:" << test_c_array(stable_sort<uint64_t *>, 10000000)
               << std::endl;
     std::cout << "stdsort:" << test_c_array(std::sort<uint64_t *>, 10000000)
               << std::endl;
-    // std::cout << "eastlsort:" << test_c_array(eastl::sort<uint64_t*>, 10000000)
-    //           << std::endl;
+    std::cout << "eastlsort:" << test_c_array(eastl::sort<uint64_t*>, 10000000)
+              << std::endl;
 
     std::cout << "ParallelSort:"
               << test_c_array(parallel_sort<uint64_t *>, 10000000) << std::endl;

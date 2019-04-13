@@ -5,6 +5,7 @@
 #include <string>
 
 #ifdef _ALA_WIN
+#define NOMINMAX
 #include <windows.h>
 #elif defined _ALA_LINUX
 #include <time.h>
@@ -22,7 +23,7 @@ std::string timer(const Fn &fn, Args &&... args) {
     LARGE_INTEGER before, after, frequency;
     QueryPerformanceFrequency(&frequency);
     QueryPerformanceCounter(&before);
-    ala::forward<Fn>(fn)(ala::forward<Args>(args)...);
+    fn(ala::forward<Args>(args)...);
     QueryPerformanceCounter(&after);
     long long ns_time = (after.QuadPart - before.QuadPart) * 1000 /
                         (frequency.QuadPart / 1000000);
@@ -41,7 +42,7 @@ std::string timer(Fn &&fn, Args &&... args) {
     std::string units[] = {"ns", "us", "ms", "s"};
     struct timespec before, after;
     clock_gettime(CLOCK_MONOTONIC, &before);
-    ala::forward<Fn>(fn)(ala::forward<Args>(args)...);
+    fn(ala::forward<Args>(args)...);
     clock_gettime(CLOCK_MONOTONIC, &after);
     long long ns_time = ((after.tv_nsec - before.tv_nsec) +
                          (after.tv_sec - before.tv_sec) * 1000000000);
@@ -62,7 +63,7 @@ std::string timer(Fn &&fn, Args &&... args) {
     mach_timebase_info_data_t info;
     mach_timebase_info(&info);
     before = mach_absolute_time();
-    ala::forward<Fn>(fn)(ala::forward<Args>(args)...);
+    fn(ala::forward<Args>(args)...);
     after = mach_absolute_time();
     long long ns_time = (after - before) * info.denom / info.numer;
     int unit_index = 0;

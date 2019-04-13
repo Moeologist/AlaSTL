@@ -1,14 +1,17 @@
 #ifndef _ALA_ITERATOR_H
 #define _ALA_ITERATOR_H
 
-struct input_iterator_tag {};
-struct output_iterator_tag {};
-struct forward_iterator_tag {};
-struct bidirectional_iterator_tag {};
-struct random_access_iterator_tag {};
-struct contiguous_iterator_tag {};
+#include <ala/type_traits.h>
+#include <iterator>
 
 namespace ala {
+
+using std::input_iterator_tag;
+using std::output_iterator_tag;
+using std::forward_iterator_tag;
+using std::bidirectional_iterator_tag;
+using std::random_access_iterator_tag;
+
 template<typename It>
 struct iterator_traits {
     // using difference_type = typename It::difference_type;
@@ -143,8 +146,8 @@ struct const_iterator: public It {
     typedef typename It::iterator_category iterator_category;
     typedef typename It::difference_type difference_type;
     typedef const typename It::value_type value_type;
-    typedef const typename It::value_type *pointer;
-    typedef const typename It::value_type &reference;
+    typedef const value_type *pointer;
+    typedef const value_type &reference;
 
     constexpr const_iterator(const It &base): It(base) {}
 
@@ -188,6 +191,44 @@ constexpr bool operator>(const const_iterator<It1> &lhs,
 template<class It1, class It2>
 constexpr bool operator>=(const const_iterator<It1> &lhs,
                           const const_iterator<It2> &rhs);
+
+template<class It>
+constexpr enable_if_t<is_base_of<random_access_iterator_tag,
+                                 typename iterator_traits<It>::iterator_category>::value,
+                      typename iterator_traits<It>::difference_type>
+distance(It first, It last) {
+    return last - first;
+}
+
+template<class It>
+constexpr enable_if_t<!is_base_of<random_access_iterator_tag,
+                                  typename iterator_traits<It>::iterator_category>::value,
+                      typename iterator_traits<It>::difference_type>
+distance(It first, It last) {
+    typename iterator_traits<It>::difference_type ret = 0;
+    for (; first != last; ++first)
+        ++ret;
+    return ret;
+}
+
+template<class It, class Distance>
+constexpr enable_if_t<is_base_of<random_access_iterator_tag,
+                                 typename iterator_traits<It>::iterator_category>::value>
+advance(It &it, Distance n) {
+    it += n;
+}
+
+template<class It, class Distance>
+constexpr enable_if_t<!is_base_of<random_access_iterator_tag,
+                                  typename iterator_traits<It>::iterator_category>::value>
+advance(It &it, Distance n) {
+    if (n > 0)
+        for (Distance i = 0; i < n; ++i)
+            ++it;
+    else if (n < 0)
+        for (Distance i = 0; i > n; --i)
+            --it;
+}
 
 } // namespace ala
 

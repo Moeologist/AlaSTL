@@ -17,7 +17,7 @@ namespace astd = std;
 #endif
 
 namespace ala {
-namespace La {
+namespace la {
 
 template<class T, size_t Size>
 struct vector {
@@ -182,13 +182,15 @@ struct vector {
     constexpr T &operator[](int index) noexcept {
         if (index < 0)
             index = Size + index;
-        assert(index > 0 && index < Size);return _m[index];
+        assert(index > 0 && index < Size);
+        return _m[index];
     }
 
     constexpr const T &operator[](int index) const noexcept {
         if (index < 0)
             index = Size + index;
-        assert(index > 0 && index < Size); return _m[index];
+        assert(index > 0 && index < Size);
+        return _m[index];
     }
 
     constexpr T *data() noexcept {
@@ -200,27 +202,23 @@ struct vector {
 };
 
 template<class T, size_t Size, class U>
-constexpr enable_if_t<is_assignable<T &, U>::value, vector<T, Size>>
-operator+(const U &lhs, const vector<T, Size> &rhs) {
+constexpr vector<T, Size> operator+(const U &lhs, const vector<T, Size> &rhs) {
     return rhs + lhs;
 }
 
 template<class T, size_t Size, class U>
-constexpr enable_if_t<is_assignable<T &, U>::value, vector<T, Size>>
-operator-(const U &lhs, const vector<T, Size> &rhs) {
+constexpr vector<T, Size> operator-(const U &lhs, const vector<T, Size> &rhs) {
     vector<T, Size> tmp{};
     return tmp.fill(lhs) -= rhs;
 }
 
 template<class T, size_t Size, class U>
-constexpr enable_if_t<is_assignable<T &, U>::value, vector<T, Size>>
-operator*(const U &lhs, const vector<T, Size> &rhs) {
+constexpr vector<T, Size> operator*(const U &lhs, const vector<T, Size> &rhs) {
     return rhs * lhs;
 }
 
 template<class T, size_t Size, class U>
-constexpr enable_if_t<is_assignable<T &, U>::value, vector<T, Size>>
-operator/(const U &lhs, const vector<T, Size> &rhs) {
+constexpr vector<T, Size> operator/(const U &lhs, const vector<T, Size> &rhs) {
     vector<T, Size> tmp{};
     return tmp.fill(lhs) /= rhs;
 }
@@ -247,7 +245,7 @@ template<typename... Ts>
 vector(Ts...)->vector<common_type_t<Ts...>, sizeof...(Ts)>;
 #endif
 
-} // namespace La
+} // namespace la
 } // namespace ala
 
 #endif // HEAD

@@ -66,12 +66,12 @@ struct reference_wrapper;
 template<typename...> struct _or_;
 template<> struct _or_<> : false_type {};
 template<typename B1> struct _or_<B1> : B1 {};
-template<typename B1, typename... Bs> struct _or_<B1, Bs...> : conditional_t<bool(B1::value), B1, _or_<Bs...>> {};
+template<typename B1, typename... Bs> struct _or_<B1, Bs...> : conditional_t<(bool)B1::value, B1, _or_<Bs...>> {};
 
 template<typename...> struct _and_;
 template<> struct _and_<> : true_type {};
 template<typename B1> struct _and_<B1> : B1 {};
-template<typename B1, typename... Bs> struct _and_<B1, Bs...> : conditional_t<bool(B1::value), _and_<Bs...>, B1> {};
+template<typename B1, typename... Bs> struct _and_<B1, Bs...> : conditional_t<(bool)B1::value, _and_<Bs...>, B1> {};
 
 template<typename B>
 struct _not_ : bool_constant<!bool(B::value)> {};
@@ -524,13 +524,9 @@ struct is_base_of : bool_constant<__is_base_of(Base, Derived)> {};
 
 template<typename T>           struct remove_const             { typedef T type;    };
 template<typename T>           struct remove_const<const T>    { typedef T type;    };
-template<typename T>           struct remove_const<const T[]>  { typedef T type[];  };
-template<typename T, size_t N> struct remove_const<const T[N]> { typedef T type[N]; };
 
 template<typename T>           struct remove_volatile                { typedef T type;    };
 template<typename T>           struct remove_volatile<volatile T>    { typedef T type;    };
-template<typename T>           struct remove_volatile<volatile T[]>  { typedef T type[];  };
-template<typename T, size_t N> struct remove_volatile<volatile T[N]> { typedef T type[N]; };
 
 template<typename T> struct remove_cv { typedef remove_volatile_t<remove_const_t<T>> type; };
 template<typename T> struct add_cv { typedef const volatile T type; };
@@ -795,6 +791,8 @@ enum class endian {
 #endif
 };
 
+// C++20
+
 template<typename T> struct type_identity { typedef T type; };
 
 template<typename T> struct unwrap_reference { using type = T; };
@@ -881,12 +879,15 @@ struct _simple_common_ref_mix<T1, T2, true> : _simple_common_mix_sfinae<T1, T2> 
 
 template<typename T1, typename T2>
 struct _simple_common_reference : conditional_t<
-    is_lvalue_reference<T1>::value && is_lvalue_reference<T2>::value,
-    _simple_common_lref<T1, T2>, conditional_t<
-        is_rvalue_reference<T1>::value && is_rvalue_reference<T2>::value,
-        _simple_common_rref<T1, T2>, conditional_t<
-            is_rvalue_reference<T1>::value && is_lvalue_reference<T2>::value,
-            _simple_common_ref_mix<T2, T1>, _simple_common_ref_mix<T1, T2>>>> {};
+                                                is_lvalue_reference<T1>::value && is_lvalue_reference<T2>::value,
+                                                _simple_common_lref<T1, T2>,
+                                                conditional_t<
+                                                              is_rvalue_reference<T1>::value && is_rvalue_reference<T2>::value,
+                                                              _simple_common_rref<T1, T2>,
+                                                              conditional_t<
+                                                                  is_rvalue_reference<T1>::value && is_lvalue_reference<T2>::value,
+                                                                  _simple_common_ref_mix<T2, T1>,
+                                                                  _simple_common_ref_mix<T1, T2>>>> {};
 
 template<typename T, bool = is_const<T>::value, bool = is_volatile<T>::value>
 struct _get_cv;

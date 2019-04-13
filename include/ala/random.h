@@ -1,7 +1,8 @@
 #ifndef _ALA_RANDOM_H
 #define _ALA_RANDOM_H
 
-#include "ala/config.h"
+#include <ala/type_traits.h>
+
 #if defined(_ALA_X86) && \
     ((defined(__RDSEED__) && defined(__RDRND__)) || defined(_ALA_MSVC))
 #include <ala/detail/intrin.h>
@@ -11,26 +12,35 @@ namespace ala {
 
 #if defined(_ALA_X86) && \
     ((defined(__RDSEED__) && defined(__RDRND__)) || defined(_ALA_MSVC))
+
 template<class UInt>
-constexpr int rdseed(UInt *p) {
-    ALA_CONST_IF(sizeof(UInt) == 2)
+constexpr enable_if_t<sizeof(UInt) == 2, int> rdseed(UInt *p) {
     return _rdseed16_step(p);
-    ALA_CONST_IF(sizeof(UInt) == 4)
-    return _rdseed32_step(p);
-    ALA_CONST_IF(sizeof(UInt) == 8)
-    return _rdseed64_step(p);
-    return 0;
 }
 
 template<class UInt>
-constexpr int rdrand(UInt *p) {
-    ALA_CONST_IF(sizeof(UInt) == 2)
+constexpr enable_if_t<sizeof(UInt) == 4, int> rdseed(UInt *p) {
+    return _rdseed32_step(p);
+}
+
+template<class UInt>
+constexpr enable_if_t<sizeof(UInt) == 8, int> rdseed(UInt *p) {
+    return _rdseed64_step(p);
+}
+
+template<class UInt>
+constexpr enable_if_t<sizeof(UInt) == 2, int> rdrand(UInt *p) {
     return _rdrand16_step(p);
-    ALA_CONST_IF(sizeof(UInt) == 4)
+}
+
+template<class UInt>
+constexpr enable_if_t<sizeof(UInt) == 4, int> rdrand(UInt *p) {
     return _rdrand32_step(p);
-    ALA_CONST_IF(sizeof(UInt) == 8)
+}
+
+template<class UInt>
+constexpr enable_if_t<sizeof(UInt) == 8, int> rdrand(UInt *p) {
     return _rdrand64_step(p);
-    return 0;
 }
 
 template<class UInt, bool RdSeed = true>
@@ -54,14 +64,12 @@ struct random_device_adaptor {
         throw exception{};
     }
 };
+
 using random_device = random_device_adaptor<uint_fast32_t>;
+
 #endif
 
-// http://xoshiro.di.unimi.it/
-template<typename UInt>
-constexpr UInt rotl(const UInt x, int k) {
-    return (x << k) | (x >> (sizeof(UInt) * 8 - k));
-}
+// see http://xoshiro.di.unimi.it/
 
 template<typename>
 struct _xoshiro_jump;
@@ -104,11 +112,13 @@ struct xoshiro {
         return (x << k) | (x >> (sizeof(UInt) * 8 - k));
     }
 
-    constexpr result_type plus() {
+    template<bool Dummy = Star>
+    constexpr enable_if_t<!Dummy, result_type> scramber() {
         return s[0] + s[3];
     }
 
-    constexpr result_type starstar() {
+    template<bool Dummy = Star>
+    constexpr enable_if_t<Dummy, result_type> scramber() {
         return rotl(s[I] * 5, 7) * 9;
     }
 
@@ -124,7 +134,7 @@ struct xoshiro {
 
     constexpr result_type operator()() {
         next();
-        return Star ? starstar() : plus();
+        return scramber();
     }
 
     constexpr void discard(unsigned long long k) {

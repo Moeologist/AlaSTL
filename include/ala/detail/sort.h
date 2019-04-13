@@ -53,67 +53,67 @@ template<typename RanIt>
 void shell_sort(RanIt first, RanIt last) {
     typedef typename iterator_traits<RanIt>::value_type T;
     constexpr uint64_t seq[] = {0x1ull,
-                            0x5ull,
-                            0x13ull,
-                            0x29ull,
-                            0x6dull,
-                            0xd1ull,
-                            0x1f9ull,
-                            0x3a1ull,
-                            0x871ull,
-                            0xf41ull,
-                            0x22e1ull,
-                            0x3e81ull,
-                            0x8dc1ull,
-                            0xfd01ull,
-                            0x23b81ull,
-                            0x3fa01ull,
-                            0x8f701ull,
-                            0xff401ull,
-                            0x23ee01ull,
-                            0x3fe801ull,
-                            0x8fdc01ull,
-                            0xffd001ull,
-                            0x23fb801ull,
-                            0x3ffa001ull,
-                            0x8ff7001ull,
-                            0xfff4001ull,
-                            0x23fee001ull,
-                            0x3ffe8001ull,
-                            0x8ffdc001ull,
-                            0xfffd0001ull,
-                            0x23ffb8001ull,
-                            0x3fffa0001ull,
-                            0x8fff70001ull,
-                            0xffff40001ull,
-                            0x23ffee0001ull,
-                            0x3fffe80001ull,
-                            0x8fffdc0001ull,
-                            0xffffd00001ull,
-                            0x23fffb80001ull,
-                            0x3ffffa00001ull,
-                            0x8ffff700001ull,
-                            0xfffff400001ull,
-                            0x23fffee00001ull,
-                            0x3ffffe800001ull,
-                            0x8ffffdc00001ull,
-                            0xfffffd000001ull,
-                            0x23ffffb800001ull,
-                            0x3fffffa000001ull,
-                            0x8fffff7000001ull,
-                            0xffffff4000001ull,
-                            0x23ffffee000000ull,
-                            0x3fffffe8000000ull,
-                            0x8fffffdc000000ull,
-                            0xffffffd0000000ull,
-                            0x23fffffb8000000ull,
-                            0x3ffffffa0000000ull,
-                            0x8ffffff70000000ull,
-                            0xfffffff40000000ull,
-                            0x23fffffee0000000ull,
-                            0x3ffffffe80000000ull,
-                            0x8ffffffdc0000000ull,
-                            0xfffffffd00000000ull};
+                                0x5ull,
+                                0x13ull,
+                                0x29ull,
+                                0x6dull,
+                                0xd1ull,
+                                0x1f9ull,
+                                0x3a1ull,
+                                0x871ull,
+                                0xf41ull,
+                                0x22e1ull,
+                                0x3e81ull,
+                                0x8dc1ull,
+                                0xfd01ull,
+                                0x23b81ull,
+                                0x3fa01ull,
+                                0x8f701ull,
+                                0xff401ull,
+                                0x23ee01ull,
+                                0x3fe801ull,
+                                0x8fdc01ull,
+                                0xffd001ull,
+                                0x23fb801ull,
+                                0x3ffa001ull,
+                                0x8ff7001ull,
+                                0xfff4001ull,
+                                0x23fee001ull,
+                                0x3ffe8001ull,
+                                0x8ffdc001ull,
+                                0xfffd0001ull,
+                                0x23ffb8001ull,
+                                0x3fffa0001ull,
+                                0x8fff70001ull,
+                                0xffff40001ull,
+                                0x23ffee0001ull,
+                                0x3fffe80001ull,
+                                0x8fffdc0001ull,
+                                0xffffd00001ull,
+                                0x23fffb80001ull,
+                                0x3ffffa00001ull,
+                                0x8ffff700001ull,
+                                0xfffff400001ull,
+                                0x23fffee00001ull,
+                                0x3ffffe800001ull,
+                                0x8ffffdc00001ull,
+                                0xfffffd000001ull,
+                                0x23ffffb800001ull,
+                                0x3fffffa000001ull,
+                                0x8fffff7000001ull,
+                                0xffffff4000001ull,
+                                0x23ffffee000000ull,
+                                0x3fffffe8000000ull,
+                                0x8fffffdc000000ull,
+                                0xffffffd0000000ull,
+                                0x23fffffb8000000ull,
+                                0x3ffffffa0000000ull,
+                                0x8ffffff70000000ull,
+                                0xfffffff40000000ull,
+                                0x23fffffee0000000ull,
+                                0x3ffffffe80000000ull,
+                                0x8ffffffdc0000000ull,
+                                0xfffffffd00000000ull};
     int index = 0;
     while (last - first > seq[index])
         index++;
@@ -133,14 +133,14 @@ namespace detail {
 
 template<typename T>
 T &&median(T &&a, T &&b, T &&c) {
-    if (a < b) {
+    if (a < b)
         if (b < c)
             return forward<T>(b);
         else if (a < c)
             return forward<T>(c);
         else
             return forward<T>(a);
-    } else if (a < c)
+    else if (a < c)
         return forward<T>(a);
     else if (b < c)
         return forward<T>(c);
@@ -149,14 +149,14 @@ T &&median(T &&a, T &&b, T &&c) {
 
 template<typename It>
 It iter_median(It a, It b, It c) {
-    if (*a < *b) {
+    if (*a < *b)
         if (*b < *c)
             return b;
         else if (*a < *c)
             return c;
         else
             return a;
-    } else if (*a < *c)
+    else if (*a < *c)
         return a;
     else if (*b < *c)
         return c;
@@ -258,7 +258,7 @@ void quick_sort_impl3(RanIt first, RanIt last) {
 }
 
 } // namespace detail
-#define ALA_ENABLE_3WAY_QUICK_SOR 1
+#define ALA_ENABLE_3WAY_QUICK_SOR 0
 template<typename RanIt>
 void quick_sort(RanIt first, RanIt last) {
     typedef typename iterator_traits<RanIt>::value_type T;
@@ -289,9 +289,9 @@ void insertion_for_sort(RanIt first, RanIt last) {
 }
 
 template<typename RanIt>
-void sort_impl(RanIt first, RanIt last, unsigned int depth) {
+void sort_impl(RanIt first, RanIt last) {
     typedef typename iterator_traits<RanIt>::value_type T;
-    while (last - first > 28) {
+    while (last - first > 32) {
         RanIt pivot = iter_median(first, first + (last - first) / 2, last - 1);
         RanIt left = first, right = last;
         for (;; ++left) {
@@ -308,25 +308,19 @@ void sort_impl(RanIt first, RanIt last, unsigned int depth) {
             else if (right == pivot)
                 pivot = left;
         }
-        sort_impl(left, last, --depth);
+        sort_impl(left, last);
         last = left;
     }
-    if (depth == 0)
-        insertion_sort(first, last);
 }
 
 } // namespace detail
 
 // a quick-sort variety form eastl
 template<typename RanIt>
-void sort(RanIt first, RanIt last) {
+constexpr void sort(RanIt first, RanIt last) {
     typedef typename iterator_traits<RanIt>::value_type T;
     if (first < last) {
-        unsigned i = 0;
-        ptrdiff_t s = last - first;
-        // for (; s; ++i)
-        //     s >>= 1;
-        detail::sort_impl(first, last, 2 * (i - 1));
+        detail::sort_impl(first, last);
         insertion_sort(first, last);
     }
 }
@@ -334,22 +328,22 @@ void sort(RanIt first, RanIt last) {
 namespace detail {
 
 template<typename RanIt>
-void merge_sort_impl(RanIt first, RanIt last, RanIt temp_first) {
+void merge_sort_impl(RanIt first, RanIt last, RanIt tmp_first) {
     ptrdiff_t length = last - first;
     if (length < 28) {
         insertion_sort(first, last);
         return;
     }
-    const RanIt mid = first + length / 2, temp_mid = temp_first + length / 2,
-                temp_last = temp_first + length;
-    merge_sort_impl(temp_first, temp_mid, first);
-    merge_sort_impl(temp_mid, temp_last, mid);
-    RanIt i = temp_first, j = temp_mid;
-    while (i != temp_mid && j != temp_last)
+    const RanIt mid = first + length / 2, tmp_mid = tmp_first + length / 2,
+                tmp_last = tmp_first + length;
+    merge_sort_impl(tmp_first, tmp_mid, first);
+    merge_sort_impl(tmp_mid, tmp_last, mid);
+    RanIt i = tmp_first, j = tmp_mid;
+    while (i != tmp_mid && j != tmp_last)
         *first++ = (*i < *j || *i == *j) ? *i++ : *j++;
-    while (i != temp_mid)
+    while (i != tmp_mid)
         *first++ = *i++;
-    while (j != temp_last)
+    while (j != tmp_last)
         *first++ = *j++;
 }
 
@@ -359,20 +353,18 @@ void merge_sort_impl(RanIt first, RanIt last, RanIt temp_first) {
 template<typename RanIt>
 void merge_sort(RanIt first, RanIt last) {
     typedef typename iterator_traits<RanIt>::value_type T;
-    T *tmp(new T[last - first]);
-    for (RanIt i = first, ti = tmp; i != last; ++i, ++ti)
-        *ti = *i;
-    detail::merge_sort_impl(first, last, RanIt(tmp));
+    T *tmp = new T[last - first];
+    detail::merge_sort_impl(first, last, tmp);
     delete[] tmp;
     return;
 }
 
 // bottom-up merge-sort, no-copyback
 template<typename RanIt>
-void stable_sort(RanIt first, RanIt last) {
+constexpr void stable_sort(RanIt first, RanIt last) {
     typedef typename iterator_traits<RanIt>::value_type T;
     ptrdiff_t length = last - first;
-    RanIt tmp(new T[length]);
+    RanIt tmp = new T[length];
     RanIt left;
     for (left = first; left < last - 32; left += 32) {
         RanIt next = left + 32;
@@ -426,31 +418,6 @@ void heap_sort(RanIt first, RanIt last) {
     for (ptrdiff_t i = length - 1; i > 0; --i) {
         iter_swap(first, first + i);
         detail::heap_sink(first, 0, i - 1);
-    }
-}
-
-template<typename RanIt>
-inline void heap(RanIt first, RanIt last, RanIt offset) {
-    RanIt parent = first, child = parent + (parent - offset) + 1;
-    while (child <= last) {
-        if (child < last && *child < *(child + 1))
-            ++child;
-        if (*parent > *child)
-            return;
-        iter_swap(parent, child); //将一个三叉的最大值移至三叉顶
-        parent = child;
-        child = parent + (parent - offset) + 1;
-    }
-}
-
-template<typename RanIt>
-inline void heap_sortx(RanIt first, RanIt last) {
-    int len = last - first;
-    for (RanIt i = first + len / 2 - 1; i >= first; --i)
-        heap(i, last - 1, first);
-    for (RanIt i = last - 1; i > first; --i) {
-        iter_swap(first, i);
-        heap(first, i - 1, first);
     }
 }
 

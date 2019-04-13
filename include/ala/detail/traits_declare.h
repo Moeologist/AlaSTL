@@ -146,16 +146,16 @@ template<typename T> using remove_pointer_t = typename remove_pointer<T>::type;
 template<typename T> using add_pointer_t    = typename add_pointer<T>::type;
 
 // other transformations:
-template<size_t Len, size_t Align>      struct aligned_storage;
-template<size_t Len, typename... Ts>    struct aligned_union;
-template<typename T>                    struct decay;
-template<typename T>                    struct remove_cvref;
-template<bool, typename T = void>       struct enable_if;
-template<bool, typename T, typename F>  struct conditional;
-template<typename... T>                 struct common_type;
-template<typename T>                    struct underlying_type;
-template<typename>                      struct result_of;
-template<typename F, typename... Args>  struct invoke_result;
+template<size_t Len, size_t Align>     struct aligned_storage;
+template<size_t Len, typename... Ts>   struct aligned_union;
+template<typename T>                   struct decay;
+template<typename T>                   struct remove_cvref;
+template<bool, typename T = void>      struct enable_if;
+template<bool, typename T, typename F> struct conditional;
+template<typename... T>                struct common_type;
+template<typename T>                   struct underlying_type;
+template<typename>                     struct result_of;
+template<typename F, typename... Args> struct invoke_result;
 
 template<size_t Len, size_t Align = alignof(double)> using aligned_storage_t = typename aligned_storage<Len, Align>::type;
 template<size_t Len, typename... Types>              using aligned_union_t   = typename aligned_union<Len, Types...>::type;
