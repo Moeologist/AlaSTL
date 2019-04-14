@@ -3,6 +3,7 @@
 
 #include <ala/detail/config/platform.h>
 #include <ala/detail/config/support.h>
+#include <ala/detail/config/features.h>
 #include <ala/detail/external.h>
 
 #endif // HEAD

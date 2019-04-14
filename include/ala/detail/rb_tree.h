@@ -359,7 +359,7 @@ public:
 
     template<bool Dummy = is_uniq, class... Args>
     enable_if_t<Dummy, pair<node_pointer, bool>> emplace(node_pointer hint,
-                                                          Args &&... args) {
+                                                         Args &&... args) {
         using ret = pair<node_pointer, bool>;
         node_pointer new_node = construct_node(ala::forward<Args>(args)...);
         pair<node_pointer, bool> pr = search(hint, new_node);
@@ -374,7 +374,7 @@ public:
 
     template<bool Dummy = is_uniq, class... Args>
     enable_if_t<!Dummy, pair<node_pointer, bool>> emplace(node_pointer hint,
-                                                           Args &&... args) {
+                                                          Args &&... args) {
         using ret = pair<node_pointer, bool>;
         node_pointer new_node = construct_node(ala::forward<Args>(args)...);
         pair<node_pointer, bool> pr = search(hint, new_node);
@@ -384,7 +384,7 @@ public:
 
     template<bool Dummy = is_uniq>
     enable_if_t<Dummy, pair<node_pointer, bool>> search(node_pointer hint,
-                                                          node_pointer p) {
+                                                        node_pointer p) {
         node_pointer guard, current = nullptr;
         bool found = false;
         if (!is_nil(hint) && !_comp(hint->_data, p->_data))
@@ -407,7 +407,7 @@ public:
 
     template<bool Dummy = is_uniq>
     enable_if_t<!Dummy, pair<node_pointer, bool>> search(node_pointer hint,
-                                                           node_pointer p) {
+                                                         node_pointer p) {
         node_pointer guard, current = nullptr;
         if (!is_nil(hint) && !_comp(hint->_data, p->_data))
             guard = hint;

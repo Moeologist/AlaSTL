@@ -6,6 +6,12 @@
 
 namespace ala {
 
+template<class It1, class It2>
+constexpr void iter_swap(It1 a, It2 b) {
+    ala::swap(*a, *b);
+}
+
+// Comparison operations
 template<class It1, class It2, class BinPred>
 constexpr bool equal(It1 first1, It1 last1, It2 first2, BinPred pred) {
     for (; first1 != last1; ++first1, ++first2) {
@@ -22,8 +28,7 @@ constexpr bool equal(It1 first1, It1 last1, It2 first2) {
 }
 
 template<class It1, class It2, class BinPred>
-constexpr bool equal(It1 first1, It1 last1, It2 first2, It2 last2,
-           BinPred pred) {
+constexpr bool equal(It1 first1, It1 last1, It2 first2, It2 last2, BinPred pred) {
     if (ala::distance(first1, last1) != ala::distance(first2, last2))
         return false;
     return equal(first1, last1, first2, pred);
@@ -32,11 +37,6 @@ constexpr bool equal(It1 first1, It1 last1, It2 first2, It2 last2,
 template<class It1, class It2>
 constexpr bool equal(It1 first1, It1 last1, It2 first2, It2 last2) {
     return equal(first1, last1, first2, last2, equal_to<>());
-}
-
-template<class It1, class It2>
-constexpr void iter_swap(It1 a, It2 b) {
-    ala::swap(*a, *b);
 }
 
 template<class It1, class It2, class Compare>
@@ -55,6 +55,83 @@ template<class It1, class It2>
 constexpr bool lexicographical_compare(It1 first1, It1 last1, It2 first2,
                                        It2 last2) {
     return lexicographical_compare(first1, last1, first2, last2, less<>());
+}
+
+// Binary search operations (on sorted ranges)
+template<class ForwardIterer, class T, class Comp>
+constexpr ForwardIterer lower_bound(ForwardIterer first, ForwardIterer last,
+                                    const T &value, Comp comp) {
+    typename iterator_traits<ForwardIterer>::difference_type count, step;
+    count = ala::distance(first, last);
+
+    while (count > 0) {
+        ForwardIterer it = first;
+        step = count / 2;
+        ala::advance(it, step);
+        if (comp(*it, value)) {
+            first = ++it;
+            count -= step + 1;
+        } else
+            count = step;
+    }
+    return first;
+}
+
+template<class ForwardIterer, class T>
+constexpr ForwardIterer lower_bound(ForwardIterer first, ForwardIterer last,
+                                    const T &value) {
+    return ala::lower_bound(first, last, value, less<>());
+}
+
+template<class ForwardIterer, class T, class Comp>
+constexpr ForwardIterer upper_bound(ForwardIterer first, ForwardIterer last,
+                                    const T &value, Comp comp) {
+    typename iterator_traits<ForwardIterer>::difference_type count, step;
+    count = ala::distance(first, last);
+
+    while (count > 0) {
+        ForwardIterer it = first;
+        step = count / 2;
+        ala::advance(it, step);
+        if (!comp(value, *it)) {
+            first = ++it;
+            count -= step + 1;
+        } else
+            count = step;
+    }
+    return first;
+}
+
+template<class ForwardIterer, class T>
+constexpr ForwardIterer upper_bound(ForwardIterer first, ForwardIterer last,
+                                    const T &value) {
+    return ala::upper_bound(first, last, value, less<>());
+}
+
+template<class ForwardIterer, class T, class Comp>
+constexpr pair<ForwardIterer, ForwardIterer>
+equal_range(ForwardIterer first, ForwardIterer last, const T &value, Comp comp) {
+    auto lower = ala::lower_bound(first, last, value, comp);
+    return ala::make_pair(lower, ala::upper_bound(lower, last, value, comp));
+}
+
+template<class ForwardIterer, class T>
+constexpr pair<ForwardIterer, ForwardIterer>
+equal_range(ForwardIterer first, ForwardIterer last, const T &value) {
+    return ala::equal_range(first, last, value, less<>());
+}
+
+template<class ForwardIterer, class T, class Comp>
+constexpr bool binary_search(ForwardIterer first, ForwardIterer last,
+                             const T &value, Comp comp) {
+    first = ala::lower_bound(first, last, value, comp);
+    return (!(first == last) && !(comp(value, *first)));
+}
+
+template<class ForwardIterer, class T>
+constexpr bool binary_search(ForwardIterer first, ForwardIterer last,
+                             const T &value) {
+    return binary_search(first, last, value, less<>());
 }
 
 } // namespace ala

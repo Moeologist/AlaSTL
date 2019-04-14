@@ -670,11 +670,14 @@ public:
     }
 
     iterator lower_bound(const key_type &k) {
-        key_compare comp = key_comp();
-        iterator i = begin();
-        for (; i != end() && comp(i->first, k); ++i)
-            ;
-        return i;
+#if IS_MAP
+    constexpr static auto _bin = [] (const value_type &v, const key_type &k){
+        return key_compare()(v.first, k);
+    };
+    return ala::lower_bound(begin(), end(), k, _bin);
+#else
+    return ala::lower_bound(begin(), end(), k, tree._comp);
+#endif
     }
 
     const_iterator lower_bound(const key_type &k) const {
@@ -683,11 +686,14 @@ public:
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     iterator lower_bound(const K &k) {
-        key_compare comp = key_comp();
-        iterator i = begin();
-        for (; i != end() && comp(i->first, k); ++i)
-            ;
-        return i;
+#if IS_MAP
+    constexpr static auto _bin = [] (const value_type &v, const key_type &k){
+        return key_compare()(v.first, k);
+    };
+    return ala::lower_bound(begin(), end(), k, _bin);
+#else
+    return ala::lower_bound(begin(), end(), k, tree._comp);
+#endif
     }
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
@@ -696,11 +702,14 @@ public:
     }
 
     iterator upper_bound(const key_type &k) {
-        key_compare comp = key_comp();
-        iterator i = begin();
-        for (; i != end() && !comp(k, i->first); ++i)
-            ;
-        return i;
+#if IS_MAP
+    constexpr static auto _bin = [] (const key_type &k, const value_type &v){
+        return key_compare()(k, v.first);
+    };
+    return ala::upper_bound(begin(), end(), k, _bin);
+#else
+    return ala::upper_bound(begin(), end(), k, tree._comp);
+#endif
     }
 
     const_iterator upper_bound(const key_type &k) const {
@@ -709,11 +718,14 @@ public:
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     iterator upper_bound(const K &k) {
-        key_compare comp = key_comp();
-        iterator i = begin();
-        for (; i != end() && !comp(k, i->first); ++i)
-            ;
-        return i;
+#if IS_MAP
+    constexpr static auto _bin = [] (const key_type &k, const value_type &v){
+        return key_compare()(k, v.first);
+    };
+    return ala::upper_bound(begin(), end(), k, _bin);
+#else
+    return ala::upper_bound(begin(), end(), k, tree._comp);
+#endif
     }
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
@@ -722,7 +734,7 @@ public:
     }
 
     pair<iterator, iterator> equal_range(const key_type &k) {
-        return pair<iterator, iterator>(lower_bound(k), upper_bound(k));
+        return pair<iterator, iterator>(this->lower_bound(k), this->upper_bound(k));
     }
 
     pair<const_iterator, const_iterator> equal_range(const key_type &k) const {
@@ -731,7 +743,7 @@ public:
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     pair<iterator, iterator> equal_range(const K &k) {
-        return pair<iterator, iterator>(lower_bound(k), upper_bound(k));
+        return pair<iterator, iterator>(this->lower_bound(k), this->upper_bound(k));
     }
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
