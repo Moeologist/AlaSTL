@@ -86,7 +86,7 @@ auto test_c_array(function &&f, size_t N) { //编译器推导T
     auto dTime = timer(f, a, b);
 
     assert(std::is_sorted(a, b));
-    assert(check(a, N));
+    // assert(check(a, N));
     delete[] a;
     return dTime;
 }
@@ -108,8 +108,12 @@ void test() {
 
 //@build_type=rel
 int bx[9];
+int aq[] = {1, 1, 1, 2, 3, 4, 4, 4};
 
 int main() {
+    // rotate(aq, aq + 1, aq + 8);
+    rotate(aq, aq + 7, aq + 8);
+    unique_copy(aq, aq + 7, bx);
     int ax[] = {4, 8, 0, 2, 5, 6, 7, 8, 2};
     partial_sort_copy(ax, ax + 9, bx, bx + 4);
     stable_partition(ax, ax + 9, [](const auto &x) { return x > 5; });
@@ -166,20 +170,22 @@ int main() {
         delete[] a;
         return dTime;
     }() << std::endl;
-    std::cout << "Merge:" << test_c_array(merge_sort<uint64_t *>, 10000000)
+
+    std::cout << "Quick:" << test_c_array(quick_sort<uint64_t *>, 500000000)
               << std::endl;
-    std::cout << "Sort:" << test_c_array(sort<uint64_t *>, 10000000) << std::endl;
-    std::cout << "Stable:" << test_c_array(stable_sort<uint64_t *>, 10000000)
-              << std::endl;
+    std::cout << "Sort:" << test_c_array(sort<uint64_t *>, 500000000) << std::endl;
     std::cout << "Select:" << test_c_array(select_sort<uint64_t *>, 100000)
               << std::endl;
     std::cout << "Insert:" << test_c_array(insertion_sort<uint64_t *>, 100000)
               << std::endl;
+    std::cout << "Merge:" << test_c_array(merge_sort<uint64_t *>, 10000000)
+              << std::endl;
+    std::cout << "Stable:" << test_c_array(stable_sort<uint64_t *>, 10000000)
+              << std::endl;
+
     std::cout << "Shell:" << test_c_array(shell_sort<uint64_t *>, 10000000)
               << std::endl;
 
-    std::cout << "Quick:" << test_c_array(quick_sort<uint64_t *>, 10000000)
-              << std::endl;
 
     std::cout << "Heap:" << test_c_array(heap_sort<uint64_t *>, 10000000)
               << std::endl;

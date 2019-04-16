@@ -555,40 +555,40 @@ constexpr tuple<Ts &&...> forward_as_tuple(Ts &&... args) noexcept {
 template<typename EmptyTuple, typename EmptySeq, typename ArgSeq>
 struct _tuple_cat_impl;
 
-template<typename... RetTs, size_t... RetIs, size_t... Tuple0Is>
+template<typename... RetTs, size_t... RetIs, size_t... Tuple1Is>
 struct _tuple_cat_impl<tuple<RetTs...>, index_sequence<RetIs...>,
-                       index_sequence<Tuple0Is...>> {
-    template<typename Tuple0>
-    constexpr decltype(auto) operator()(tuple<RetTs...> t, Tuple0 &&t0) {
+                       index_sequence<Tuple1Is...>> {
+    template<typename Tuple1>
+    constexpr decltype(auto) operator()(tuple<RetTs...> t, Tuple1 &&t0) {
         return make_tuple(ala::forward<RetTs>(ala::get<RetIs>(t))...,
-                          ala::get<Tuple0Is>(ala::forward<Tuple0>(t0))...);
+                          ala::get<Tuple1Is>(ala::forward<Tuple1>(t0))...);
     }
 
-    template<typename Tuple0, typename Tuple1, typename... Tuples>
-    constexpr decltype(auto) operator()(tuple<RetTs...> t, Tuple0 &&t0,
-                                        Tuple1 &&t1, Tuples &&... tpls) {
-        typedef remove_reference_t<Tuple0> T0;
+    template<typename Tuple1, typename Tuple2, typename... Tuples>
+    constexpr decltype(auto) operator()(tuple<RetTs...> t, Tuple1 &&t0,
+                                        Tuple2 &&t1, Tuples &&... tpls) {
         typedef remove_reference_t<Tuple1> T1;
+        typedef remove_reference_t<Tuple2> T2;
 
         typedef _tuple_cat_impl<
-            tuple<RetTs..., tuple_element_t<Tuple0Is, T0> &&...>,
-            make_index_sequence<sizeof...(RetTs) + tuple_size<T0>::value>,
-            make_index_sequence<tuple_size<T1>::value>>
+            tuple<RetTs..., tuple_element_t<Tuple1Is, T1> &&...>,
+            make_index_sequence<sizeof...(RetTs) + tuple_size<T1>::value>,
+            make_index_sequence<tuple_size<T2>::value>>
             next;
 
         return next()(forward_as_tuple(ala::forward<RetTs>(ala::get<RetIs>(t))...,
-                                       ala::get<Tuple0Is>(
-                                           ala::forward<Tuple0>(t0))...),
-                      ala::forward<Tuple1>(t1), ala::forward<Tuples>(tpls)...);
+                                       ala::get<Tuple1Is>(
+                                           ala::forward<Tuple1>(t0))...),
+                      ala::forward<Tuple2>(t1), ala::forward<Tuples>(tpls)...);
     }
 };
 
-template<typename Tuple0, typename... Tuples>
-constexpr decltype(auto) tuple_cat(Tuple0 &&t0, Tuples &&... tpls) {
-    typedef typename remove_reference<Tuple0>::type T0;
+template<typename Tuple1, typename... Tuples>
+constexpr decltype(auto) tuple_cat(Tuple1 &&t0, Tuples &&... tpls) {
+    typedef typename remove_reference<Tuple1>::type T1;
     return _tuple_cat_impl<tuple<>, index_sequence<>,
-                           make_index_sequence<tuple_size<T0>::value>>()(
-        tuple<>(), ala::forward<Tuple0>(t0), ala::forward<Tuples>(tpls)...);
+                           make_index_sequence<tuple_size<T1>::value>>()(
+        tuple<>(), ala::forward<Tuple1>(t0), ala::forward<Tuples>(tpls)...);
 }
 
 constexpr decltype(auto) tuple_cat() {

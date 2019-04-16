@@ -14,6 +14,16 @@
 
 namespace ala {
 
+template<typename T, T Value>
+struct integral_constant {
+    static constexpr T value = Value;
+    typedef T value_type;
+    typedef integral_constant<T, Value> type;
+
+    constexpr operator value_type() const noexcept { return value; }
+    constexpr value_type operator()() const noexcept { return value; }
+};
+
 template<typename T>
 struct _is_implicitly_default_constructible_impl {
     template<typename T1>
@@ -61,7 +71,11 @@ struct is_specification<Template<TArgs...>, Template> : true_type {};
 template<typename T>
 struct reference_wrapper;
 
-#include <ala/detail/utility_inc.h>
+} // namespace ala
+
+#include <ala/detail/utility_base.h>
+
+namespace ala {
 
 template<typename...> struct _or_;
 template<> struct _or_<> : false_type {};
@@ -522,11 +536,11 @@ template<typename T>             struct is_same<T, T> : true_type {};
 template<typename Base, typename Derived>
 struct is_base_of : bool_constant<__is_base_of(Base, Derived)> {};
 
-template<typename T>           struct remove_const             { typedef T type;    };
-template<typename T>           struct remove_const<const T>    { typedef T type;    };
+template<typename T> struct remove_const             { typedef T type;    };
+template<typename T> struct remove_const<const T>    { typedef T type;    };
 
-template<typename T>           struct remove_volatile                { typedef T type;    };
-template<typename T>           struct remove_volatile<volatile T>    { typedef T type;    };
+template<typename T> struct remove_volatile                { typedef T type;    };
+template<typename T> struct remove_volatile<volatile T>    { typedef T type;    };
 
 template<typename T> struct remove_cv { typedef remove_volatile_t<remove_const_t<T>> type; };
 template<typename T> struct add_cv { typedef const volatile T type; };
@@ -663,11 +677,13 @@ struct aligned_union {
 template<typename T>
 struct decay {
     typedef remove_reference_t<T> U;
-    typedef conditional_t<is_array<U>::value,
-                          remove_extent_t<U> *,
-                          conditional_t<is_function<U>::value,
-                                        add_pointer_t<U>,
-                                        remove_cv_t<U>>> type;
+    typedef conditional_t<
+                is_array<U>::value,
+                remove_extent_t<U> *,
+                conditional_t<
+                    is_function<U>::value,
+                    add_pointer_t<U>,
+                    remove_cv_t<U>>> type;
 };
 
 template< typename T >
@@ -878,16 +894,17 @@ template<typename T1, typename T2>
 struct _simple_common_ref_mix<T1, T2, true> : _simple_common_mix_sfinae<T1, T2> {};
 
 template<typename T1, typename T2>
-struct _simple_common_reference : conditional_t<
-                                                is_lvalue_reference<T1>::value && is_lvalue_reference<T2>::value,
-                                                _simple_common_lref<T1, T2>,
-                                                conditional_t<
-                                                              is_rvalue_reference<T1>::value && is_rvalue_reference<T2>::value,
-                                                              _simple_common_rref<T1, T2>,
-                                                              conditional_t<
-                                                                  is_rvalue_reference<T1>::value && is_lvalue_reference<T2>::value,
-                                                                  _simple_common_ref_mix<T2, T1>,
-                                                                  _simple_common_ref_mix<T1, T2>>>> {};
+struct _simple_common_reference
+    : conditional_t<
+          is_lvalue_reference<T1>::value && is_lvalue_reference<T2>::value,
+          _simple_common_lref<T1, T2>,
+          conditional_t<
+              is_rvalue_reference<T1>::value && is_rvalue_reference<T2>::value,
+              _simple_common_rref<T1, T2>,
+              conditional_t<
+                  is_rvalue_reference<T1>::value && is_lvalue_reference<T2>::value,
+                  _simple_common_ref_mix<T2, T1>,
+                  _simple_common_ref_mix<T1, T2>>>> {};
 
 template<typename T, bool = is_const<T>::value, bool = is_volatile<T>::value>
 struct _get_cv;

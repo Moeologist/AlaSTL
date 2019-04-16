@@ -8,14 +8,7 @@ namespace ala {
 
 // helper class:
 template<typename T, T Value>
-struct integral_constant {
-    static constexpr T value = Value;
-    typedef T value_type;
-    typedef integral_constant<T, Value> type;
-
-    constexpr operator value_type() const noexcept { return value; }
-    constexpr value_type operator()() const noexcept { return value; }
-};
+struct integral_constant;
 template<bool B>
 using bool_constant = integral_constant<bool, B>;
 using true_type     = bool_constant<true>;

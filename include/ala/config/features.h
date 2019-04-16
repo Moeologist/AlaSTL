@@ -1,0 +1,6 @@
+#ifndef _ALA_CONFIG_FEATURES_H
+#define _ALA_CONFIG_FEATURES_H
+
+#define ALA_INSERTION_THRESHOLD 28
+
+#endif // HEAD

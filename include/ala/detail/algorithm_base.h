@@ -6,12 +6,58 @@
 
 namespace ala {
 
+// Minimum/maximum operations
+#ifdef min
+#warning "undef min macro"
+#undef min
+#endif
+template<class T>
+constexpr const T &min(const T &a, const T &b) {
+    return min(a, b, less<>());
+}
+
+template<class T, class Comp>
+constexpr const T &min(const T &a, const T &b, Comp comp) {
+    return comp(b, a) ? b : a;
+}
+
+#ifdef max
+#warning "undef max macro"
+#undef max
+#endif
+template<class T>
+constexpr const T &max(const T &a, const T &b) {
+    return max(a, b, less<>());
+}
+
+template<class T, class Comp>
+constexpr const T &max(const T &a, const T &b, Comp comp) {
+    return comp(a, b) ? b : a;
+}
+
+// Modifying sequence operations
+
+template<class InputIter, class OutputIter>
+constexpr OutputIter copy(InputIter first, InputIter last, OutputIter out) {
+    while (first != last)
+        *out++ = *first++;
+    return out;
+}
+
+template<class InputIter, class OutputIter>
+constexpr OutputIter move(InputIter first, InputIter last, OutputIter out) {
+    while (first != last)
+        *out++ = ala::move(*first++);
+    return out;
+}
+
 template<class It1, class It2>
 constexpr void iter_swap(It1 a, It2 b) {
     ala::swap(*a, *b);
 }
 
 // Comparison operations
+
 template<class It1, class It2, class BinPred>
 constexpr bool equal(It1 first1, It1 last1, It2 first2, BinPred pred) {
     for (; first1 != last1; ++first1, ++first2) {
@@ -61,18 +107,18 @@ constexpr bool lexicographical_compare(It1 first1, It1 last1, It2 first2,
 template<class ForwardIterer, class T, class Comp>
 constexpr ForwardIterer lower_bound(ForwardIterer first, ForwardIterer last,
                                     const T &value, Comp comp) {
-    typename iterator_traits<ForwardIterer>::difference_type count, step;
-    count = ala::distance(first, last);
+    typename iterator_traits<ForwardIterer>::difference_type len, step;
+    len = ala::distance(first, last);
 
-    while (count > 0) {
-        ForwardIterer it = first;
-        step = count / 2;
-        ala::advance(it, step);
-        if (comp(*it, value)) {
-            first = ++it;
-            count -= step + 1;
+    while (len > 0) {
+        ForwardIterer i = first;
+        step = len / 2;
+        ala::advance(i, step);
+        if (comp(*i, value)) {
+            first = ++i;
+            len -= step + 1;
         } else
-            count = step;
+            len = step;
     }
     return first;
 }
@@ -86,18 +132,18 @@ constexpr ForwardIterer lower_bound(ForwardIterer first, ForwardIterer last,
 template<class ForwardIterer, class T, class Comp>
 constexpr ForwardIterer upper_bound(ForwardIterer first, ForwardIterer last,
                                     const T &value, Comp comp) {
-    typename iterator_traits<ForwardIterer>::difference_type count, step;
-    count = ala::distance(first, last);
+    typename iterator_traits<ForwardIterer>::difference_type len, step;
+    len = ala::distance(first, last);
 
-    while (count > 0) {
-        ForwardIterer it = first;
-        step = count / 2;
-        ala::advance(it, step);
-        if (!comp(value, *it)) {
-            first = ++it;
-            count -= step + 1;
+    while (len > 0) {
+        ForwardIterer i = first;
+        step = len / 2;
+        ala::advance(i, step);
+        if (!comp(value, *i)) {
+            first = ++i;
+            len -= step + 1;
         } else
-            count = step;
+            len = step;
     }
     return first;
 }

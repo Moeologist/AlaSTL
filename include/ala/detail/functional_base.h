@@ -40,33 +40,35 @@
         using is_transparent = void; \
         template<class T, class U> \
         constexpr decltype(auto) operator()(T &&lhs, U &&rhs) const { \
-            return ala::forward<T>(lhs) < ala::forward<U>(rhs); \
+            return ala::forward<T>(lhs) _op_ ala::forward<U>(rhs); \
         } \
     };
 
 namespace ala {
-    ALA_MAKE_BASE_FUNCTION(plus, +)
-    ALA_MAKE_BASE_FUNCTION(minus, -)
-    ALA_MAKE_BASE_FUNCTION(multiplies, *)
-    ALA_MAKE_BASE_FUNCTION(divides, /)
-    ALA_MAKE_BASE_FUNCTION(modulus, %)
-    ALA_MAKE_BASE_FUNCTION(negate, -)
+ALA_MAKE_BASE_FUNCTION(plus, +)
+ALA_MAKE_BASE_FUNCTION(minus, -)
+ALA_MAKE_BASE_FUNCTION(multiplies, *)
+ALA_MAKE_BASE_FUNCTION(divides, /)
+ALA_MAKE_BASE_FUNCTION(modulus, %)
+ALA_MAKE_BASE_FUNCTION(negate, -)
 
-    ALA_MAKE_BASE_FUNCTION(equal_to, ==)
-    ALA_MAKE_BASE_FUNCTION(not_equal_to, !=)
-    ALA_MAKE_BASE_FUNCTION(less, <)
-    ALA_MAKE_BASE_FUNCTION(less_equal, <=)
-    ALA_MAKE_BASE_FUNCTION(greater, >)
-    ALA_MAKE_BASE_FUNCTION(greater_equal, >=)
+ALA_MAKE_BASE_FUNCTION(equal_to, ==)
+ALA_MAKE_BASE_FUNCTION(not_equal_to, !=)
+ALA_MAKE_BASE_FUNCTION(less, <)
+ALA_MAKE_BASE_FUNCTION(less_equal, <=)
+ALA_MAKE_BASE_FUNCTION(greater, >)
+ALA_MAKE_BASE_FUNCTION(greater_equal, >=)
 
-    ALA_MAKE_BASE_FUNCTION(logical_and, &&)
-    ALA_MAKE_BASE_FUNCTION(logical_or, ||)
-    ALA_MAKE_BASE_FUNCTION_UNARY(logical_not, !)
+ALA_MAKE_BASE_FUNCTION(logical_and, &&)
+ALA_MAKE_BASE_FUNCTION(logical_or, ||)
+ALA_MAKE_BASE_FUNCTION_UNARY(logical_not, !)
 
-    ALA_MAKE_BASE_FUNCTION(bit_and, &)
-    ALA_MAKE_BASE_FUNCTION(bit_or, |)
-    ALA_MAKE_BASE_FUNCTION(bit_xor, ^)
-    ALA_MAKE_BASE_FUNCTION_UNARY(bit_not, ~)
+ALA_MAKE_BASE_FUNCTION(bit_and, &)
+ALA_MAKE_BASE_FUNCTION(bit_or, |)
+ALA_MAKE_BASE_FUNCTION(bit_xor, ^)
+ALA_MAKE_BASE_FUNCTION_UNARY(bit_not, ~)
 } // namespace ala
 
+#undef ALALA_MAKE_BASE_FUNCTION
+#undef ALA_MAKE_BASE_FUNCTION_UNARY
 #endif // HEAD

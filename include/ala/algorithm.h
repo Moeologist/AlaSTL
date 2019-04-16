@@ -5,205 +5,211 @@
 #include <ala/iterator.h>
 #include <ala/random.h>
 #include <ala/detail/algorithm_base.h>
+#include <ala/detail/sort.h>
 
 namespace ala {
 
 // Non-modifying sequence operations
 
-template<class Iter, class T>
-constexpr Iter find(Iter first, Iter last, const T &value) {
+template<class InputIter, class T>
+constexpr InputIter find(InputIter first, InputIter last, const T &value) {
     for (; first != last; ++first)
         if (*first == value)
             return first;
     return last;
 }
-template<class Iter, class UnaryPred>
-constexpr Iter find_if(Iter first, Iter last, UnaryPred pred) {
+
+template<class InputIter, class UnaryPred>
+constexpr InputIter find_if(InputIter first, InputIter last, UnaryPred pred) {
     for (; first != last; ++first)
         if (pred(*first))
             return first;
     return last;
 }
-template<class Iter, class UnaryPred>
-constexpr Iter find_if_not(Iter first, Iter last, UnaryPred pred) {
+
+template<class InputIter, class UnaryPred>
+constexpr InputIter find_if_not(InputIter first, InputIter last, UnaryPred pred) {
     for (; first != last; ++first)
         if (!pred(*first))
             return first;
     return last;
 }
 
-template<class Iter, class UnaryPred>
-constexpr bool all_of(Iter first, Iter last, UnaryPred pred) {
+template<class InputIter, class UnaryPred>
+constexpr bool all_of(InputIter first, InputIter last, UnaryPred pred) {
     return ala::find_if_not(first, last, pred) == last;
 }
 
-template<class Iter, class UnaryPred>
-constexpr bool any_of(Iter first, Iter last, UnaryPred pred) {
+template<class InputIter, class UnaryPred>
+constexpr bool any_of(InputIter first, InputIter last, UnaryPred pred) {
     return ala::find_if(first, last, pred) != last;
 }
 
-template<class Iter, class UnaryPred>
-constexpr bool none_of(Iter first, Iter last, UnaryPred pred) {
+template<class InputIter, class UnaryPred>
+constexpr bool none_of(InputIter first, InputIter last, UnaryPred pred) {
     return ala::find_if(first, last, pred) == last;
 }
 
-template<class Iter, class Fn>
-constexpr Fn for_each(Iter first, Iter last, Fn f) {
+template<class InputIter, class Fn>
+constexpr Fn for_each(InputIter first, InputIter last, Fn f) {
     for (; first != last; ++first)
         f(*first);
     return f;
 }
 
-template<class Iter, class Size, class Fn>
-constexpr Iter for_each_n(Iter first, Size n, Fn f) {
+template<class InputIter, class Size, class Fn>
+constexpr InputIter for_each_n(InputIter first, Size n, Fn f) {
     for (Size i = 0; i < n; ++first, ++i)
         f(*first);
     return first;
 }
 
-template<class ForwardIterer1, class ForwardIterer2, class BinPred>
-ForwardIterer1 search(ForwardIterer1 first1, ForwardIterer1 last1,
-                      ForwardIterer2 first2, ForwardIterer2 last2, BinPred pred) {
+template<class ForwardIter1, class ForwardIter2, class BinPred>
+ForwardIter1 search(ForwardIter1 first1, ForwardIter1 last1,
+                    ForwardIter2 first2, ForwardIter2 last2, BinPred pred) {
     for (;; ++first1) {
-        ForwardIterer1 it1 = first1;
-        for (ForwardIterer2 it2 = first2;; ++it1, ++it2) {
-            if (it2 == last2)
+        for (ForwardIter1 i = first1, j = first2;; ++i, ++j) {
+            if (j == last2)
                 return first1;
-            if (it1 == last1)
+            if (i == last1)
                 return last1;
-            if (!pred(*it1, *it2))
+            if (!pred(*i, *j))
                 break;
         }
     }
 }
 
-template<class ForwardIterer1, class ForwardIterer2>
-ForwardIterer1 search(ForwardIterer1 first1, ForwardIterer1 last1,
-                      ForwardIterer2 first2, ForwardIterer2 last2) {
+template<class ForwardIter1, class ForwardIter2>
+ForwardIter1 search(ForwardIter1 first1, ForwardIter1 last1,
+                    ForwardIter2 first2, ForwardIter2 last2) {
     return search(first1, last1, first2, last2, equal_to<>());
 }
 
-template<class ForwardIterer1, class ForwardIterer2, class BinPred>
-constexpr ForwardIterer1 find_end(ForwardIterer1 first1, ForwardIterer1 last1,
-                                  ForwardIterer2 first2, ForwardIterer2 last2,
-                                  BinPred pred) {
+template<class ForwardIter1, class ForwardIter2, class BinPred>
+constexpr ForwardIter1 find_end(ForwardIter1 first1, ForwardIter1 last1,
+                                ForwardIter2 first2, ForwardIter2 last2,
+                                BinPred pred) {
     if (first2 == last2)
         return last1;
-    ForwardIterer1 ret = last1;
+    ForwardIter1 tmp = last1;
     while (true) {
-        ForwardIterer1 ret1 = ala::search(first1, last1, first2, last2, pred);
-        if (ret1 == last1) {
+        ForwardIter1 pos = ala::search(first1, last1, first2, last2, pred);
+        if (pos == last1) {
             break;
         } else {
-            ret = ret1;
-            first1 = ret1;
+            tmp = first1 = pos;
             ++first1;
         }
     }
-    return ret;
+    return tmp;
 }
 
-template<class ForwardIterer1, class ForwardIterer2>
-constexpr ForwardIterer1 find_end(ForwardIterer1 first1, ForwardIterer1 last1,
-                                  ForwardIterer2 first2, ForwardIterer2 last2) {
+template<class ForwardIter1, class ForwardIter2>
+constexpr ForwardIter1 find_end(ForwardIter1 first1, ForwardIter1 last1,
+                                ForwardIter2 first2, ForwardIter2 last2) {
     return find_end(first1, last2, first2, last2, equal_to<>());
 }
 
-template<class Iter, class ForwardIterer, class BinPred>
-constexpr Iter find_first_of(Iter first1, Iter last1, ForwardIterer first2,
-                             ForwardIterer last2, BinPred pred) {
+template<class InputIter, class ForwardIter, class BinPred>
+constexpr InputIter find_first_of(InputIter first1, InputIter last1,
+                                  ForwardIter first2, ForwardIter last2,
+                                  BinPred pred) {
     for (; first1 != last1; ++first1)
-        for (ForwardIterer it = first2; it != last2; ++it)
-            if (pred(*first1, *it))
+        for (ForwardIter i = first2; i != last2; ++i)
+            if (pred(*first1, *i))
                 return first1;
     return last1;
 }
 
-template<class Iter, class ForwardIterer>
-constexpr Iter find_first_of(Iter first1, Iter last1, ForwardIterer first2,
-                             ForwardIterer last2) {
+template<class InputIter, class ForwardIter>
+constexpr InputIter find_first_of(InputIter first1, InputIter last1,
+                                  ForwardIter first2, ForwardIter last2) {
     return find_first_of(first1, last1, first2, last2, equal_to<>());
 }
 
-template<class ForwardIterer, class BinPred>
-constexpr ForwardIterer adjacent_find(ForwardIterer first, ForwardIterer last,
-                                      BinPred pred) {
+template<class ForwardIter, class BinPred>
+constexpr ForwardIter adjacent_find(ForwardIter first, ForwardIter last,
+                                    BinPred pred) {
     if (first == last)
         return last;
-    ForwardIterer next = first;
+    ForwardIter next = first;
     for (++next; next != last; ++next, ++first)
         if (pred(*first, *next))
             return first;
     return last;
 }
 
-template<class ForwardIterer>
-constexpr ForwardIterer adjacent_find(ForwardIterer first, ForwardIterer last) {
+template<class ForwardIter>
+constexpr ForwardIter adjacent_find(ForwardIter first, ForwardIter last) {
     return adjacent_find(first, last, ala::equal_to<>());
 }
 
-template<class Iter, class T>
-constexpr typename iterator_traits<Iter>::difference_type
-count(Iter first, Iter last, const T &value) {
-    typename iterator_traits<Iter>::difference_type ret = 0;
+template<class InputIter, class T>
+constexpr typename iterator_traits<InputIter>::difference_type
+count(InputIter first, InputIter last, const T &value) {
+    typedef typename iterator_traits<InputIter>::difference_type diff_t;
+    diff_t n = 0;
     for (; first != last; ++first)
         if (*first == value)
-            ret++;
-    return ret;
+            ++n;
+    return n;
 }
 
-template<class Iter, class UnaryPred>
-constexpr typename iterator_traits<Iter>::difference_type
-count_if(Iter first, Iter last, UnaryPred pred) {
-    typename iterator_traits<Iter>::difference_type ret = 0;
+template<class InputIter, class UnaryPred>
+constexpr typename iterator_traits<InputIter>::difference_type
+count_if(InputIter first, InputIter last, UnaryPred pred) {
+    typedef typename iterator_traits<InputIter>::difference_type diff_t;
+    diff_t n = 0;
     for (; first != last; ++first)
         if (pred(*first))
-            ret++;
-    return ret;
+            n++;
+    return n;
 }
 
-template<class Iter1, class Iter2, class BinPred>
-constexpr pair<Iter1, Iter2> mismatch(Iter1 first1, Iter1 last1, Iter2 first2,
-                                      BinPred pred) {
+template<class InputIter1, class InputIter2, class BinPred>
+constexpr pair<InputIter1, InputIter2>
+mismatch(InputIter1 first1, InputIter1 last1, InputIter2 first2, BinPred pred) {
     while (first1 != last1 && pred(*first1, *first2))
         ++first1, ++first2;
     return ala::make_pair(first1, first2);
 }
 
-template<class Iter1, class Iter2>
-constexpr pair<Iter1, Iter2> mismatch(Iter1 first1, Iter1 last1, Iter2 first2) {
+template<class InputIter1, class InputIter2>
+constexpr pair<InputIter1, InputIter2>
+mismatch(InputIter1 first1, InputIter1 last1, InputIter2 first2) {
     return mismatch(first1, last1, first2, equal_to<>());
 }
 
-template<class Iter1, class Iter2, class BinPred>
-constexpr pair<Iter1, Iter2> mismatch(Iter1 first1, Iter1 last1, Iter2 first2,
-                                      Iter2 last2, BinPred pred) {
+template<class InputIter1, class InputIter2, class BinPred>
+constexpr pair<InputIter1, InputIter2>
+mismatch(InputIter1 first1, InputIter1 last1, InputIter2 first2,
+         InputIter2 last2, BinPred pred) {
     while (first1 != last1 && first2 != last2 && pred(*first1, *first2))
         ++first1, ++first2;
     return ala::make_pair(first1, first2);
 }
 
-template<class Iter1, class Iter2>
-constexpr pair<Iter1, Iter2> mismatch(Iter1 first1, Iter1 last1, Iter2 first2,
-                                      Iter2 last2) {
+template<class InputIter1, class InputIter2>
+constexpr pair<InputIter1, InputIter2>
+mismatch(InputIter1 first1, InputIter1 last1, InputIter2 first2,
+         InputIter2 last2) {
     return mismatch(first1, last1, first2, last2, equal_to<>());
 }
 
-template<class ForwardIterer, class Size, class T, class BinPred>
-constexpr ForwardIterer search_n(ForwardIterer first, ForwardIterer last,
-                                 Size count, const T &value, BinPred pred) {
+template<class ForwardIter, class Size, class T, class BinPred>
+constexpr ForwardIter search_n(ForwardIter first, ForwardIter last, Size count,
+                               const T &value, BinPred pred) {
     if (count <= 0)
         return first;
     for (; first != last; ++first) {
-        if (!pred(*first, value)) {
+        if (!pred(*first, value))
             continue;
-        }
-        ForwardIterer candidate = first;
-        Size cur_count = 0;
+        ForwardIter tmp = first;
+        Size n = 0;
         while (true) {
-            ++cur_count;
-            if (cur_count >= count)
-                return candidate;
+            ++n;
+            if (n >= count)
+                return tmp;
             ++first;
             if (first == last)
                 return last;
@@ -214,30 +220,25 @@ constexpr ForwardIterer search_n(ForwardIterer first, ForwardIterer last,
     return last;
 }
 
-template<class ForwardIterer, class Size, class T>
-constexpr ForwardIterer search_n(ForwardIterer first, ForwardIterer last,
-                                 Size count, const T &value) {
+template<class ForwardIter, class Size, class T>
+constexpr ForwardIter search_n(ForwardIter first, ForwardIter last, Size count,
+                               const T &value) {
     return search_n(first, last, count, value, equal_to<>());
 }
 
 // Modifying sequence operations
-template<class Iter, class OutIter>
-constexpr OutIter copy(Iter first, Iter last, OutIter out) {
-    while (first != last)
-        *out++ = *first++;
-    return out;
-}
 
-template<class Iter, class Size, class OutIter>
-constexpr OutIter copy_n(Iter first, Size count, OutIter out) {
+template<class InputIter, class Size, class OutputIter>
+constexpr OutputIter copy_n(InputIter first, Size count, OutputIter out) {
     if (count > 0)
         for (Size i = 0; i < count; ++i)
             *out++ = *first++;
     return out;
 }
 
-template<class Iter, class OutIter, class UnaryPred>
-constexpr OutIter copy_if(Iter first, Iter last, OutIter out, UnaryPred pred) {
+template<class InputIter, class OutputIter, class UnaryPred>
+constexpr OutputIter copy_if(InputIter first, InputIter last, OutputIter out,
+                             UnaryPred pred) {
     while (first != last)
         if (pred(*first))
             *out++ = *first++;
@@ -252,13 +253,6 @@ constexpr BidirIter2 copy_backward(BidirIter1 first, BidirIter1 last,
     return out;
 }
 
-template<class Iter, class OutIter>
-constexpr OutIter move(Iter first, Iter last, OutIter out) {
-    while (first != last)
-        *out++ = ala::move(*first++);
-    return out;
-}
-
 template<class BidirIter1, class BidirIter2>
 constexpr BidirIter2 move_backward(BidirIter1 first, BidirIter1 last,
                                    BidirIter2 out) {
@@ -267,173 +261,162 @@ constexpr BidirIter2 move_backward(BidirIter1 first, BidirIter1 last,
     return out;
 }
 
-template<class ForwardIterer1, class ForwardIterer2>
-constexpr ForwardIterer2 swap_ranges(ForwardIterer1 first1, ForwardIterer1 last1,
-                                     ForwardIterer2 first2) {
+template<class ForwardIter1, class ForwardIter2>
+constexpr ForwardIter2 swap_ranges(ForwardIter1 first1, ForwardIter1 last1,
+                                   ForwardIter2 first2) {
     while (first1 != last1)
         ala::iter_swap(first1++, first2++);
     return first2;
 }
 
-template<class Iter, class OutIter, class UnaryOperation>
-constexpr OutIter transform(Iter first, Iter last, OutIter out,
-                            UnaryOperation unary_op) {
+template<class InputIter, class OutputIter, class UnaryOperation>
+constexpr OutputIter transform(InputIter first, InputIter last, OutputIter out,
+                               UnaryOperation unary_op) {
     while (first != last)
         *out++ = unary_op(*first++);
     return out;
 }
 
-template<class Iter1, class Iter2, class OutIter, class BinaryOperation>
-constexpr OutIter transform(Iter1 first1, Iter1 last1, Iter2 first2,
-                            OutIter out, BinaryOperation binary_op) {
+template<class InputIter1, class InputIter2, class OutputIter, class BinaryOperation>
+constexpr OutputIter transform(InputIter1 first1, InputIter1 last1,
+                               InputIter2 first2, OutputIter out,
+                               BinaryOperation binary_op) {
     while (first1 != last1)
         *out++ = binary_op(*first1++, *first2++);
     return out;
 }
 
-template<class ForwardIterer, class T>
-constexpr void replace(ForwardIterer first, ForwardIterer last,
-                       const T &old_value, const T &new_value) {
+template<class ForwardIter, class T>
+constexpr void replace(ForwardIter first, ForwardIter last, const T &old_value,
+                       const T &new_value) {
     for (; first != last; ++first)
         if (*first == old_value)
             *first = new_value;
 }
 
-template<class ForwardIterer, class UnaryPred, class T>
-constexpr void replace_if(ForwardIterer first, ForwardIterer last,
-                          UnaryPred pred, const T &new_value) {
+template<class ForwardIter, class UnaryPred, class T>
+constexpr void replace_if(ForwardIter first, ForwardIter last, UnaryPred pred,
+                          const T &new_value) {
     for (; first != last; ++first)
         if (pred(*first))
             *first = new_value;
 }
 
-template<class Iter, class OutIter, class T>
-constexpr OutIter replace_copy(Iter first, Iter last, OutIter out,
-                               const T &old_value, const T &new_value) {
+template<class InputIter, class OutputIter, class T>
+constexpr OutputIter replace_copy(InputIter first, InputIter last, OutputIter out,
+                                  const T &old_value, const T &new_value) {
     for (; first != last; ++first)
         *out++ = (*first == old_value) ? new_value : *first;
     return out;
 }
 
-template<class Iter, class OutIter, class UnaryPred, class T>
-constexpr OutIter replace_copy_if(Iter first, Iter last, OutIter out,
-                                  UnaryPred pred, const T &new_value) {
+template<class InputIter, class OutputIter, class UnaryPred, class T>
+constexpr OutputIter replace_copy_if(InputIter first, InputIter last,
+                                     OutputIter out, UnaryPred pred,
+                                     const T &new_value) {
     for (; first != last; ++first)
         *out++ = pred(*first) ? new_value : *first;
     return out;
 }
 
-template<class ForwardIterer, class T>
-constexpr void fill(ForwardIterer first, ForwardIterer last, const T &value) {
+template<class ForwardIter, class T>
+constexpr void fill(ForwardIter first, ForwardIter last, const T &value) {
     for (; first != last; ++first)
         *first = value;
 }
 
-template<class OutIter, class Size, class T>
-constexpr OutIter fill_n(OutIter first, Size count, const T &value) {
+template<class OutputIter, class Size, class T>
+constexpr OutputIter fill_n(OutputIter first, Size count, const T &value) {
     if (count > 0)
         for (Size i = 0; i < count; ++i)
             *first++ = value;
     return first;
 }
 
-template<class ForwardIterer, class Generator>
-constexpr void generate(ForwardIterer first, ForwardIterer last, Generator gen) {
+template<class ForwardIter, class Generator>
+constexpr void generate(ForwardIter first, ForwardIter last, Generator gen) {
     for (; first != last; ++first)
         *first = gen();
 }
 
-template<class OutIter, class Size, class Generator>
-constexpr OutIter generate_n(OutIter first, Size count, Generator gen) {
+template<class OutputIter, class Size, class Generator>
+constexpr OutputIter generate_n(OutputIter first, Size count, Generator gen) {
     if (count > 0)
         for (Size i = 0; i < count; ++i)
             *first++ = gen();
     return first;
 }
 
-template<class ForwardIterer, class T>
-constexpr ForwardIterer remove(ForwardIterer first, ForwardIterer last,
-                               const T &value) {
+template<class ForwardIter, class T>
+constexpr ForwardIter remove(ForwardIter first, ForwardIter last, const T &value) {
     if (first != last)
-        for (ForwardIterer i = first; ++i != last;)
-            if (*i != value)
+        for (ForwardIter i = first; ++i != last;)
+            if (!(*i == value))
                 *first++ = ala::move(*i);
     return first;
 }
 
-template<class ForwardIterer, class UnaryPred>
-constexpr ForwardIterer remove_if(ForwardIterer first, ForwardIterer last,
-                                  UnaryPred pred) {
+template<class ForwardIter, class UnaryPred>
+constexpr ForwardIter remove_if(ForwardIter first, ForwardIter last,
+                                UnaryPred pred) {
     if (first != last)
-        for (ForwardIterer i = first; ++i != last;)
+        for (ForwardIter i = first; ++i != last;)
             if (!pred(*i))
                 *first++ = ala::move(*i);
     return first;
 }
 
-template<class Iter, class OutIter, class T>
-constexpr OutIter remove_copy(Iter first, Iter last, OutIter out, const T &value) {
+template<class InputIter, class OutputIter, class T>
+constexpr OutputIter remove_copy(InputIter first, InputIter last,
+                                 OutputIter out, const T &value) {
     for (; first != last; ++first)
         if (!(*first == value))
             *out++ = *first;
     return out;
 }
 
-template<class Iter, class OutIter, class UnaryPred>
-constexpr OutIter remove_copy_if(Iter first, Iter last, OutIter out,
-                                 UnaryPred pred) {
+template<class InputIter, class OutputIter, class UnaryPred>
+constexpr OutputIter remove_copy_if(InputIter first, InputIter last,
+                                    OutputIter out, UnaryPred pred) {
     for (; first != last; ++first)
         if (pred(*first))
             *out++ = *first;
     return out;
 }
 
-template<class ForwardIterer>
-constexpr ForwardIterer unique(ForwardIterer first, ForwardIterer last) {
+template<class ForwardIter, class BinPred>
+constexpr ForwardIter unique(ForwardIter first, ForwardIter last, BinPred pred) {
     if (first == last)
         return last;
-    ForwardIterer ret = first;
-    while (++first != last)
-        if (!(*ret == *first) && ++ret != first)
-            *ret = ala::move(*first);
-    return ++ret;
+    for (ForwardIter next = first; ++next != last;)
+        if (!pred(*first, *next) && ++first != next)
+            *first = ala::move(*next);
+    return ++first;
 }
 
-template<class ForwardIterer, class BinPred>
-constexpr ForwardIterer unique(ForwardIterer first, ForwardIterer last,
-                               BinPred pred) {
-    if (first == last)
-        return last;
-    ForwardIterer ret = first;
-    while (++first != last)
-        if (!pred(*ret, *first) && ++ret != first)
-            *ret = ala::move(*first);
-    return ++ret;
+template<class ForwardIter>
+constexpr ForwardIter unique(ForwardIter first, ForwardIter last) {
+    return ala::unique(first, last, equal_to<>());
 }
 
 // TODO: make this work with input iterator
-template<class ForwardIterer, class OutIter>
-constexpr OutIter unique_copy(ForwardIterer first, ForwardIterer last,
-                              OutIter out) {
+template<class ForwardIter, class OutputIter, class BinPred>
+constexpr OutputIter unique_copy(ForwardIter first, ForwardIter last,
+                                 OutputIter out, BinPred pred) {
     if (first == last)
-        return out;
-    ForwardIterer ret = first;
-    while (++first != last)
-        if (!(*ret == *first) || ++ret != first)
-            *out++ = *ret++;
+        return last;
+    for (ForwardIter tmp; first != last;) {
+        *out++ = *first;
+        for (tmp = first++; first != last && pred(*tmp, *first);)
+            ++first;
+    }
     return out;
 }
 
-template<class ForwardIterer, class OutIter, class BinPred>
-constexpr OutIter unique_copy(ForwardIterer first, ForwardIterer last,
-                              OutIter out, BinPred pred) {
-    if (first == last)
-        return out;
-    ForwardIterer ret = first;
-    while (++first != last)
-        if (!pred(*ret, *first) || ++ret != first)
-            *out++ = *ret++;
-    return out;
+template<class ForwardIter, class OutputIter>
+constexpr OutputIter unique_copy(ForwardIter first, ForwardIter last,
+                                 OutputIter out) {
+    return ala::unique_copy(first, last, out, equal_to<>());
 }
 
 template<class BidirIter>
@@ -442,32 +425,40 @@ void reverse(BidirIter first, BidirIter last) {
         iter_swap(first++, last);
 }
 
-template<class BidirIter, class OutIter>
-constexpr OutIter reverse_copy(BidirIter first, BidirIter last, OutIter out) {
+template<class BidirIter, class OutputIter>
+constexpr OutputIter reverse_copy(BidirIter first, BidirIter last,
+                                  OutputIter out) {
     while (first != --last)
         *out = *last;
 }
 
-template<class ForwardIterer>
-constexpr ForwardIterer rotate(ForwardIterer first, ForwardIterer middle,
-                               ForwardIterer last) {
+template<class ForwardIter>
+constexpr ForwardIter rotate(ForwardIter first, ForwardIter middle,
+                             ForwardIter last) {
     if (first == middle)
         return last;
     if (middle == last)
         return first;
-    ForwardIterer next_mid = middle;
-    while (middle != last) {
-        if (first == next_mid)
-            next_mid = middle;
-        ala::iter_swap(first++, middle++);
+
+    ForwardIter tmp, next_mid;
+    for (bool flg = true; middle != first; middle = next_mid) {
+        next_mid = middle;
+        while (middle != last) {
+            if (first == next_mid)
+                next_mid = middle;
+            ala::iter_swap(first++, middle++);
+        }
+        if (flg) {
+            tmp = first;
+            flg = false;
+        }
     }
-    rotate(first, next_mid, last);
-    return first;
+    return tmp;
 }
 
-template<class ForwardIterer, class OutIter>
-constexpr OutIter rotate_copy(ForwardIterer first, ForwardIterer middle,
-                              ForwardIterer last, OutIter out) {
+template<class ForwardIter, class OutputIter>
+constexpr OutputIter rotate_copy(ForwardIter first, ForwardIter middle,
+                                 ForwardIter last, OutputIter out) {
     return ala::copy(first, middle, ala::copy(middle, last, out));
 }
 
@@ -508,8 +499,8 @@ constexpr OutIter rotate_copy(ForwardIterer first, ForwardIterer middle,
 // }
 
 // Partitioning operations
-template<class Iter, class UnaryPred>
-constexpr bool is_partitioned(Iter first, Iter last, UnaryPred pred) {
+template<class InputIter, class UnaryPred>
+constexpr bool is_partitioned(InputIter first, InputIter last, UnaryPred pred) {
     for (; first != last; ++first)
         if (!pred(*first))
             break;
@@ -519,13 +510,13 @@ constexpr bool is_partitioned(Iter first, Iter last, UnaryPred pred) {
     return true;
 }
 
-template<class ForwardIterer, class UnaryPred>
-constexpr ForwardIterer partition(ForwardIterer first, ForwardIterer last,
-                                  UnaryPred pred) {
+template<class ForwardIter, class UnaryPred>
+constexpr ForwardIter partition(ForwardIter first, ForwardIter last,
+                                UnaryPred pred) {
     first = ala::find_if_not(first, last, pred);
     if (first == last)
-        return first;
-    ForwardIterer i = first;
+        return last;
+    ForwardIter i = first;
     for (++i; i != last; ++i)
         if (pred(*i))
             ala::iter_swap(i, first++);
@@ -557,41 +548,44 @@ constexpr BidirIter stable_partition(BidirIter first, BidirIter last,
     return first;
 }
 
-template<class Iter, class OutIter1, class OutIter2, class UnaryPred>
-constexpr pair<OutIter1, OutIter2>
-partition_copy(Iter first, Iter last, OutIter1 out_true, OutIter2 out_false,
-               UnaryPred pred) {
+template<class InputIter, class OutputIter1, class OutputIter2, class UnaryPred>
+constexpr pair<OutputIter1, OutputIter2>
+partition_copy(InputIter first, InputIter last, OutputIter1 out_true,
+               OutputIter2 out_false, UnaryPred pred) {
     while (first != last) {
         if (pred(*first++))
             *out_true++ = *first;
         else
             *out_false++ = *first;
     }
-    return ala::pair<OutIter1, OutIter2>(out_true, out_false);
+    return ala::pair<OutputIter1, OutputIter2>(out_true, out_false);
 }
 
-template<class ForwardIterer, class UnaryPred>
-constexpr ForwardIterer partition_point(ForwardIterer first, ForwardIterer last,
-                                        UnaryPred pred) {
-    auto len = ala::distance(first, last);
-    if (len < 1)
-        return last;
-    while (len != 0) {
-        ForwardIterer i = first;
-        ala::advance(i, len / 2);
-        if (pred(*i))
+template<class ForwardIter, class UnaryPred>
+constexpr ForwardIter partition_point(ForwardIter first, ForwardIter last,
+                                      UnaryPred pred) {
+    typedef typename iterator_traits<ForwardIter>::difference_type diff_t;
+    diff_t len = ala::distance(first, last);
+
+    while (len > 0) {
+        ForwardIter i = first;
+        diff_t step = len / 2;
+        ala::advance(i, step);
+        if (pred(*i)) {
             first = ++i;
-        len = len / 2;
+            len -= step + 1;
+        } else
+            len = step;
     }
     return first;
 }
 
 // Sorting operations (see ala/detail/sort.h)
-template<class ForwardIterer, class Comp>
-constexpr ForwardIterer is_sorted_until(ForwardIterer first, ForwardIterer last,
-                                        Comp comp) {
+template<class ForwardIter, class Comp>
+constexpr ForwardIter is_sorted_until(ForwardIter first, ForwardIter last,
+                                      Comp comp) {
     if (first != last) {
-        ForwardIterer next = first;
+        ForwardIter next = first;
         while (++next != last) {
             if (comp(*next, *first))
                 return next;
@@ -601,25 +595,25 @@ constexpr ForwardIterer is_sorted_until(ForwardIterer first, ForwardIterer last,
     return last;
 }
 
-template<class ForwardIterer>
-constexpr ForwardIterer is_sorted_until(ForwardIterer first, ForwardIterer last) {
+template<class ForwardIter>
+constexpr ForwardIter is_sorted_until(ForwardIter first, ForwardIter last) {
     return ala::is_sorted_until(first, last, less<>());
 }
 
-template<class ForwardIterer, class Comp>
-constexpr bool is_sorted(ForwardIterer first, ForwardIterer last, Comp comp) {
+template<class ForwardIter, class Comp>
+constexpr bool is_sorted(ForwardIter first, ForwardIter last, Comp comp) {
     return ala::is_sorted_until(first, last, comp) == last;
 }
 
-template<class ForwardIterer>
-constexpr bool is_sorted(ForwardIterer first, ForwardIterer last) {
+template<class ForwardIter>
+constexpr bool is_sorted(ForwardIter first, ForwardIter last) {
     return ala::is_sorted(first, last, less<>());
 }
 
 // Set operations (on sorted ranges)
-template<class Iter1, class Iter2, class Comp>
-constexpr bool includes(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2,
-                        Comp comp) {
+template<class InputIter1, class InputIter2, class Comp>
+constexpr bool includes(InputIter1 first1, InputIter1 last1, InputIter2 first2,
+                        InputIter2 last2, Comp comp) {
     for (; first2 != last2; ++first1) {
         if (first1 == last1 || comp(*first2, *first1))
             return false;
@@ -629,14 +623,16 @@ constexpr bool includes(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2,
     return true;
 }
 
-template<class Iter1, class Iter2>
-constexpr bool includes(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2) {
+template<class InputIter1, class InputIter2>
+constexpr bool includes(InputIter1 first1, InputIter1 last1, InputIter2 first2,
+                        InputIter2 last2) {
     return ala::includes(first1, last1, first2, last2, less<>());
 }
 
-template<class Iter1, class Iter2, class OutIter, class Comp>
-constexpr OutIter set_union(Iter1 first1, Iter1 last1, Iter2 first2,
-                            Iter2 last2, OutIter out, Comp comp) {
+template<class InputIter1, class InputIter2, class OutputIter, class Comp>
+constexpr OutputIter set_union(InputIter1 first1, InputIter1 last1,
+                               InputIter2 first2, InputIter2 last2,
+                               OutputIter out, Comp comp) {
     for (; first1 != last1; ++out) {
         if (first2 == last2)
             return ala::copy(first1, last1, out);
@@ -652,15 +648,17 @@ constexpr OutIter set_union(Iter1 first1, Iter1 last1, Iter2 first2,
     return ala::copy(first2, last2, out);
 }
 
-template<class Iter1, class Iter2, class OutIter>
-constexpr OutIter set_union(Iter1 first1, Iter1 last1, Iter2 first2,
-                            Iter2 last2, OutIter out) {
+template<class InputIter1, class InputIter2, class OutputIter>
+constexpr OutputIter set_union(InputIter1 first1, InputIter1 last1,
+                               InputIter2 first2, InputIter2 last2,
+                               OutputIter out) {
     return ala::set_union(first1, last1, first2, last2, out, less<>());
 }
 
-template<class Iter1, class Iter2, class OutIter, class Comp>
-constexpr OutIter set_intersection(Iter1 first1, Iter1 last1, Iter2 first2,
-                                   Iter2 last2, OutIter out, Comp comp) {
+template<class InputIter1, class InputIter2, class OutputIter, class Comp>
+constexpr OutputIter set_intersection(InputIter1 first1, InputIter1 last1,
+                                      InputIter2 first2, InputIter2 last2,
+                                      OutputIter out, Comp comp) {
     while (first1 != last1 && first2 != last2) {
         if (comp(*first1, *first2)) {
             ++first1;
@@ -674,15 +672,17 @@ constexpr OutIter set_intersection(Iter1 first1, Iter1 last1, Iter2 first2,
     return out;
 }
 
-template<class Iter1, class Iter2, class OutIter>
-constexpr OutIter set_intersection(Iter1 first1, Iter1 last1, Iter2 first2,
-                                   Iter2 last2, OutIter out) {
+template<class InputIter1, class InputIter2, class OutputIter>
+constexpr OutputIter set_intersection(InputIter1 first1, InputIter1 last1,
+                                      InputIter2 first2, InputIter2 last2,
+                                      OutputIter out) {
     return ala::set_intersection(first1, last1, first2, last2, out, less<>());
 }
 
-template<class Iter1, class Iter2, class OutIter, class Comp>
-constexpr OutIter set_difference(Iter1 first1, Iter1 last1, Iter2 first2,
-                                 Iter2 last2, OutIter out, Comp comp) {
+template<class InputIter1, class InputIter2, class OutputIter, class Comp>
+constexpr OutputIter set_difference(InputIter1 first1, InputIter1 last1,
+                                    InputIter2 first2, InputIter2 last2,
+                                    OutputIter out, Comp comp) {
     while (first1 != last1) {
         if (first2 == last2)
             return ala::copy(first1, last1, out);
@@ -698,16 +698,17 @@ constexpr OutIter set_difference(Iter1 first1, Iter1 last1, Iter2 first2,
     return out;
 }
 
-template<class Iter1, class Iter2, class OutIter>
-constexpr OutIter set_difference(Iter1 first1, Iter1 last1, Iter2 first2,
-                                 Iter2 last2, OutIter out) {
+template<class InputIter1, class InputIter2, class OutputIter>
+constexpr OutputIter set_difference(InputIter1 first1, InputIter1 last1,
+                                    InputIter2 first2, InputIter2 last2,
+                                    OutputIter out) {
     return ala::set_difference(first1, last1, first2, last2, out, less<>());
 }
 
-template<class Iter1, class Iter2, class OutIter, class Comp>
-constexpr OutIter set_symmetric_difference(Iter1 first1, Iter1 last1,
-                                           Iter2 first2, Iter2 last2,
-                                           OutIter out, Comp comp) {
+template<class InputIter1, class InputIter2, class OutputIter, class Comp>
+constexpr OutputIter
+set_symmetric_difference(InputIter1 first1, InputIter1 last1, InputIter2 first2,
+                         InputIter2 last2, OutputIter out, Comp comp) {
     while (first1 != last1) {
         if (first2 == last2)
             return ala::copy(first1, last1, out);
@@ -725,37 +726,12 @@ constexpr OutIter set_symmetric_difference(Iter1 first1, Iter1 last1,
     return ala::copy(first2, last2, out);
 }
 
-template<class Iter1, class Iter2, class OutIter>
-constexpr OutIter set_symmetric_difference(Iter1 first1, Iter1 last1,
-                                           Iter2 first2, Iter2 last2,
-                                           OutIter out) {
+template<class InputIter1, class InputIter2, class OutputIter>
+constexpr OutputIter
+set_symmetric_difference(InputIter1 first1, InputIter1 last1, InputIter2 first2,
+                         InputIter2 last2, OutputIter out) {
     return ala::set_difference(first1, last1, first2, last2, out, less<>());
 }
-
-// Minimum/maximum operations
-#ifndef min
-template<class T>
-constexpr const T &min(const T &a, const T &b) {
-    return min(a, b, less<>());
-}
-
-template<class T, class Comp>
-constexpr const T &min(const T &a, const T &b, Comp comp) {
-    return comp(b, a) ? b : a;
-}
-#endif
-
-#ifndef max
-template<class T>
-constexpr const T &max(const T &a, const T &b) {
-    return max(a, b, less<>());
-}
-
-template<class T, class Comp>
-constexpr const T &max(const T &a, const T &b, Comp comp) {
-    return comp(a, b) ? b : a;
-}
-#endif
 
 template<class T, class Comp>
 constexpr pair<const T &, const T &> minmax(const T &a, const T &b, Comp comp) {
@@ -767,12 +743,11 @@ constexpr pair<const T &, const T &> minmax(const T &a, const T &b) {
     return ala::minmax(a, b, less<>());
 }
 
-template<class ForwardIterer, class Comp>
-constexpr ForwardIterer min_element(ForwardIterer first, ForwardIterer last,
-                                    Comp comp) {
+template<class ForwardIter, class Comp>
+constexpr ForwardIter min_element(ForwardIter first, ForwardIter last, Comp comp) {
     if (first == last)
         return last;
-    ForwardIterer min = first;
+    ForwardIter min = first;
     for (++first; first != last; ++first) {
         if (comp(*first, *min))
             min = first;
@@ -780,17 +755,16 @@ constexpr ForwardIterer min_element(ForwardIterer first, ForwardIterer last,
     return min;
 }
 
-template<class ForwardIterer>
-constexpr ForwardIterer min_element(ForwardIterer first, ForwardIterer last) {
+template<class ForwardIter>
+constexpr ForwardIter min_element(ForwardIter first, ForwardIter last) {
     return ala::min_element(first, last, less<>());
 }
 
-template<class ForwardIterer, class Comp>
-constexpr ForwardIterer max_element(ForwardIterer first, ForwardIterer last,
-                                    Comp comp) {
+template<class ForwardIter, class Comp>
+constexpr ForwardIter max_element(ForwardIter first, ForwardIter last, Comp comp) {
     if (first == last)
         return last;
-    ForwardIterer max = first;
+    ForwardIter max = first;
     for (++first; first != last; ++first) {
         if (comp(*max, *first))
             max = first;
@@ -798,18 +772,18 @@ constexpr ForwardIterer max_element(ForwardIterer first, ForwardIterer last,
     return max;
 }
 
-template<class ForwardIterer>
-constexpr ForwardIterer max_element(ForwardIterer first, ForwardIterer last) {
+template<class ForwardIter>
+constexpr ForwardIter max_element(ForwardIter first, ForwardIter last) {
     return ala::max_element(first, last, less<>());
 }
 
-template<class ForwardIterer, class Comp>
-constexpr pair<ForwardIterer, ForwardIterer>
-minmax_element(ForwardIterer first, ForwardIterer last, Comp comp) {
+template<class ForwardIter, class Comp>
+constexpr pair<ForwardIter, ForwardIter>
+minmax_element(ForwardIter first, ForwardIter last, Comp comp) {
     if (first == last)
         return last;
-    ForwardIterer min = first;
-    ForwardIterer max = first;
+    ForwardIter min = first;
+    ForwardIter max = first;
     for (++first; first != last; ++first) {
         if (comp(*first, *min))
             min = first;
@@ -819,33 +793,31 @@ minmax_element(ForwardIterer first, ForwardIterer last, Comp comp) {
     return ala::make_pair(min, max);
 }
 
-template<class ForwardIterer>
-constexpr pair<ForwardIterer, ForwardIterer> minmax_element(ForwardIterer first,
-                                                            ForwardIterer last) {
+template<class ForwardIter>
+constexpr pair<ForwardIter, ForwardIter> minmax_element(ForwardIter first,
+                                                        ForwardIter last) {
     return ala::minmax_element(first, last, less<>());
 }
 
-#ifndef min
 template<class T, class Comp>
 constexpr T min(initializer_list<T> t, Comp comp) {
     return ala::min_element(t.begin(), t.end(), comp);
 }
+
 template<class T>
 constexpr T min(initializer_list<T> t) {
     return ala::min(t, less<>());
 }
-#endif
 
-#ifndef max
 template<class T, class Comp>
 constexpr T max(initializer_list<T> t, Comp comp) {
     return ala::max_element(t.begin(), t.end(), comp);
 }
+
 template<class T>
 constexpr T max(initializer_list<T> t) {
     return ala::max(t, less<>());
 }
-#endif
 
 template<class T, class Comp>
 constexpr pair<T, T> minmax(initializer_list<T> t, Comp comp) {
@@ -943,7 +915,7 @@ constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
 template<class ForwardIter1, class ForwardIter2>
 constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
                               ForwardIter2 first2) {
-    return ala::is_permutation(first1, last1, first2, equal<>());
+    return ala::is_permutation(first1, last1, first2, equal_to<>());
 }
 
 template<class ForwardIter1, class ForwardIter2, class BinPred>
@@ -958,11 +930,9 @@ constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
 template<class ForwardIter1, class ForwardIter2, class BinPred>
 constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
                               ForwardIter2 first2, ForwardIter2 last2) {
-    return ala::is_permutation(first1, last1, first2, last2, equal<>());
+    return ala::is_permutation(first1, last1, first2, last2, equal_to<>());
 }
 
 } // namespace ala
-
-#include <ala/detail/sort.h>
 
 #endif // HEAD

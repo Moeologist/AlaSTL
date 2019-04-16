@@ -1,5 +1,5 @@
-#ifndef _ALA_DETAIL_CONFIG_SUPPORT_H
-#define _ALA_DETAIL_CONFIG_SUPPORT_H
+#ifndef _ALA_CONFIG_SUPPORT_H
+#define _ALA_CONFIG_SUPPORT_H
 
 #if !defined(_ALA_CLANG) && !defined(__is_identifier)
 #define __is_identifier(x) 0
@@ -7,10 +7,13 @@
 
 #if defined(_ALA_MSVC)
 
-#if !defined(__has_cpp_attribute)
+#if defined(__has_cpp_attribute)
+#define _ALA_ENABLE_CPP_ATTR_MACRO 1
+// not work in 191X, maybe implement in future?
+#else
 #define __has_cpp_attribute(x) 0
-#endif
 #define _ALA_ENABLE_CPP_ATTR_MACRO 0
+#endif
 
 #if _MSC_VER >= 1915
 #define _ALA_ENABLE_CPP_MACRO 1
@@ -73,6 +76,7 @@
 #endif
 
 #ifdef _ALA_DEBUG
+
 #define ALA_FORCEINLINE
 #define ALA_NOINLINE
 

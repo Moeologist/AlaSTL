@@ -5,7 +5,9 @@
 #include <string>
 
 #ifdef _ALA_WIN
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <windows.h>
 #elif defined _ALA_LINUX
 #include <time.h>
