@@ -9,7 +9,7 @@ ala::xoshiro128p x{10086};
 ala::xoshiro128p y{10086};
 ala::xoshiro<int, 1, 2, true, 0> xx;
 
-constexpr auto bp = 1000;
+constexpr auto bp = 100;
 
 void test() {
     ala::map<int, char> m, n;
@@ -36,6 +36,7 @@ void test() {
 
 void test1() {
     std::map<int, char> m, n;
+    std::map<int, char>::iterator i();
     for (int sz = 0; sz < bp; ++sz) {
         for (int i = 0; i < sz; ++i)
             m[y()] = 'L';

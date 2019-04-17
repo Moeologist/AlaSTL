@@ -150,16 +150,16 @@ template<typename T>                   struct underlying_type;
 template<typename>                     struct result_of;
 template<typename F, typename... Args> struct invoke_result;
 
-template<size_t Len, size_t Align = alignof(double)> using aligned_storage_t = typename aligned_storage<Len, Align>::type;
-template<size_t Len, typename... Types>              using aligned_union_t   = typename aligned_union<Len, Types...>::type;
-template<typename T>                                 using decay_t           = typename decay<T>::type;
-template<typename T>                                 using remove_cvref_t    = typename remove_cvref<T>::type;
-template<bool b, typename T = void>                  using enable_if_t       = typename enable_if<b, T>::type;
-template<bool b, typename T, typename F>             using conditional_t     = typename conditional<b, T, F>::type;
-template<typename... T>                              using common_type_t     = typename common_type<T...>::type;
-template<typename T>                                 using underlying_type_t = typename underlying_type<T>::type;
-template<typename T>                                 using result_of_t       = typename result_of<T>::type;
-template<typename F, typename... Args>               using invoke_result_t   = typename invoke_result<F, Args...>::type;
+template<size_t Len, size_t Align = alignof(max_align_t)> using aligned_storage_t = typename aligned_storage<Len, Align>::type;
+template<size_t Len, typename... Types>                   using aligned_union_t   = typename aligned_union<Len, Types...>::type;
+template<typename T>                                      using decay_t           = typename decay<T>::type;
+template<typename T>                                      using remove_cvref_t    = typename remove_cvref<T>::type;
+template<bool b, typename T = void>                       using enable_if_t       = typename enable_if<b, T>::type;
+template<bool b, typename T, typename F>                  using conditional_t     = typename conditional<b, T, F>::type;
+template<typename... T>                                   using common_type_t     = typename common_type<T...>::type;
+template<typename T>                                      using underlying_type_t = typename underlying_type<T>::type;
+template<typename T>                                      using result_of_t       = typename result_of<T>::type;
+template<typename F, typename... Args>                    using invoke_result_t   = typename invoke_result<F, Args...>::type;
 
 #if _ALA_CPP_STD >= 17
 template<typename...> using void_t = void;

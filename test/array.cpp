@@ -1,54 +1,55 @@
 #include <ala/array.h>
+#include <ala/vector.h>
 #include <array>
 #include <ala/tuple.h>
+#include <ala/detail/pair.h>
+#include <ala/detail/allocator.h>
 #include <iostream>
 
 template<class...>
 struct FK;
 
-struct Foo {
-    Foo(int num): num_(num) {}
-    void print_add(int i) const {
-        std::cout << num_ + i << '\n';
-    }
-    int num_;
+struct pod {
+    pod &operator=(const pod &) = delete;
+    pod &operator=(pod &&) {
+        return *this;
+    };
 };
 
-void print_num(int i) {
-    std::cout << i << '\n';
-}
-
-struct PrintNum {
-    void operator()(int i) const {
-        std::cout << i << '\n';
-    }
-};
-
-int test() {
-    // 调用自由函数
-    ala::invoke(print_num, -9);
-
-    // 调用 lambda
-    ala::invoke([]() { print_num(42); });
-
-    // 调用成员函数
-    const Foo foo(314159);
-    ala::invoke(&Foo::print_add, &foo, 1);
-
-    // 调用（访问）数据成员
-    std::cout << "num_: " << ala::invoke(&Foo::num_, foo) << '\n';
-
-    // 调用函数对象
-    ala::invoke(PrintNum(), 18);
+ala::tuple<int, int> pp() {
+    return {1, 2};
 }
 
 int main() {
-    test();
     using namespace ala;
     using ar = array<int, 2>;
+    pp();
+
+    // pair pr(1, 2);
+    // auto pr1 = pair(1, 2);
+    // pair pr2{1, 2};
+    // auto pr3 = pair{1, 2};
+
+    pair pr{1, 2};
+
+    auto t1 = tuple<>(); // libstdc++ tuple<> 是 incomplete type, 即使不用libstdc++，gcc 也报错,
+    tuple<> t2{}; // 非libstdc++可以写
+    auto t3 = tuple{}; // 非libstdc++可以写
+
+    // pr换成右值也一样，以下写法gcc全跪，任何标准库实现，推出空的tuple类型
+    tuple tp{pr};
+    tuple tp1(pr);
+    auto tp2 = tuple(pr);
+    auto tp3 = tuple{pr};
+
+    ar as;
+    allocator<int> alloc;
+    auto p = alloc.allocate(0);
+    static_assert(is_same_v<int, signed int>, "f**k");
+    ala::copy(as.begin(), as.end(), as.begin());
     constexpr ar x = {};
     ar y = {1, 2};
-    apply([](auto &&x, auto &&y) { ++x + y; }, y);
+    apply([](auto &&x, auto &&y) { return ++x + ++y; }, y);
     x.cbegin();
     x.crbegin();
     return 0;

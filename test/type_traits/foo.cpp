@@ -133,8 +133,8 @@ int main() {
 
     #if !defined(_ALA_MSVC) || _ALA_CPP_STD >= 17
 
-    static_assert(ala::is_same<ala::invoke_result_t<pmf, CC, float>, int>::value, "oh");
-    static_assert(ala::is_same<ala::invoke_result_t<decltype(&CC::v), CC>, double &&>::value, "oh");
+    static_assert(ala::is_same<ala::invoke_result_t<pmf, CC, int>, int>::value, "oh");
+    static_assert(ala::is_same<ala::invoke_result_t<decltype(&CC::v), CC>, double>::value, "oh");
     #endif
 
     struct A {};

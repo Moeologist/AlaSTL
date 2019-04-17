@@ -45,6 +45,7 @@
     };
 
 namespace ala {
+
 ALA_MAKE_BASE_FUNCTION(plus, +)
 ALA_MAKE_BASE_FUNCTION(minus, -)
 ALA_MAKE_BASE_FUNCTION(multiplies, *)
@@ -67,6 +68,7 @@ ALA_MAKE_BASE_FUNCTION(bit_and, &)
 ALA_MAKE_BASE_FUNCTION(bit_or, |)
 ALA_MAKE_BASE_FUNCTION(bit_xor, ^)
 ALA_MAKE_BASE_FUNCTION_UNARY(bit_not, ~)
+
 } // namespace ala
 
 #undef ALALA_MAKE_BASE_FUNCTION

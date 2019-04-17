@@ -110,7 +110,7 @@ struct pair {
     template<class... Args1, class... Args2, size_t... I1, size_t... I2>
     constexpr pair(piecewise_construct_t, tuple<Args1...> &first_args,
                    tuple<Args2...> &second_args, index_sequence<I1...>,
-                   index_sequence<I2...>);
+                   index_sequence<I2...>); // define in tuple.h
 
     pair(const pair &) = default;
     pair(pair &&) = default;
@@ -161,37 +161,37 @@ struct pair {
         ala::swap(first, p.first);
         ala::swap(second, p.second);
     }
-    // clang-format on
 };
 
 template<typename T1, typename T2>
-constexpr bool operator==(const pair<T1, T2> &x, const pair<T1, T2> &y) {
-    return x.first == y.first && x.second == y.second;
+constexpr bool operator==(const pair<T1, T2> &lhs, const pair<T1, T2> &rhs) {
+    return lhs.first == rhs.first && lhs.second == rhs.second;
 }
 
 template<typename T1, typename T2>
-constexpr bool operator<(const pair<T1, T2> &x, const pair<T1, T2> &y) {
-    return x.first < y.first || (!(y.first < x.first) && x.second < y.second);
+constexpr bool operator<(const pair<T1, T2> &lhs, const pair<T1, T2> &rhs) {
+    return lhs.first < rhs.first ||
+           (!(rhs.first < lhs.first) && lhs.second < rhs.second);
 }
 
 template<typename T1, typename T2>
-constexpr bool operator!=(const pair<T1, T2> &x, const pair<T1, T2> &y) {
-    return !(x == y);
+constexpr bool operator!=(const pair<T1, T2> &lhs, const pair<T1, T2> &rhs) {
+    return !(lhs == rhs);
 }
 
 template<typename T1, typename T2>
-constexpr bool operator>(const pair<T1, T2> &x, const pair<T1, T2> &y) {
-    return y < x;
+constexpr bool operator>(const pair<T1, T2> &lhs, const pair<T1, T2> &rhs) {
+    return rhs < lhs;
 }
 
 template<typename T1, typename T2>
-constexpr bool operator<=(const pair<T1, T2> &x, const pair<T1, T2> &y) {
-    return !(y < x);
+constexpr bool operator<=(const pair<T1, T2> &lhs, const pair<T1, T2> &rhs) {
+    return !(rhs < lhs);
 }
 
 template<typename T1, typename T2>
-constexpr bool operator>=(const pair<T1, T2> &x, const pair<T1, T2> &y) {
-    return !(x < y);
+constexpr bool operator>=(const pair<T1, T2> &lhs, const pair<T1, T2> &rhs) {
+    return !(lhs < rhs);
 }
 
 template<class T1, class T2>
@@ -202,9 +202,9 @@ constexpr decltype(auto) make_pair(T1 &&t1, T2 &&t2) {
 
 template<class T1, class T2>
 constexpr enable_if_t<is_swappable<T1>::value && is_swappable<T2>::value>
-swap(pair<T1, T2> &x, pair<T1, T2> &y) noexcept(
+swap(pair<T1, T2> &lhs, pair<T1, T2> &rhs) noexcept(
     is_nothrow_swappable<T1>::value &&is_nothrow_swappable<T2>::value) {
-    x.swap(y);
+    lhs.swap(rhs);
 }
 
 template<size_t I, typename T1, typename T2>

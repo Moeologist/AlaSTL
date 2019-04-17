@@ -45,9 +45,10 @@ struct NODE {
         }
         if (nh._ptr != nullptr) {
             _ptr = ala::move(nh._ptr);
-            ALA_CONST_IF(
-                allocator_type::propagate_on_container_move_assignment::value)
-            _a = ala::move(nh._ptr);
+            ALA_CONST_IF(allocator_traits<allocator_type>::
+                             propagate_on_container_move_assignment::value) {
+                _a = ala::move(nh._ptr);
+            }
         }
         nh._ptr = nullptr;
     }
@@ -88,8 +89,10 @@ struct NODE {
     void swap(NODE &nh) noexcept(allocator_type::propagate_on_container_swap::value ||
                                  allocator_type::is_always_equal::value) {
         ala::swap(_ptr, nh._ptr);
-        ALA_CONST_IF(allocator_type::propagate_on_container_swap::value)
-        ala::swap(_a, nh._a);
+        ALA_CONST_IF(
+            allocator_traits<allocator_type>::propagate_on_container_swap::value) {
+            ala::swap(_a, nh._a);
+        }
     }
 
 private:

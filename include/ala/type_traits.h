@@ -261,14 +261,14 @@ struct _is_destructible_impl : false_type {};
 template<typename T>
 struct _is_destructible_impl<T, void_t<decltype(declval<T &>().~T())>> : true_type {};
 
-template<typename T, bool = _or_<is_void<T>, is_bounded_array<T>, is_function<T>>::value,
-                     bool = _or_<is_reference<T>, is_scalar<T>>::value>
+template<typename T, bool = is_reference<T>::value,
+                     bool = is_object<T>::value>
 struct _is_destructible_helper : false_type {};
 
 template<typename T>
-struct _is_destructible_helper<T, false, false> : _is_destructible_impl<remove_all_extents_t<T>>::type {};
-template<typename T>
-struct _is_destructible_helper<T, false, true> : true_type {};
+struct _is_destructible_helper<T, false, true> : _is_destructible_impl<remove_all_extents_t<T>>::type {};
+template<typename T, bool B>
+struct _is_destructible_helper<T, true, B> : true_type {};
 
 template<typename T>
 struct is_destructible : _is_destructible_helper<T> {};
@@ -582,12 +582,12 @@ template<> struct make_signed<const volatile unsigned long>      { typedef const
 template<> struct make_signed<const volatile unsigned long long> { typedef const volatile signed long long type; };
 template<> struct make_signed<const volatile char>               { typedef const volatile signed char      type; };
 
-#if (defined(__WCHAR_MAX__) && (__WCHAR_MAX__ == 4294967295U))
+#if (defined(__WCHAR_MAX__) && (__WCHAR_MAX__ == 0xffffffffU))
 template<> struct make_signed<wchar_t>                { typedef int32_t                type; };
 template<> struct make_signed<const wchar_t>          { typedef const int32_t          type; };
 template<> struct make_signed<volatile wchar_t>       { typedef volatile int32_t       type; };
 template<> struct make_signed<const volatile wchar_t> { typedef const volatile int32_t type; };
-#elif (defined(__WCHAR_MAX__) && (__WCHAR_MAX__ == 65535))
+#elif (defined(__WCHAR_MAX__) && (__WCHAR_MAX__ == 0xffff))
 template<> struct make_signed<wchar_t>                { typedef int16_t                type; };
 template<> struct make_signed<const wchar_t>          { typedef const int16_t          type; };
 template<> struct make_signed<volatile wchar_t>       { typedef volatile int16_t       type; };
@@ -620,12 +620,12 @@ template<> struct make_unsigned<const volatile signed long>      { typedef const
 template<> struct make_unsigned<const volatile signed long long> { typedef const volatile unsigned long long type; };
 template<> struct make_unsigned<const volatile char>             { typedef const volatile unsigned char      type; };
 
-#if defined(__WCHAR_MAX__) && (__WCHAR_MAX__ != 4294967295U)
+#if defined(__WCHAR_MAX__) && (__WCHAR_MAX__ != 0xffffffffU)
 template<> struct make_unsigned<wchar_t>                { typedef uint32_t                type; };
 template<> struct make_unsigned<const wchar_t>          { typedef const uint32_t          type; };
 template<> struct make_unsigned<volatile wchar_t>       { typedef volatile uint32_t       type; };
 template<> struct make_unsigned<const volatile wchar_t> { typedef const volatile uint32_t type; };
-#elif defined(__WCHAR_MAX__) && (__WCHAR_MAX__ != 65535)
+#elif defined(__WCHAR_MAX__) && (__WCHAR_MAX__ != 0xffff)
 template<> struct make_unsigned<wchar_t>                { typedef uint16_t                type; };
 template<> struct make_unsigned<const wchar_t>          { typedef const uint16_t          type; };
 template<> struct make_unsigned<volatile wchar_t>       { typedef volatile uint16_t       type; };
@@ -674,13 +674,11 @@ struct aligned_union {
 template<typename T>
 struct decay {
     typedef remove_reference_t<T> U;
-    typedef conditional_t<
-                is_array<U>::value,
-                remove_extent_t<U> *,
-                conditional_t<
-                    is_function<U>::value,
-                    add_pointer_t<U>,
-                    remove_cv_t<U>>> type;
+    typedef conditional_t<is_array<U>::value,
+                          remove_extent_t<U> *,
+                          conditional_t<is_function<U>::value,
+                                        add_pointer_t<U>,
+                                        remove_cv_t<U>>> type;
 };
 
 template< typename T >
@@ -696,14 +694,14 @@ template<typename T1, typename T2>
 using _cm_tp_helper_t = decay_t<decltype(false ? declval<T1>() : declval<T2>())>;
 
 template<typename T1, typename T2, typename = void_t<>>
-struct _common_type_2_sf_helper {};
+struct _common_type_2_helper {};
 
 template<typename T1, typename T2>
-struct _common_type_2_sf_helper<T1, T2, void_t<_cm_tp_helper_t<const T1&, const T2&>>>
+struct _common_type_2_helper<T1, T2, void_t<_cm_tp_helper_t<const T1&, const T2&>>>
 { typedef _cm_tp_helper_t<const T1&, const T2&> type; };
 
 template<typename T1, typename T2, typename = void_t<>>
-struct _common_type_2_sfinae : _common_type_2_sf_helper<T1, T2> {};
+struct _common_type_2_sfinae : _common_type_2_helper<T1, T2> {};
 
 template<typename T1, typename T2>
 struct _common_type_2_sfinae<T1, T2, void_t<_cm_tp_helper_t<T1, T2>>>
@@ -736,20 +734,12 @@ template<typename T> struct _underlying_type_helper<T, true> { typedef __underly
 template<typename T> struct underlying_type : _underlying_type_helper<T> {};
 
 #if !defined(_ALA_MSVC) || _MSC_VER >= 1910
+
+template<typename Void, typename Fn, typename... Args>
+struct _invoke_result_impl {};
+
 template<typename Fn, typename... Args>
-struct _invoke_result_impl {
-    template<typename T>
-    struct _success_type { typedef T type; };
-    struct _failure_type {};
-
-    template<typename Fn1, typename... Args1>
-    static _success_type<decltype(invoke(declval<Fn1>(), declval<Args1>()...))> _test(int);
-
-    template<typename...>
-    static _failure_type _test(...);
-
-    typedef decltype(_test<Fn, Args...>(0)) type;
-};
+struct _invoke_result_impl<void_t<decltype(invoke(declval<Fn>(), declval<Args>()...))>, Fn, Args...> {};
 
 template<typename Fn, typename... Args>
 struct invoke_result : _invoke_result_impl<Fn, Args...>::type {};
@@ -925,10 +915,10 @@ template<typename T1, typename T2>
 using _cm_ref_helper_t = decltype(false ? _val<T1>() : _val<T2>());
 
 template<typename T1, typename T2, typename = void_t<>>
-struct _common_reference_sf_helper : common_type_t<T1, T2> {};
+struct _common_reference_2_helper : common_type_t<T1, T2> {};
 
 template<typename T1, typename T2>
-struct _common_reference_sf_helper<T1, T2, void_t<_cm_ref_helper_t<T1, T2>>>
+struct _common_reference_2_helper<T1, T2, void_t<_cm_ref_helper_t<T1, T2>>>
 { typedef _cm_ref_helper_t<T1, T2> type; };
 
 template<typename, typename, template<typename> class, template<typename> class>
@@ -939,14 +929,14 @@ using _basic_common_ref_t = typename basic_common_reference<
     remove_cvref_t<T1>, remove_cvref_t<T2>, _get_cv<T1>::template _bind_t, _get_cv<T2>::template _bind_t>::type;
 
 template<typename T1, typename T2, typename = void_t<>>
-struct _common_reference_sfinae : _common_reference_sf_helper<T1, T2> {};
+struct _common_reference_2_sfinae : _common_reference_2_helper<T1, T2> {};
 
 template<typename T1, typename T2>
-struct _common_reference_sfinae<T1, T2, void_t<_basic_common_ref_t<T1, T2>>>
+struct _common_reference_2_sfinae<T1, T2, void_t<_basic_common_ref_t<T1, T2>>>
 { typedef _basic_common_ref_t<T1, T2> type; };
 
 template<typename T1, typename T2, bool = is_reference<T1>::value && is_reference<T2>::value, typename = void_t<>>
-struct _common_reference_2 : _common_reference_sfinae<T1, T2> {};
+struct _common_reference_2 : _common_reference_2_sfinae<T1, T2> {};
 
 template<typename T1, typename T2>
 struct _common_reference_2<T1, T2, true, void_t<typename _simple_common_reference<T1, T2>::type>>

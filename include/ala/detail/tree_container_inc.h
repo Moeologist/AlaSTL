@@ -64,14 +64,14 @@ public:
 #else
     typedef Key value_type;
 #endif
-    typedef size_t size_type;
-    typedef ptrdiff_t difference_type;
     typedef Comp key_compare;
     typedef Alloc allocator_type;
     typedef value_type &reference;
     typedef const value_type &const_reference;
-    typedef typename allocator_type::pointer pointer;
-    typedef typename allocator_type::const_pointer const_pointer;
+    typedef typename allocator_traits<Alloc>::size_type size_type;
+    typedef typename allocator_traits<Alloc>::difference_type difference_type;
+    typedef typename allocator_traits<Alloc>::pointer pointer;
+    typedef typename allocator_traits<Alloc>::const_pointer const_pointer;
 
 #if IS_MAP
     struct value_compare {
@@ -175,7 +175,7 @@ public:
         allocator_type::propagate_on_container_move_assignment::value
             &&is_nothrow_move_assignable<allocator_type>::value
                 &&is_nothrow_move_assignable<key_compare>::value) {
-        tree = move(m.tree);
+        tree = ala::move(m.tree);
         return *this;
     }
 
@@ -258,17 +258,17 @@ public:
     }
 
     mapped_type &at(const key_type &k) {
-        iterator it = iterator(tree.find(k));
-        if (!it.first)
+        iterator i = iterator(tree.find(k));
+        if (!i.first)
             throw out_of_range("map element not found");
-        return it->second;
+        return i->second;
     }
 
     const mapped_type &at(const key_type &k) const {
-        const_iterator it = const_iterator(iterator(tree.find(k)));
-        if (!it.first)
+        const_iterator i = const_iterator(iterator(tree.find(k)));
+        if (!i.first)
             throw out_of_range("map element not found");
-        return it->second;
+        return i->second;
     }
 #endif
 
@@ -734,20 +734,20 @@ bool operator!=(const CONTAINER<Key, Comp, Alloc> &lhs,
 template<class Key, class Comp, class Alloc>
 bool operator<(const CONTAINER<Key, Comp, Alloc> &lhs,
                const CONTAINER<Key, Comp, Alloc> &rhs) {
-    return lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
-                                   rhs.end());
-}
-
-template<class Key, class Comp, class Alloc>
-bool operator<=(const CONTAINER<Key, Comp, Alloc> &lhs,
-                const CONTAINER<Key, Comp, Alloc> &rhs) {
-    return !(rhs < lhs);
+    return ala::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
+                                        rhs.end());
 }
 
 template<class Key, class Comp, class Alloc>
 bool operator>(const CONTAINER<Key, Comp, Alloc> &lhs,
                const CONTAINER<Key, Comp, Alloc> &rhs) {
     return rhs < lhs;
+}
+
+template<class Key, class Comp, class Alloc>
+bool operator<=(const CONTAINER<Key, Comp, Alloc> &lhs,
+                const CONTAINER<Key, Comp, Alloc> &rhs) {
+    return !(rhs < lhs);
 }
 
 template<class Key, class Comp, class Alloc>

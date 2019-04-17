@@ -170,9 +170,9 @@ public:
 
     rb_tree(rb_tree &&other)
         : _comp(ala::move(other._comp)), _alloc(ala::move(other._alloc)),
-          _nalloc(ala::move(other._nalloc)), _size(other._size) {
+          _nalloc(ala::move(other._nalloc)), _root(other._root),
+          _size(other._size) {
         initializer_nil();
-        _root = other._root;
         fix_nil();
         other._root = nullptr;
         other._size = 0;
@@ -187,9 +187,9 @@ public:
     }
 
     rb_tree(rb_tree &&other, const allocator_type &a)
-        : _comp(other._comp), _alloc(a), _nalloc(), _size(other._size) {
+        : _comp(other._comp), _alloc(a), _nalloc(), _root(other._root),
+          _size(other._size) {
         initializer_nil();
-        _root = other._root;
         fix_nil();
         other._root = nullptr;
         other._size = 0;
@@ -269,10 +269,12 @@ public:
         ala::swap(_left_nil, other._left_nil);
         ala::swap(_right_nil, other._right_nil);
         ala::swap(_size, other._size);
-        ALA_CONST_IF(allocator_type::propagate_on_container_swap::value)
-        ala::swap(_alloc, other._alloc);
-        ALA_CONST_IF(node_allocator_type::propagate_on_container_swap::value)
-        ala::swap(_nalloc, other._nalloc);
+        ALA_CONST_IF(allocator_type::propagate_on_container_swap::value) {
+            ala::swap(_alloc, other._alloc);
+        }
+        ALA_CONST_IF(node_allocator_type::propagate_on_container_swap::value) {
+            ala::swap(_nalloc, other._nalloc);
+        }
     }
 
     template<class RBTree>
@@ -286,12 +288,12 @@ public:
 
     template<class K>
     node_pointer find(const K &key) const {
-        decltype(auto) comp = get_key_comp();
+        decltype(auto) comp = key_comp();
         node_pointer current = _root;
         while (!is_nil(current))
-            if (comp(key, get_key(current->_data)))
+            if (comp(key, key(current->_data)))
                 current = current->_left;
-            else if (comp(get_key(current->_data), key))
+            else if (comp(key(current->_data), key))
                 current = current->_right;
             else
                 return current;
@@ -300,12 +302,12 @@ public:
 
     template<class K>
     size_t count(const K &key, node_pointer current) const {
-        decltype(auto) comp = get_key_comp();
+        decltype(auto) comp = key_comp();
         size_t eql = 0;
         while (!is_nil(current)) {
-            if (comp(key, get_key(current->_data)))
+            if (comp(key, key(current->_data)))
                 current = current->_left;
-            else if (comp(get_key(current->_data), key))
+            else if (comp(key(current->_data), key))
                 current = current->_right;
             else {
                 return 1 + count(key, current->_left) +
@@ -322,12 +324,12 @@ public:
 
     template<class K>
     bool contains(const K &key) const {
-        decltype(auto) comp = get_key_comp();
+        decltype(auto) comp = key_comp();
         node_pointer current = _root;
         while (!is_nil(current))
-            if (comp(key, get_key(current->_data)))
+            if (comp(key, key(current->_data)))
                 current = current->_left;
-            else if (comp(get_key(current->_data), key))
+            else if (comp(key(current->_data), key))
                 current = current->_right;
             else
                 return true;
@@ -336,12 +338,12 @@ public:
 
     template<class K>
     bool erase(const K &key) {
-        decltype(auto) comp = get_key_comp();
+        decltype(auto) comp = key_comp();
         node_pointer current = _root;
         while (!is_nil(current)) {
-            if (comp(key, get_key(current->_data)))
+            if (comp(key, key(current->_data)))
                 current = current->_left;
-            else if (comp(get_key(current->_data), key))
+            else if (comp(key(current->_data), key))
                 current = current->_right;
             else {
                 remove(current);
@@ -447,25 +449,25 @@ protected:
 
     template<typename Dummy = value_type,
              typename = enable_if_t<_has_first<Dummy>::value>>
-    const auto &get_key(const value_type &v) const {
+    const auto &key(const value_type &v) const {
         return v.first;
     }
 
     template<typename Dummy = value_type,
              typename = enable_if_t<!_has_first<Dummy>::value>>
-    const value_type &get_key(const value_type &v) const {
+    const value_type &key(const value_type &v) const {
         return v;
     }
 
     template<typename Dummy = value_compare,
              typename = enable_if_t<_has_comp<Dummy>::value>>
-    const auto &get_key_comp() const {
+    const auto &key_comp() const {
         return _comp.comp;
     }
 
     template<typename Dummy = value_compare,
              typename = enable_if_t<!_has_comp<Dummy>::value>>
-    const value_compare &get_key_comp() const {
+    const value_compare &key_comp() const {
         return _comp;
     }
 
@@ -613,7 +615,6 @@ protected:
         }
     }
 
-    template<bool Rebalance = true>
     void attach_to(node_pointer pos, node_pointer p) noexcept {
         p->_color = ALA_RED;
         p->_left = p->_right = nullptr;
@@ -637,7 +638,6 @@ protected:
             pos->_right = p;
         }
         ++_size;
-        ALA_CONST_IF(Rebalance)
         rebalance_for_attach(p);
     }
 
@@ -685,7 +685,6 @@ protected:
         _root->_color = ALA_BLACK;
     }
 
-    template<bool Rebalance = true>
     void detach(node_pointer current) noexcept {
         node_pointer child, parent, subs, fix = nullptr;
         bool color;
@@ -720,7 +719,6 @@ protected:
             fix = subs;
         }
         --_size;
-        ALA_CONST_IF(Rebalance)
         if (_root != nullptr && color == ALA_BLACK)
             rebalance_for_detach(child, parent);
         if (fix)

@@ -258,8 +258,7 @@ void test8() {
     // second insert function version (with hint position):
     ala::map<char, int>::iterator it = mymap.begin();
     mymap.insert(it, ala::pair<char, int>('b', 300)); // max efficiency inserting
-    mymap.insert(it,
-                 ala::pair<char, int>('c', 400)); // no max efficiency inserting
+    mymap.insert(it, ala::pair<char, int>('c', 400)); // no max efficiency inserting
 
     // third insert function version (range insertion):
     ala::map<char, int> anothermap;
@@ -450,10 +449,10 @@ void test17() {
 }
 
 int main() {
-    ala::map<int,char> mp;
-    mp[1]='c';
+    ala::map<int, char> mp;
+    mp[1] = 'c';
     // auto a= mp.extract(1);
-    ala::multimap<int,char> mmp;
+    ala::multimap<int, char> mmp;
     mmp.insert(mp.extract(1));
     test1();
     test2();

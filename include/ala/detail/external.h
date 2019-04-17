@@ -12,6 +12,8 @@
 #include <cstdint>
 #include <cstddef>
 
+#include <cstring>
+
 namespace ala {
 using std::exception;
 using std::length_error;
@@ -54,6 +56,8 @@ using std::uint_least32_t;
 using std::uint_least64_t;
 using std::uintmax_t;
 using std::uintptr_t;
+
+using std::memmove;
 
 } // namespace ala
 

@@ -39,17 +39,51 @@ constexpr const T &max(const T &a, const T &b, Comp comp) {
 // Modifying sequence operations
 
 template<class InputIter, class OutputIter>
-constexpr OutputIter copy(InputIter first, InputIter last, OutputIter out) {
+constexpr enable_if_t<
+    !(is_trivial<typename iterator_traits<InputIter>::value_type>::value &&
+      is_pointer<InputIter>::value && is_pointer<OutputIter>::value),
+    OutputIter>
+copy(InputIter first, InputIter last, OutputIter out) {
     while (first != last)
         *out++ = *first++;
     return out;
 }
 
 template<class InputIter, class OutputIter>
-constexpr OutputIter move(InputIter first, InputIter last, OutputIter out) {
+constexpr enable_if_t<
+    (is_trivial<typename iterator_traits<InputIter>::value_type>::value &&
+     is_pointer<InputIter>::value && is_pointer<OutputIter>::value),
+    OutputIter>
+copy(InputIter first, InputIter last, OutputIter out) {
+    ala::memmove(reinterpret_cast<void *>(out), reinterpret_cast<void *>(first),
+                 sizeof(typename iterator_traits<InputIter>::value_type) *
+                     (last - first));
+    return out + (last - first);
+}
+
+template<class InputIter, class OutputIter>
+constexpr enable_if_t<
+    !(is_trivial<typename iterator_traits<InputIter>::value_type>::value &&
+      is_pointer<InputIter>::value && is_pointer<OutputIter>::value),
+    OutputIter>
+move(InputIter first, InputIter last, OutputIter out) {
     while (first != last)
         *out++ = ala::move(*first++);
     return out;
+}
+
+template<class InputIter, class OutputIter>
+constexpr enable_if_t<
+    (is_trivial<typename iterator_traits<InputIter>::value_type>::value &&
+     is_pointer<InputIter>::value && is_pointer<OutputIter>::value),
+    OutputIter>
+move(InputIter first, InputIter last, OutputIter out) {
+    if (first >= last)
+        return out;
+    ala::memmove((void *)out, (void *)first,
+                 sizeof(typename iterator_traits<InputIter>::value_type) *
+                     (last - first));
+    return out + (last - first);
 }
 
 template<class ForwardIter, class T>

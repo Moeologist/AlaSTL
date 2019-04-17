@@ -223,7 +223,7 @@ public:
     tuple(tuple const &) = default;
     tuple(tuple &&) = default;
 
-    // make template not specialization immediately
+    // make template not specialization immediately (msvc not need this)
     template<typename Dummy = true_type,
              typename = enable_if_t<
                  _and_<Dummy, _and_<is_default_constructible<Ts>...>,
@@ -691,6 +691,14 @@ template<typename T1, typename T2>
 tuple(pair<T1, T2>)->tuple<T1, T2>;
 #endif
 
+template<typename T1, typename T2>
+template<typename... Args1, typename... Args2, size_t... I1, size_t... I2>
+constexpr pair<T1, T2>::pair(piecewise_construct_t, tuple<Args1...> &first_args,
+                             tuple<Args2...> &second_args,
+                             index_sequence<I1...>, index_sequence<I2...>)
+    : first(ala::forward<Args1>(ala::get<I1>(first_args))...),
+      second(ala::forward<Args2>(ala::get<I2>(second_args))...) {}
+
 // extra features
 
 template<template<typename> class Templt, size_t Cur, typename IntSeq, typename... Ts>
@@ -714,14 +722,6 @@ struct _type_pick_impl<Templt, Cur, index_sequence<SIs...>> {
 template<template<typename> class Templt, typename... Ts>
 using _type_pick_t =
     typename _type_pick_impl<Templt, 0, index_sequence<>, Ts...>::type;
-
-template<typename T1, typename T2>
-template<typename... Args1, typename... Args2, size_t... I1, size_t... I2>
-constexpr pair<T1, T2>::pair(piecewise_construct_t, tuple<Args1...> &first_args,
-                             tuple<Args2...> &second_args,
-                             index_sequence<I1...>, index_sequence<I2...>)
-    : first(ala::forward<Args1>(ala::get<I1>(first_args))...),
-      second(ala::forward<Args2>(ala::get<I2>(second_args))...) {}
 
 template<typename... Ts, size_t... Ids>
 constexpr auto _choice_helper(tuple<Ts...> &t, index_sequence<Ids...>) {
