@@ -61,7 +61,7 @@ struct rb_iterator {
     typedef value_type *pointer;
     typedef value_type &reference;
 
-    // constexpr rb_iterator(): _ptr(nullptr) {}
+    constexpr rb_iterator(): _ptr(nullptr) {}
     constexpr rb_iterator(const rb_iterator &other): _ptr(other._ptr) {}
     constexpr rb_iterator(const Ptr &ptr): _ptr(ptr) {}
 
@@ -74,11 +74,11 @@ struct rb_iterator {
     }
 
     constexpr bool operator==(const rb_iterator &rhs) const {
-        return _ptr == rhs._ptr;
+        return (_ptr == rhs._ptr) || (is_nil(_ptr) && is_nil(rhs._ptr));
     }
 
     constexpr bool operator!=(const rb_iterator &rhs) const {
-        return _ptr != rhs._ptr;
+        return !(_ptr == rhs._ptr);
     }
 
     constexpr rb_iterator &operator++() {
@@ -277,8 +277,11 @@ public:
 
     template<class RBTree>
     void transfer(RBTree &other, node_pointer p) {
-        other.detach(p);
-        insert(nullptr, p);
+        pair<node_pointer, bool> pr = search(nullptr, p);
+        if (!pr.second) {
+            other.detach(p);
+            attach_to(pr.first, p);
+        }
     }
 
     template<class K>
@@ -360,26 +363,24 @@ public:
     template<bool Dummy = is_uniq, class... Args>
     enable_if_t<Dummy, pair<node_pointer, bool>> emplace(node_pointer hint,
                                                          Args &&... args) {
-        using ret = pair<node_pointer, bool>;
         node_pointer new_node = construct_node(ala::forward<Args>(args)...);
         pair<node_pointer, bool> pr = search(hint, new_node);
         if (pr.second) {
             destruct_node(new_node);
-            return ret(pr.first, false);
+            return pair<node_pointer, bool>(pr.first, false);
         } else {
             attach_to(pr.first, new_node);
-            return ret(new_node, true);
+            return pair<node_pointer, bool>(new_node, true);
         }
     }
 
     template<bool Dummy = is_uniq, class... Args>
     enable_if_t<!Dummy, pair<node_pointer, bool>> emplace(node_pointer hint,
                                                           Args &&... args) {
-        using ret = pair<node_pointer, bool>;
         node_pointer new_node = construct_node(ala::forward<Args>(args)...);
         pair<node_pointer, bool> pr = search(hint, new_node);
         attach_to(pr.first, new_node);
-        return ret(new_node, true);
+        return pair<node_pointer, bool>(new_node, true);
     }
 
     template<bool Dummy = is_uniq>
@@ -423,7 +424,7 @@ public:
                 guard = guard->_left;
             }
         }
-        return pair<node_pointer, bool>(current, true);
+        return pair<node_pointer, bool>(current, false);
     }
 
 protected:

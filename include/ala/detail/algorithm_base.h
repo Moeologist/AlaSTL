@@ -2,6 +2,7 @@
 #define _ALA_DETAIL_ALGORITHM_BASE_H
 
 #include <ala/detail/functional_base.h>
+#include <ala/detail/pair.h>
 #include <ala/iterator.h>
 
 namespace ala {
@@ -51,9 +52,23 @@ constexpr OutputIter move(InputIter first, InputIter last, OutputIter out) {
     return out;
 }
 
+template<class ForwardIter, class T>
+constexpr void fill(ForwardIter first, ForwardIter last, const T &value) {
+    for (; first != last; ++first)
+        *first = value;
+}
+
 template<class It1, class It2>
 constexpr void iter_swap(It1 a, It2 b) {
     ala::swap(*a, *b);
+}
+
+template<class ForwardIter1, class ForwardIter2>
+constexpr ForwardIter2 swap_ranges(ForwardIter1 first1, ForwardIter1 last1,
+                                   ForwardIter2 first2) {
+    while (first1 != last1)
+        ala::iter_swap(first1++, first2++);
+    return first2;
 }
 
 // Comparison operations

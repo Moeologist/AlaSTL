@@ -616,7 +616,7 @@ constexpr decltype(auto) _apply_impl(F &&f, Tuple &&tpl, index_sequence<I...>) {
 }
 
 template<typename F, typename Tuple>
-constexpr decltype(auto) _apply(F &&f, Tuple &&tpl) {
+constexpr decltype(auto) apply(F &&f, Tuple &&tpl) {
     return _apply_impl(
         ala::forward<F>(f), ala::forward<Tuple>(tpl),
         make_index_sequence<tuple_size<remove_reference_t<Tuple>>::value>{});
@@ -687,11 +687,11 @@ constexpr const T &&get(const tuple<Ts...> &&t) noexcept {
 template<typename... Ts>
 tuple(Ts...)->tuple<Ts...>;
 
-template<class T1, class T2>
+template<typename T1, typename T2>
 tuple(pair<T1, T2>)->tuple<T1, T2>;
 #endif
 
-// extra feature
+// extra features
 
 template<template<typename> class Templt, size_t Cur, typename IntSeq, typename... Ts>
 struct _type_pick_impl;

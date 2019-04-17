@@ -12,13 +12,13 @@ using std::forward_iterator_tag;
 using std::bidirectional_iterator_tag;
 using std::random_access_iterator_tag;
 
-template<typename It>
+template<typename Iter>
 struct iterator_traits {
-    using difference_type = typename It::difference_type;
-    using value_type = typename It::value_type;
-    using pointer = typename It::pointer;
-    using reference = typename It::reference;
-    using iterator_category = typename It::iterator_category;
+    using difference_type = typename Iter::difference_type;
+    using value_type = typename Iter::value_type;
+    using pointer = typename Iter::pointer;
+    using reference = typename Iter::reference;
+    using iterator_category = typename Iter::iterator_category;
 };
 
 template<typename T>
@@ -39,19 +39,16 @@ struct iterator_traits<const T *> {
     using iterator_category = random_access_iterator_tag;
 };
 
-template<class It>
+template<class Iter>
 struct reverse_iterator {
-    typedef typename It::iterator_category iterator_category;
-    typedef typename It::value_type value_type;
-    typedef typename It::difference_type difference_type;
-    typedef typename It::pointer pointer;
-    typedef typename It::reference reference;
-    typedef It iterator_type;
-    static_assert(
-        is_same<iterator_category, bidirectional_iterator_tag>::value ||
-            is_same<iterator_category, bidirectional_iterator_tag>::value ||
-            is_same<iterator_category, bidirectional_iterator_tag>::value,
-        "iterator can not reverse");
+    typedef typename iterator_traits<Iter>::iterator_category iterator_category;
+    typedef typename iterator_traits<Iter>::value_type value_type;
+    typedef typename iterator_traits<Iter>::difference_type difference_type;
+    typedef typename iterator_traits<Iter>::pointer pointer;
+    typedef typename iterator_traits<Iter>::reference reference;
+    typedef Iter iterator_type;
+    static_assert(is_base_of<bidirectional_iterator_tag, iterator_category>::value,
+                  "iterator can not reverse");
 
     constexpr reverse_iterator(): current() {}
     constexpr explicit reverse_iterator(iterator_type base): current(base) {}
@@ -70,12 +67,12 @@ struct reverse_iterator {
     }
 
     constexpr reference operator*() const {
-        It tmp = current;
+        Iter tmp = current;
         return (--tmp).operator*();
     }
 
     constexpr pointer operator->() const {
-        It tmp = current;
+        Iter tmp = current;
         return (--tmp).operator->();
     }
 
@@ -105,123 +102,125 @@ struct reverse_iterator {
     constexpr reverse_iterator &operator-=(difference_type n);
 
 protected:
+    template<class>
+    friend class reverse_iterator;
     iterator_type current;
 };
 
-template<class It1, class It2>
-constexpr bool operator==(const reverse_iterator<It1> &lhs,
-                          const reverse_iterator<It2> &rhs) {
+template<class Iter1, class Iter2>
+constexpr bool operator==(const reverse_iterator<Iter1> &lhs,
+                          const reverse_iterator<Iter2> &rhs) {
     return lhs.base() == rhs.base();
 }
 
-template<class It1, class It2>
-constexpr bool operator!=(const reverse_iterator<It1> &lhs,
-                          const reverse_iterator<It2> &rhs) {
+template<class Iter1, class Iter2>
+constexpr bool operator!=(const reverse_iterator<Iter1> &lhs,
+                          const reverse_iterator<Iter2> &rhs) {
     return lhs.base() != rhs.base();
 }
 
-template<class It1, class It2>
-constexpr bool operator<(const reverse_iterator<It1> &lhs,
-                         const reverse_iterator<It2> &rhs);
+template<class Iter1, class Iter2>
+constexpr bool operator<(const reverse_iterator<Iter1> &lhs,
+                         const reverse_iterator<Iter2> &rhs);
 
-template<class It1, class It2>
-constexpr bool operator<=(const reverse_iterator<It1> &lhs,
-                          const reverse_iterator<It2> &rhs);
+template<class Iter1, class Iter2>
+constexpr bool operator<=(const reverse_iterator<Iter1> &lhs,
+                          const reverse_iterator<Iter2> &rhs);
 
-template<class It1, class It2>
-constexpr bool operator>(const reverse_iterator<It1> &lhs,
-                         const reverse_iterator<It2> &rhs);
+template<class Iter1, class Iter2>
+constexpr bool operator>(const reverse_iterator<Iter1> &lhs,
+                         const reverse_iterator<Iter2> &rhs);
 
-template<class It1, class It2>
-constexpr bool operator>=(const reverse_iterator<It1> &lhs,
-                          const reverse_iterator<It2> &rhs);
+template<class Iter1, class Iter2>
+constexpr bool operator>=(const reverse_iterator<Iter1> &lhs,
+                          const reverse_iterator<Iter2> &rhs);
 
-template<class It>
-constexpr reverse_iterator<It> make_reverse_iterator(It i) {
-    return reverse_iterator<It>(i);
+template<class Iter>
+constexpr reverse_iterator<Iter> make_reverse_iterator(Iter i) {
+    return reverse_iterator<Iter>(i);
 };
 
-template<class It>
-struct const_iterator: public It {
-    typedef typename It::iterator_category iterator_category;
-    typedef typename It::difference_type difference_type;
-    typedef const typename It::value_type value_type;
+template<class Iter>
+struct const_iterator: public Iter {
+    typedef typename Iter::iterator_category iterator_category;
+    typedef typename Iter::difference_type difference_type;
+    typedef const typename Iter::value_type value_type;
     typedef const value_type *pointer;
     typedef const value_type &reference;
 
-    constexpr const_iterator(const It &base): It(base) {}
+    constexpr const_iterator(const Iter &base): Iter(base) {}
 
     constexpr reference operator*() const {
-        return this->It::operator*();
+        return this->Iter::operator*();
     }
 
     constexpr pointer operator->() const {
-        return this->It::operator->();
+        return this->Iter::operator->();
     }
 
     constexpr reference operator[](difference_type n) const {
-        return this->It::operator[](n);
+        return this->Iter::operator[](n);
     }
 };
 
-template<class It1, class It2>
-constexpr bool operator==(const const_iterator<It1> &lhs,
-                          const const_iterator<It2> &rhs) {
-    return static_cast<const It1 &>(lhs) == static_cast<const It2 &>(rhs);
+template<class Iter1, class Iter2>
+constexpr bool operator==(const const_iterator<Iter1> &lhs,
+                          const const_iterator<Iter2> &rhs) {
+    return static_cast<const Iter1 &>(lhs) == static_cast<const Iter2 &>(rhs);
 }
 
-template<class It1, class It2>
-constexpr bool operator!=(const const_iterator<It1> &lhs,
-                          const const_iterator<It2> &rhs) {
-    return static_cast<const It1 &>(lhs) != static_cast<const It2 &>(rhs);
+template<class Iter1, class Iter2>
+constexpr bool operator!=(const const_iterator<Iter1> &lhs,
+                          const const_iterator<Iter2> &rhs) {
+    return static_cast<const Iter1 &>(lhs) != static_cast<const Iter2 &>(rhs);
 }
 
-template<class It1, class It2>
-constexpr bool operator<(const const_iterator<It1> &lhs,
-                         const const_iterator<It2> &rhs);
+template<class Iter1, class Iter2>
+constexpr bool operator<(const const_iterator<Iter1> &lhs,
+                         const const_iterator<Iter2> &rhs);
 
-template<class It1, class It2>
-constexpr bool operator<=(const const_iterator<It1> &lhs,
-                          const const_iterator<It2> &rhs);
+template<class Iter1, class Iter2>
+constexpr bool operator<=(const const_iterator<Iter1> &lhs,
+                          const const_iterator<Iter2> &rhs);
 
-template<class It1, class It2>
-constexpr bool operator>(const const_iterator<It1> &lhs,
-                         const const_iterator<It2> &rhs);
+template<class Iter1, class Iter2>
+constexpr bool operator>(const const_iterator<Iter1> &lhs,
+                         const const_iterator<Iter2> &rhs);
 
-template<class It1, class It2>
-constexpr bool operator>=(const const_iterator<It1> &lhs,
-                          const const_iterator<It2> &rhs);
+template<class Iter1, class Iter2>
+constexpr bool operator>=(const const_iterator<Iter1> &lhs,
+                          const const_iterator<Iter2> &rhs);
 
-template<class It>
+template<class Iter>
 constexpr enable_if_t<is_base_of<random_access_iterator_tag,
-                                 typename iterator_traits<It>::iterator_category>::value,
-                      typename iterator_traits<It>::difference_type>
-distance(It first, It last) {
+                                 typename iterator_traits<Iter>::iterator_category>::value,
+                      typename iterator_traits<Iter>::difference_type>
+distance(Iter first, Iter last) {
     return last - first;
 }
 
-template<class It>
+template<class Iter>
 constexpr enable_if_t<!is_base_of<random_access_iterator_tag,
-                                  typename iterator_traits<It>::iterator_category>::value,
-                      typename iterator_traits<It>::difference_type>
-distance(It first, It last) {
-    typename iterator_traits<It>::difference_type ret = 0;
+                                  typename iterator_traits<Iter>::iterator_category>::value,
+                      typename iterator_traits<Iter>::difference_type>
+distance(Iter first, Iter last) {
+    typename iterator_traits<Iter>::difference_type ret = 0;
     for (; first != last; ++first)
         ++ret;
     return ret;
 }
 
-template<class It, class Distance>
+template<class Iter, class Distance>
 constexpr enable_if_t<is_base_of<random_access_iterator_tag,
-                                 typename iterator_traits<It>::iterator_category>::value>
-advance(It &it, Distance n) {
+                                 typename iterator_traits<Iter>::iterator_category>::value>
+advance(Iter &it, Distance n) {
     it += n;
 }
 
-template<class It, class Distance>
-constexpr enable_if_t<!is_base_of<random_access_iterator_tag,
-                                  typename iterator_traits<It>::iterator_category>::value>
-advance(It &it, Distance n) {
+template<class Iter, class Distance>
+constexpr enable_if_t<!is_base_of<
+    random_access_iterator_tag, typename iterator_traits<Iter>::iterator_category>::value>
+advance(Iter &it, Distance n) {
     if (n > 0)
         for (Distance i = 0; i < n; ++i)
             ++it;

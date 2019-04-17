@@ -19,6 +19,4 @@ const T *addressof(const T &&) = delete;
 
 } // namespace ala
 
-#include <ala/detail/external/allocator.h>
-
 #endif // HEAD

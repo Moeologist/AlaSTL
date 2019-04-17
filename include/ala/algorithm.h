@@ -261,14 +261,6 @@ constexpr BidirIter2 move_backward(BidirIter1 first, BidirIter1 last,
     return out;
 }
 
-template<class ForwardIter1, class ForwardIter2>
-constexpr ForwardIter2 swap_ranges(ForwardIter1 first1, ForwardIter1 last1,
-                                   ForwardIter2 first2) {
-    while (first1 != last1)
-        ala::iter_swap(first1++, first2++);
-    return first2;
-}
-
 template<class InputIter, class OutputIter, class UnaryOperation>
 constexpr OutputIter transform(InputIter first, InputIter last, OutputIter out,
                                UnaryOperation unary_op) {
@@ -317,12 +309,6 @@ constexpr OutputIter replace_copy_if(InputIter first, InputIter last,
     for (; first != last; ++first)
         *out++ = pred(*first) ? new_value : *first;
     return out;
-}
-
-template<class ForwardIter, class T>
-constexpr void fill(ForwardIter first, ForwardIter last, const T &value) {
-    for (; first != last; ++first)
-        *first = value;
 }
 
 template<class OutputIter, class Size, class T>

@@ -5,9 +5,6 @@
 
 namespace ala {
 
-template<typename... Ts>
-struct _type_;
-
 template<typename T>
 struct tuple_size;
 
@@ -57,6 +54,9 @@ struct tuple;
 template<typename, typename>
 struct pair;
 
+template<typename, size_t>
+struct array;
+
 } // namespace ala
 
 #if _ALA_ENABLE_STRUCT_BIND
@@ -65,6 +65,7 @@ namespace std {
 #if defined(_LIBCPP_ABI_NAMESPACE)
 inline namespace _LIBCPP_ABI_NAMESPACE {
 #endif
+
 template<size_t, typename>
 struct tuple_element;
 
@@ -75,7 +76,37 @@ struct tuple_size;
 }
 #endif
 
-#define ALA_MAKE_STRUCT_BIND(_type_) \
+template<size_t I, typename T, ala::size_t N>
+struct tuple_element<I, ala::array<T, N>>
+    : ala::tuple_element<I, ala::array<T, N>> {};
+
+template<size_t I, typename T, ala::size_t N>
+struct tuple_element<I, const ala::array<T, N>>
+    : ala::tuple_element<I, const ala::array<T, N>> {};
+
+template<size_t I, typename T, ala::size_t N>
+struct tuple_element<I, volatile ala::array<T, N>>
+    : ala::tuple_element<I, volatile ala::array<T, N>> {};
+
+template<size_t I, typename T, ala::size_t N>
+struct tuple_element<I, const volatile ala::array<T, N>>
+    : ala::tuple_element<I, const volatile ala::array<T, N>> {};
+
+template<typename T, ala::size_t N>
+struct tuple_size<ala::array<T, N>>: ala::tuple_size<ala::array<T, N>> {};
+
+template<typename T, ala::size_t N>
+struct tuple_size<const ala::array<T, N>>: ala::tuple_size<ala::array<T, N>> {};
+
+template<typename T, ala::size_t N>
+struct tuple_size<volatile ala::array<T, N>>: ala::tuple_size<ala::array<T, N>> {
+};
+
+template<typename T, ala::size_t N>
+struct tuple_size<const volatile ala::array<T, N>>
+    : ala::tuple_size<ala::array<T, N>> {};
+
+#define ALA_MAKE_TUPLE_STRUCT_BIND(_type_) \
     template<size_t I, typename... Ts> \
     struct tuple_element<I, ala::_type_<Ts...>> \
         : ala::tuple_element<I, ala::_type_<Ts...>> {}; \
@@ -108,8 +139,10 @@ struct tuple_size;
     struct tuple_size<const volatile ala::_type_<Ts...>> \
         : ala::tuple_size<ala::_type_<Ts...>> {};
 
-ALA_MAKE_STRUCT_BIND(tuple)
-ALA_MAKE_STRUCT_BIND(pair)
+ALA_MAKE_TUPLE_STRUCT_BIND(tuple)
+ALA_MAKE_TUPLE_STRUCT_BIND(pair)
+
+#undef ALA_MAKE_TUPLE_STRUCT_BIND
 
 } // namespace std
 #endif

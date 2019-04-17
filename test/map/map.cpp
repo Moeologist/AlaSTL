@@ -450,6 +450,11 @@ void test17() {
 }
 
 int main() {
+    ala::map<int,char> mp;
+    mp[1]='c';
+    // auto a= mp.extract(1);
+    ala::multimap<int,char> mmp;
+    mmp.insert(mp.extract(1));
     test1();
     test2();
     test3();

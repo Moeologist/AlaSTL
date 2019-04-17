@@ -68,9 +68,6 @@ struct is_specification : false_type {};
 template<template<typename...> class Template, typename... TArgs>
 struct is_specification<Template<TArgs...>, Template> : true_type {};
 
-template<typename T>
-struct reference_wrapper;
-
 } // namespace ala
 
 #include <ala/detail/utility_base.h>

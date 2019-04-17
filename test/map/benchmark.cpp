@@ -9,7 +9,7 @@ ala::xoshiro128p x{10086};
 ala::xoshiro128p y{10086};
 ala::xoshiro<int, 1, 2, true, 0> xx;
 
-constexpr auto bp = 10;
+constexpr auto bp = 1000;
 
 void test() {
     ala::map<int, char> m, n;
@@ -19,16 +19,18 @@ void test() {
         for (int i = 0; i < sz; ++i)
             m[i] = 'L';
         for (int i = 0; i < sz; ++i)
+            n[i] = 'L';
+        for (int i = 0; i < sz; ++i)
             n[x()] = 'L';
-        std::cout << "sz:" << m.size() + n.size() << "\n";
-        // m.merge(n);
-        // m.merge(ala::map<int, char>{});
-        std::cout << "sz:" << m.size() + n.size() << "\n";
+        auto sm = m.size() + n.size();
+        m.merge(n);
+        m.merge(ala::map<int, char>{});
+        assert(sm == m.size() + n.size());
         for (int i = 0; i < sz; ++i)
             m.erase(i);
         for (auto i = m.begin(); i != m.end();)
             i = m.erase(i);
-        std::cout << m.size() << std::endl;
+        // std::cout << m.size() << std::endl;
     }
 }
 
@@ -57,6 +59,7 @@ void test1() {
 // cflags=-fsanitize=address
 
 int main() {
+    test();
     std::cout << ala::timer(test);
     std::cout << ala::timer(test1);
     ala::set<int> st;

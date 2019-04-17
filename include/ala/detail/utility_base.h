@@ -8,6 +8,9 @@
 namespace ala {
 
 template<typename T>
+struct reference_wrapper;
+
+template<typename T>
 add_rvalue_reference_t<T> declval() noexcept;
 
 template<typename T>
