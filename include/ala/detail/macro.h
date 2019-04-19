@@ -2,25 +2,27 @@
 #define _ALA_DETAIL_MACRO_H
 
 #define ALA_HAS_MEM(mem) \
-    template<typename _type, typename = ala::void_t<>> \
+    template<typename _type_, typename = void> \
     struct _has_##mem: ala::false_type {}; \
-    template<typename _type> \
-    struct _has_##mem<_type, ala::void_t<typename _type::mem>>: ala::true_type {};
+    template<typename _type_> \
+    struct _has_##mem<_type_, ala::void_t<decltype(&_type_::mem)>> \
+        : ala::true_type {};
 
-#define ALA_HAS_MEM_VAL(memval) \
-    template<typename _type, typename = ala::void_t<>> \
-    struct _has_##memval: ala::false_type {}; \
-    template<typename _type> \
-    struct _has_##memval<_type, ala::void_t<decltype(&ala::declval<_type>().memval)>>: ala::true_type {};
+#define ALA_HAS_MEM_TYPE(mem) \
+    template<typename _type_, typename = void> \
+    struct _has_##mem: ala::false_type {}; \
+    template<typename _type_> \
+    struct _has_##mem<_type_, ala::void_t<typename _type_::mem>> \
+        : ala::true_type {};
 
 #define ALA_HAS_MEM_TYPEDEF(cls, mem, def) \
-    template<typename _type, typename = ala::void_t<>> \
+    template<typename _type_, typename = void> \
     struct _get_##mem { \
         typedef def type; \
     }; \
-    template<typename _type> \
-    struct _get_##mem<_type, ala::void_t<typename _type::mem>> { \
-        typedef typename _type::mem type; \
+    template<typename _type_> \
+    struct _get_##mem<_type_, ala::void_t<typename _type_::mem>> { \
+        typedef typename _type_::mem type; \
     }; \
     typedef typename _get_##mem<cls>::type mem;
 

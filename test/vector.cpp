@@ -2,9 +2,6 @@
 #include <iostream>
 #include <vector>
 
-struct t {
-    void f(){};
-};
 
 int main() {
     using namespace ala;
@@ -13,8 +10,9 @@ int main() {
     for (const auto &i : v)
         std::cout << i << ",";
     v.push_back(1);
-    assert((v == vector{2, 3, 4}));
+    // assert((v == vector<int>{2, 3, 4}));
     for (const auto &i : v)
         std::cout << i << ",";
+    std::cout << __WCHAR_MAX__;
     return 0;
 }

@@ -1,10 +1,6 @@
 #ifndef _ALA_CONFIG_SUPPORT_H
 #define _ALA_CONFIG_SUPPORT_H
 
-#if !defined(_ALA_CLANG) && !defined(__is_identifier)
-#define __is_identifier(x) 0
-#endif
-
 #if defined(_ALA_MSVC)
 
 #if defined(__has_cpp_attribute)

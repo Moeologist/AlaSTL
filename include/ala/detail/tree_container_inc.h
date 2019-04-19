@@ -68,10 +68,11 @@ public:
     typedef Alloc allocator_type;
     typedef value_type &reference;
     typedef const value_type &const_reference;
-    typedef typename allocator_traits<Alloc>::size_type size_type;
-    typedef typename allocator_traits<Alloc>::difference_type difference_type;
-    typedef typename allocator_traits<Alloc>::pointer pointer;
-    typedef typename allocator_traits<Alloc>::const_pointer const_pointer;
+    typedef allocator_traits<allocator_type> _alloc_traits;
+    typedef typename _alloc_traits::size_type size_type;
+    typedef typename _alloc_traits::difference_type difference_type;
+    typedef typename _alloc_traits::pointer pointer;
+    typedef typename _alloc_traits::const_pointer const_pointer;
 
 #if IS_MAP
     struct value_compare {

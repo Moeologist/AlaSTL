@@ -138,16 +138,17 @@ protected:
     Ptr _ptr;
 };
 
-template<class Data, class Comp, class Alloc, bool Uniq,
-         class NAlloc = typename Alloc::template rebind<rb_node<Data>>::other>
+template<class Data, class Comp, class Alloc, bool Uniq>
 class rb_tree {
 public:
     typedef Data value_type;
     typedef Comp value_compare;
     typedef Alloc allocator_type;
     typedef rb_node<Data> node_type;
-    typedef NAlloc node_allocator_type;
-    typedef typename node_allocator_type::pointer node_pointer;
+    typedef allocator_traits<allocator_type> _alloc_traits;
+    typedef typename _alloc_traits::template rebind_alloc<node_type> _node_alloc;
+    typedef typename _alloc_traits::template rebind_traits<node_type> _nalloc_traits;
+    typedef typename _nalloc_traits::pointer node_pointer;
     static constexpr bool is_uniq = Uniq;
 
     static_assert(is_same<node_pointer, node_type *>::value,
@@ -156,12 +157,16 @@ public:
     rb_tree(const value_compare &cmp, const allocator_type &a) noexcept(
         is_nothrow_default_constructible<allocator_type>::value
             &&is_nothrow_default_constructible<value_compare>::value)
-        : _comp(cmp), _alloc(a), _nalloc(), _size(0), _root(nullptr) {
+        : _comp(cmp), _alloc(a), _nalloc(a), _size(0), _root(nullptr) {
         initializer_nil();
     }
 
     rb_tree(const rb_tree &other)
-        : _comp(other._comp), _alloc(other._alloc), _nalloc(other._nalloc),
+        : _comp(other._comp),
+          _alloc(_alloc_traits::select_on_container_copy_construction(
+              other._alloc)),
+          _nalloc(_nalloc_traits::select_on_container_copy_construction(
+              other._alloc)),
           _size(other._size) {
         initializer_nil();
         _root = copy_tree(other._root);
@@ -180,14 +185,14 @@ public:
     }
 
     rb_tree(const rb_tree &other, const allocator_type &a)
-        : _comp(other._comp), _alloc(a), _nalloc(), _size(other._size) {
+        : _comp(other._comp), _alloc(a), _nalloc(a), _size(other._size) {
         initializer_nil();
         _root = copy_tree(other._root);
         fix_nil();
     }
 
     rb_tree(rb_tree &&other, const allocator_type &a)
-        : _comp(other._comp), _alloc(a), _nalloc(), _root(other._root),
+        : _comp(other._comp), _alloc(a), _nalloc(a), _root(other._root),
           _size(other._size) {
         initializer_nil();
         fix_nil();
@@ -197,6 +202,13 @@ public:
     }
 
     rb_tree &operator=(const rb_tree &other) {
+        ALA_CONST_IF(_alloc_traits::propagate_on_container_copy_assignment::value) {
+            _alloc = other._alloc;
+        }
+        ALA_CONST_IF(
+            _nalloc_traits::propagate_on_container_copy_assignment::value) {
+            _nalloc = other._nalloc;
+        }
         destruct_tree(_root);
         _root = copy_tree(other._root);
         fix_nil();
@@ -205,6 +217,13 @@ public:
     }
 
     rb_tree &operator=(rb_tree &&other) {
+        ALA_CONST_IF(_alloc_traits::propagate_on_container_move_assignment::value) {
+            _alloc = ala::move(other._alloc);
+        }
+        ALA_CONST_IF(
+            _nalloc_traits::propagate_on_container_move_assignment::value) {
+            _nalloc = ala::move(other._nalloc);
+        }
         destruct_tree(_root);
         _root = other._root;
         fix_nil();
@@ -262,17 +281,17 @@ public:
     }
 
     void
-    swap(rb_tree &other) noexcept(allocator_type::is_always_equal::value &&
+    swap(rb_tree &other) noexcept(_alloc_traits::is_always_equal::value &&
                                       is_nothrow_swappable<value_compare>::value) {
         ala::swap(_comp, other._comp);
         ala::swap(_root, other._root);
         ala::swap(_left_nil, other._left_nil);
         ala::swap(_right_nil, other._right_nil);
         ala::swap(_size, other._size);
-        ALA_CONST_IF(allocator_type::propagate_on_container_swap::value) {
+        ALA_CONST_IF(_alloc_traits::propagate_on_container_swap::value) {
             ala::swap(_alloc, other._alloc);
         }
-        ALA_CONST_IF(node_allocator_type::propagate_on_container_swap::value) {
+        ALA_CONST_IF(_nalloc_traits::propagate_on_container_swap::value) {
             ala::swap(_nalloc, other._nalloc);
         }
     }
@@ -288,12 +307,12 @@ public:
 
     template<class K>
     node_pointer find(const K &key) const {
-        decltype(auto) comp = key_comp();
+        decltype(auto) comp = _key_comp();
         node_pointer current = _root;
         while (!is_nil(current))
-            if (comp(key, key(current->_data)))
+            if (comp(key, _key(current->_data)))
                 current = current->_left;
-            else if (comp(key(current->_data), key))
+            else if (comp(_key(current->_data), key))
                 current = current->_right;
             else
                 return current;
@@ -302,12 +321,12 @@ public:
 
     template<class K>
     size_t count(const K &key, node_pointer current) const {
-        decltype(auto) comp = key_comp();
+        decltype(auto) comp = _key_comp();
         size_t eql = 0;
         while (!is_nil(current)) {
-            if (comp(key, key(current->_data)))
+            if (comp(key, _key(current->_data)))
                 current = current->_left;
-            else if (comp(key(current->_data), key))
+            else if (comp(_key(current->_data), key))
                 current = current->_right;
             else {
                 return 1 + count(key, current->_left) +
@@ -324,26 +343,29 @@ public:
 
     template<class K>
     bool contains(const K &key) const {
-        decltype(auto) comp = key_comp();
+        decltype(auto) comp = _key_comp();
         node_pointer current = _root;
         while (!is_nil(current))
-            if (comp(key, key(current->_data)))
+            if (comp(key, _key(current->_data)))
                 current = current->_left;
-            else if (comp(key(current->_data), key))
+            else if (comp(_key(current->_data), key))
                 current = current->_right;
             else
                 return true;
         return false;
     }
 
+    template<typename...>
+    struct Fuck;
+
     template<class K>
     bool erase(const K &key) {
-        decltype(auto) comp = key_comp();
+        decltype(auto) comp = _key_comp();
         node_pointer current = _root;
         while (!is_nil(current)) {
-            if (comp(key, key(current->_data)))
+            if (comp(key, _key(current->_data)))
                 current = current->_left;
-            else if (comp(key(current->_data), key))
+            else if (comp(_key(current->_data), key))
                 current = current->_right;
             else {
                 remove(current);
@@ -431,64 +453,59 @@ public:
 
 protected:
     node_pointer _root;
-    unsigned char _nil_mem[sizeof(rb_node<value_type>) * 2];
-    const node_pointer _left_nil = reinterpret_cast<node_pointer>(_nil_mem);
+    aligned_storage_t<sizeof(node_type)> _left_nil_mem;
+    aligned_storage_t<sizeof(node_type)> _right_nil_mem;
+    const node_pointer _left_nil = reinterpret_cast<node_pointer>(&_left_nil_mem);
     const node_pointer _right_nil = reinterpret_cast<node_pointer>(
-        _nil_mem + sizeof(rb_node<Data>));
+        &_right_nil_mem);
 
     size_t _size;
     allocator_type _alloc;
-    node_allocator_type _nalloc;
+    _node_alloc _nalloc;
     value_compare _comp;
 
-    ALA_HAS_MEM_VAL(first)
-    ALA_HAS_MEM_VAL(comp)
+    ALA_HAS_MEM(first)
+    ALA_HAS_MEM(comp)
 
     static_assert(_has_first<value_type>::value == _has_comp<value_compare>::value,
                   "key compare check failed");
 
     template<typename Dummy = value_type,
              typename = enable_if_t<_has_first<Dummy>::value>>
-    const auto &key(const value_type &v) const {
+    const auto &_key(const value_type &v) const {
         return v.first;
     }
 
     template<typename Dummy = value_type,
              typename = enable_if_t<!_has_first<Dummy>::value>>
-    const value_type &key(const value_type &v) const {
+    const value_type &_key(const value_type &v) const {
         return v;
     }
 
     template<typename Dummy = value_compare,
              typename = enable_if_t<_has_comp<Dummy>::value>>
-    const auto &key_comp() const {
+    const auto &_key_comp() const {
         return _comp.comp;
     }
 
     template<typename Dummy = value_compare,
              typename = enable_if_t<!_has_comp<Dummy>::value>>
-    const value_compare &key_comp() const {
+    const value_compare &_key_comp() const {
         return _comp;
-    }
-
-    node_pointer allocate_node() {
-        node_pointer node = _nalloc.allocate(1);
-        node->_is_nil = true;
-        return node;
     }
 
     template<class... Args>
     node_pointer construct_node(Args &&... args) {
         node_pointer node = _nalloc.allocate(1);
-        _alloc.construct(ala::addressof(node->_data),
-                         ala::forward<Args>(args)...);
+        _alloc_traits::construct(_alloc, ala::addressof(node->_data),
+                                 ala::forward<Args>(args)...);
         node->_is_nil = false;
         return node;
     }
 
     void destruct_node(node_pointer &node) {
         if (!node->_is_nil)
-            _alloc.destroy(ala::addressof(node->_data));
+            _alloc_traits::destroy(_alloc, ala::addressof(node->_data));
         _nalloc.deallocate(node, 1);
         node = nullptr;
     }
@@ -501,21 +518,11 @@ protected:
         destruct_node(node);
     }
 
-    node_pointer copy_node(node_pointer other) {
-        node_pointer node;
-        if (other->_is_nil) {
-            node = allocate_node();
-            node->_nil_type = other->_nil_type;
-        } else
-            node = construct_node(other->_data);
-        node->_color = other->_color;
-        return node;
-    }
-
     node_pointer copy_tree(node_pointer other, node_pointer parent = nullptr) {
         if (is_nil(other))
             return nullptr;
-        node_pointer node = copy_node(other);
+        node_pointer node = construct_node(other->_data);
+        node->_color = other->_color;
         node->_parent = parent;
         node->_left = copy_tree(other->_left, node);
         node->_right = copy_tree(other->_right, node);

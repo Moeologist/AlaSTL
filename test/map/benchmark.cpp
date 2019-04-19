@@ -5,14 +5,12 @@
 #include <ala/timer.h>
 #include <iostream>
 
-ala::xoshiro128p x{10086};
-ala::xoshiro128p y{10086};
-ala::xoshiro<int, 1, 2, true, 0> xx;
-
-constexpr auto bp = 100;
+constexpr auto bp = 10000;
 
 void test() {
-    ala::map<int, char> m, n;
+    using namespace ala;
+    ala::xoshiro128p x{10086};
+    map<int, char> m, n;
     for (int sz = 0; sz < bp; ++sz) {
         for (int i = 0; i < sz; ++i)
             m[x()] = 'L';
@@ -22,10 +20,10 @@ void test() {
             n[i] = 'L';
         for (int i = 0; i < sz; ++i)
             n[x()] = 'L';
-        auto sm = m.size() + n.size();
-        m.merge(n);
-        m.merge(ala::map<int, char>{});
-        assert(sm == m.size() + n.size());
+        // auto sm = m.size() + n.size();
+        // m.merge(n);
+        // m.merge(map<int, char>{});
+        // assert(sm == m.size() + n.size());
         for (int i = 0; i < sz; ++i)
             m.erase(i);
         for (auto i = m.begin(); i != m.end();)
@@ -35,32 +33,51 @@ void test() {
 }
 
 void test1() {
-    std::map<int, char> m, n;
-    std::map<int, char>::iterator i();
+    using namespace std;
+    map<int, char> m, n;
+    ala::xoshiro128p x{10086};
     for (int sz = 0; sz < bp; ++sz) {
         for (int i = 0; i < sz; ++i)
-            m[y()] = 'L';
+            m[x()] = 'L';
         for (int i = 0; i < sz; ++i)
             m[i] = 'L';
         for (int i = 0; i < sz; ++i)
-            n[y()] = 'L';
-        std::cout << "sz:" << m.size() + n.size() << "\n";
+            n[i] = 'L';
+        for (int i = 0; i < sz; ++i)
+            n[x()] = 'L';
+        // auto sm = m.size() + n.size();
         // m.merge(n);
-        // m.merge(ala::map<int, char>{});
-        std::cout << "sz:" << m.size() + n.size() << "\n";
+        // m.merge(map<int, char>{});
+        // assert(sm == m.size() + n.size());
         for (int i = 0; i < sz; ++i)
             m.erase(i);
         for (auto i = m.begin(); i != m.end();)
             i = m.erase(i);
-        std::cout << m.size() << std::endl;
+        // std::cout << m.size() << std::endl;
     }
 }
-//@build_type=dbg
+//@build_type=rel
 
 // cflags=-fsanitize=address
+template<typename _type_, typename = ala::void_t<>>
+struct _has_construct: ala::false_type {};
+template<typename _type_>
+struct _has_construct<_type_, ala::void_t<decltype(&_type_::construct)>>
+    : ala::true_type {};
+
+struct t {
+    void f(){};
+    int p;
+};
+
+ALA_HAS_MEM(f)
+ALA_HAS_MEM(p)
+ALA_HAS_MEM(cc)
+
+static_assert(_has_f<t>::value);
+static_assert(_has_p<t>::value);
 
 int main() {
-    test();
     std::cout << ala::timer(test);
     std::cout << ala::timer(test1);
     ala::set<int> st;

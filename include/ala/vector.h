@@ -15,17 +15,17 @@ public:
     typedef Alloc allocator_type;
     typedef value_type &reference;
     typedef const value_type &const_reference;
-    typedef typename allocator_traits<Alloc>::size_type size_type;
-    typedef typename allocator_traits<Alloc>::difference_type difference_type;
-    typedef typename allocator_traits<Alloc>::pointer pointer;
-    typedef typename allocator_traits<Alloc>::const_pointer const_pointer;
+    typedef allocator_traits<allocator_type> _alloc_traits;
+    typedef typename _alloc_traits::size_type size_type;
+    typedef typename _alloc_traits::difference_type difference_type;
+    typedef typename _alloc_traits::pointer pointer;
+    typedef typename _alloc_traits::const_pointer const_pointer;
     typedef pointer iterator;
     typedef const_pointer const_iterator;
     typedef ala::reverse_iterator<iterator> reverse_iterator;
     typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
 
 private:
-    typedef allocator_traits<Alloc> _alloc_traits;
     pointer _data;
     size_type _capacity;
     size_type _size;
@@ -413,7 +413,7 @@ public:
 
     iterator erase(const_iterator position) {
         ALA_CONST_IF(!is_trivially_destructible<value_type>::value) {
-            _alloc_traits::destroy(_alloc, _data + position);
+            _alloc_traits::destroy(_alloc, position);
         }
         if (position + 1 < cend())
             ala::move(position + 1, cend(), position);
@@ -435,17 +435,15 @@ public:
         swap(_data, other._data);
         swap(_capacity, other._capacity);
         swap(_size, other._size);
-        ALA_CONST_IF(
-            allocator_traits<
-                allocator_type>::propagate_on_container_move_assignment::value) {
+        ALA_CONST_IF(_alloc_traits::propagate_on_container_move_assignment::value) {
             swap(_alloc, other._alloc);
         }
     }
 
     void clear() noexcept {
         ALA_CONST_IF(!is_trivially_destructible<value_type>::value) {
-            size_type size = size();
-            for (size_type i = 0; i < size; ++i, --_size)
+            size_type sz = size();
+            for (size_type i = 0; i < sz; ++i, --_size)
                 _alloc.destroy(_data + i);
         }
         _size = 0;

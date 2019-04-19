@@ -17,7 +17,7 @@ constexpr T *addressof(T &arg) noexcept {
 
 template<typename Ptr>
 struct pointer_traits {
-    ALA_HAS_MEM(element_type)
+    ALA_HAS_MEM_TYPE(element_type)
     template<typename T, bool = _has_element_type<T>::value>
     struct _get_element_type {};
 
@@ -97,9 +97,7 @@ struct allocator {
     typedef const T &const_reference;
     typedef size_t size_type;
     typedef ptrdiff_t difference_type;
-    typedef false_type propagate_on_container_copy_assignment;
     typedef true_type propagate_on_container_move_assignment;
-    typedef false_type propagate_on_container_swap;
     typedef true_type is_always_equal;
     template<class U>
     struct rebind {
@@ -188,7 +186,7 @@ struct allocator_traits {
     template<typename T>
     using rebind_traits = ala::allocator_traits<rebind_alloc<T>>;
 
-    ALA_HAS_MEM_VAL(select_on_container_copy_construction)
+    ALA_HAS_MEM(select_on_container_copy_construction)
 
     template<typename Dummy>
     static enable_if_t<_has_select_on_container_copy_construction<Dummy>::value, Dummy>
@@ -202,42 +200,43 @@ struct allocator_traits {
         return a;
     }
 
-    ALA_HAS_MEM_VAL(construct)
+    template<typename Void, typename A, typename P, typename... Args>
+    struct _has_construct: ala::false_type {};
 
-    template<typename Dummy, typename T, typename... Args>
-    static enable_if_t<_has_construct<Dummy>::value>
-    _construct(const Dummy &a, T *p, Args &&... args) {
+    template<typename A, typename P, typename... Args>
+    struct _has_construct<
+        void_t<decltype(declval<A>().construct(declval<P>(), declval<Args>()...))>,
+        A, P, Args...>: ala::true_type {};
+
+    template<typename Void, typename A, typename P>
+    struct _has_destroy: ala::false_type {};
+
+    template<typename A, typename P>
+    struct _has_destroy<void_t<decltype(declval<A>().destroy(declval<P>()))>, A, P>
+        : ala::true_type {};
+
+    template<typename T, typename... Args>
+    static enable_if_t<_has_construct<void, allocator_type &, T *, Args...>::value>
+    construct(allocator_type &a, T *p, Args &&... args) {
         a.construct(p, ala::forward<Args>(args)...);
     }
 
-    template<typename Dummy, typename T, typename... Args>
-    static enable_if_t<!_has_construct<Dummy>::value>
-    _construct(const Dummy &a, T *p, Args &&... args) {
+    template<typename T, typename... Args>
+    static enable_if_t<!_has_construct<void, allocator_type &, T *, Args...>::value>
+    construct(allocator_type &a, T *p, Args &&... args) {
         ::new ((void *)p) T(ala::forward<Args>(args)...);
     }
 
-    ALA_HAS_MEM_VAL(destroy)
-
-    template<typename Dummy, typename T>
-    static enable_if_t<_has_destroy<Dummy>::value> _destroy(const Dummy &a, T *p) {
-        a.destroy(a, p);
-    }
-
-    template<typename Dummy, typename T>
-    static enable_if_t<!_has_destroy<Dummy>::value> _destroy(const Dummy &a,
-                                                             T *p) {
-        p->~U();
-    }
-
-    template<typename T, typename... Args>
-    static void construct(allocator_type &a, T *p, Args &&... args) {
-        return allocator_traits::template _construct<allocator_type, T>(
-            a, p, ala::forward<Args>(args)...);
+    template<typename T>
+    static enable_if_t<_has_destroy<void, allocator_type &, T *>::value>
+    destroy(allocator_type &a, T *p) {
+        a.destroy(p);
     }
 
     template<typename T>
-    static void destroy(allocator_type &a, T *p) {
-        return allocator_traits::template _destroy<allocator_type, T>(a, p);
+    static enable_if_t<!_has_destroy<void, allocator_type &, T *>::value>
+    destroy(allocator_type &a, T *p) {
+        p->~T();
     }
 
     static allocator_type

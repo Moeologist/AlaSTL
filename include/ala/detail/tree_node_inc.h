@@ -16,9 +16,7 @@
 
 namespace ala {
 
-template<class NodePtr, class Alloc,
-         class NAlloc = typename Alloc::template rebind<
-             typename pointer_traits<NodePtr>::element_type>::other>
+template<class NodePtr, class Alloc>
 struct NODE {
 #if IS_MAP
     typedef remove_const_t<decltype(declval<NodePtr>()->_data.first)> key_type;
@@ -27,6 +25,10 @@ struct NODE {
     typedef decltype(declval<NodePtr>()->_data) value_type;
 #endif
     typedef Alloc allocator_type;
+    typedef typename pointer_traits<NodePtr>::element_type _ele_type;
+    typedef allocator_traits<allocator_type> _alloc_traits;
+    typedef typename _alloc_traits::template rebind_alloc<_ele_type> _node_alloc;
+    typedef typename _alloc_traits::template rebind_traits<_ele_type> _node_alloc_traits;
 
     constexpr NODE() noexcept: _ptr(nullptr) {}
 
@@ -41,12 +43,12 @@ struct NODE {
     NODE &operator=(NODE &&nh) {
         if (_ptr != nullptr) {
             _a.destroy(ala::addressof(_ptr->_data));
-            NAlloc().deallocate(_ptr, 1);
+            _node_alloc().deallocate(_ptr, 1);
         }
         if (nh._ptr != nullptr) {
             _ptr = ala::move(nh._ptr);
-            ALA_CONST_IF(allocator_traits<allocator_type>::
-                             propagate_on_container_move_assignment::value) {
+            ALA_CONST_IF(
+                _alloc_traits::propagate_on_container_move_assignment::value) {
                 _a = ala::move(nh._ptr);
             }
         }
@@ -56,7 +58,7 @@ struct NODE {
     ~NODE() {
         if (_ptr != nullptr) {
             _a.destroy(ala::addressof(_ptr->_data));
-            NAlloc().deallocate(_ptr, 1);
+            _node_alloc().deallocate(_ptr, 1);
         }
     }
 
@@ -86,11 +88,10 @@ struct NODE {
     }
 #endif
 
-    void swap(NODE &nh) noexcept(allocator_type::propagate_on_container_swap::value ||
-                                 allocator_type::is_always_equal::value) {
+    void swap(NODE &nh) noexcept(_alloc_traits::propagate_on_container_swap::value ||
+                                 _alloc_traits::is_always_equal::value) {
         ala::swap(_ptr, nh._ptr);
-        ALA_CONST_IF(
-            allocator_traits<allocator_type>::propagate_on_container_swap::value) {
+        ALA_CONST_IF(_alloc_traits::propagate_on_container_swap::value) {
             ala::swap(_a, nh._a);
         }
     }
@@ -116,9 +117,9 @@ private:
     }
 };
 
-template<class NodePtr, class Alloc, class NAlloc>
-void swap(NODE<NodePtr, Alloc, NAlloc> &lhs,
-          NODE<NodePtr, Alloc, NAlloc> &rhs) noexcept(noexcept(lhs.swap(rhs))) {
+template<class NodePtr, class Alloc>
+void swap(NODE<NodePtr, Alloc> &lhs,
+          NODE<NodePtr, Alloc> &rhs) noexcept(noexcept(lhs.swap(rhs))) {
     lhs.swap(rhs);
 }
 

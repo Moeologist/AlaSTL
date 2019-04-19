@@ -2,6 +2,7 @@
 #define _ALA_ITERATOR_H
 
 #include <ala/type_traits.h>
+
 #include <iterator>
 
 namespace ala {

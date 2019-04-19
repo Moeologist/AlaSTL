@@ -2,16 +2,13 @@
 #define _ALA_DETAIL_EXTERNAL_H
 
 #include <new>
-
 #include <stdexcept>
 #include <initializer_list>
 #include <limits>
 
 #include <cassert>
-
 #include <cstdint>
 #include <cstddef>
-
 #include <cstring>
 
 namespace ala {

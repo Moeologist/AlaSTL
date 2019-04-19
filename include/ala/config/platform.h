@@ -7,7 +7,7 @@
 #define _ALA_CLANG
 #define _ALA_CLANG_MSVC
 
-#if __clang_major__ < 4
+#if __clang_major__ * 10 + __clang_minor < 35
 #error "unsupported compiler; ala need c++14 compiler at least."
 #endif
 
@@ -25,7 +25,7 @@
 
 #define _ALA_CLANG
 #define _ALA_CLANG_GNU
-#if __clang_major__ < 4
+#if __clang_major__ * 10 + __clang_minor < 35
 #error "unsupported compiler; ala needs c++14 compiler at least."
 #endif
 
