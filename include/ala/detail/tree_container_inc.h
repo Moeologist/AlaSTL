@@ -103,8 +103,12 @@ protected:
 #endif
 
 public:
+#if IS_MAP
     typedef rb_iterator<typename tree_type::node_pointer> iterator;
-    typedef ala::const_iterator<iterator> const_iterator;
+#else
+    typedef rb_const_iterator<typename tree_type::node_pointer> iterator;
+#endif
+    typedef rb_const_iterator<typename tree_type::node_pointer> const_iterator;
     typedef ala::reverse_iterator<iterator> reverse_iterator;
     typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
 #if IS_MAP
@@ -497,11 +501,13 @@ public:
         return position;
     }
 
+#if IS_MAP
     iterator erase(const_iterator position) {
         const_iterator tmp = position++;
         tree.remove(tmp._ptr);
         return position;
     }
+#endif
 
     size_type erase(const key_type &k) {
         return tree.erase(k);

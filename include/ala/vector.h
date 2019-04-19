@@ -325,9 +325,10 @@ public:
 
     // modifiers:
     template<class... Args>
-    void emplace_back(Args &&... args) {
+    reference emplace_back(Args &&... args) {
         expand();
         _alloc.construct(end() - 1, ala::forward<Args>(args)...);
+        return *end();
     }
 
     void push_back(const value_type &v) {

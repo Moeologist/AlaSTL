@@ -62,11 +62,11 @@ struct _class_of_memptr<Ret Class::*> { typedef Class type; };
 template<typename T>
 using _class_of_memptr_t = typename _class_of_memptr<T>::type;
 
-template<typename Type, template<typename...> class Template>
+template<typename Type, template<typename...> class >
 struct is_specification : false_type {};
 
-template<template<typename...> class Template, typename... TArgs>
-struct is_specification<Template<TArgs...>, Template> : true_type {};
+template<template<typename...> class Templt, typename... TArgs>
+struct is_specification<Templt<TArgs...>, Templt> : true_type {};
 
 } // namespace ala
 
@@ -225,19 +225,15 @@ template<typename T> struct is_standard_layout : bool_constant<__is_standard_lay
 
 template<typename T> struct is_pod : bool_constant<__is_pod(T)> {};
 
-#if (defined(_AL_CLANG) && __has_feature(is_literal))
-template<typename T> struct is_literal_type : bool_constant<__is_literal(T)> {};
-#else
 template<typename T> struct is_literal_type : bool_constant<__is_literal_type(T)> {};
-#endif
 
-#if (defined(_ALA_CLANG) && !__is_identifier(__has_unique_object_representations)) || \
+#if (defined(_ALA_CLANG) && !ALA_IS_IDENTIFIER(__has_unique_object_representations)) || \
     (defined(_ALA_GCC) && __GNUC__ >= 7) || \
     (defined(_ALA_MSVC) && MSC_VER >= 1911)
 template<typename T> struct has_unique_object_representations : bool_constant<__has_unique_object_representations(remove_cv_t<T>)> {};
 #endif
 
-#if (defined(_ALA_CLANG) && !__is_identifier(__is_aggregate)) || \
+#if (defined(_ALA_CLANG) && !ALA_IS_IDENTIFIER(__is_aggregate)) || \
     (defined(_ALA_GCC) && __GNUC__ * 1000 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__ >= 7001) || \
     (defined(_ALA_MSVC) && MSC_VER >= 1915)
 template<typename T> struct is_aggregate : bool_constant<__is_aggregate(remove_cv_t<T>)> {};

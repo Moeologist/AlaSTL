@@ -99,7 +99,7 @@ struct _xoshiro_jump<uint32_t> {
 /*
 A    state xor-lshift
 B    state rotate left
-Star use ** scrambler (+ scrambler by default)
+Star use ** scrambler
 I    index of element used for starstar output
 */
 

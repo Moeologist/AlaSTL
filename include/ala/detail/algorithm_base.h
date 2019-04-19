@@ -55,7 +55,7 @@ constexpr enable_if_t<
      is_pointer<InputIter>::value && is_pointer<OutputIter>::value),
     OutputIter>
 copy(InputIter first, InputIter last, OutputIter out) {
-    ala::memmove(reinterpret_cast<void *>(out), reinterpret_cast<void *>(first),
+    ala::memmove((void *)(out), (void *)(first),
                  sizeof(typename iterator_traits<InputIter>::value_type) *
                      (last - first));
     return out + (last - first);

@@ -26,19 +26,19 @@ struct pointer_traits {
         typedef typename T::element_type type;
     };
 
-    template<template<typename, typename...> class Template, typename T, typename... Args>
-    struct _get_element_type<Template<T, Args...>, false> {
+    template<template<typename, typename...> class Templt, typename T, typename... Args>
+    struct _get_element_type<Templt<T, Args...>, false> {
         typedef T type;
     };
 
     template<template<typename...> class...>
-    using void_template = void;
+    using _void_tplt = void;
 
-    template<typename T, typename = void_template<>>
+    template<typename T, typename = void>
     struct _has_rebind_template: false_type {};
 
     template<typename T>
-    struct _has_rebind_template<T, void_template<T::template rebind>>
+    struct _has_rebind_template<T, _void_tplt<T::template rebind>>
         : true_type {};
 
     template<typename T, typename U, bool = _has_rebind_template<T>::value>
@@ -49,10 +49,10 @@ struct pointer_traits {
         typedef typename T::template rebind<U> type;
     };
 
-    template<template<typename, typename...> class Template, typename U,
+    template<template<typename, typename...> class Templt, typename U,
              typename T, typename... Args>
-    struct _get_rebind<Template<T, Args...>, U, false> {
-        typedef Template<U, Args...> type;
+    struct _get_rebind<Templt<T, Args...>, U, false> {
+        typedef Templt<U, Args...> type;
     };
 
     typedef Ptr pointer;
@@ -157,13 +157,13 @@ struct allocator_traits {
     // clang-format on
 
     template<template<typename...> class...>
-    using void_template = void;
+    using void_tplt = void;
 
-    template<typename T, typename = void_template<>>
+    template<typename T, typename = void>
     struct _has_rebind_template: false_type {};
 
     template<typename T>
-    struct _has_rebind_template<T, void_template<T::template rebind>>
+    struct _has_rebind_template<T, void_tplt<T::template rebind>>
         : true_type {};
 
     template<typename T, typename U, bool = _has_rebind_template<T>::value>
@@ -174,10 +174,10 @@ struct allocator_traits {
         typedef typename T::template rebind<U>::other type;
     };
 
-    template<template<typename, typename...> class Template, typename U,
+    template<template<typename, typename...> class Templt, typename U,
              typename T, typename... Args>
-    struct _get_rebind<Template<T, Args...>, U, false> {
-        typedef Template<U, Args...> type;
+    struct _get_rebind<Templt<T, Args...>, U, false> {
+        typedef Templt<U, Args...> type;
     };
 
     template<typename T>

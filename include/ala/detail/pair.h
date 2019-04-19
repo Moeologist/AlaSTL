@@ -253,49 +253,49 @@ get(const pair<T1, T2> &&p) noexcept {
 }
 
 template<class T, class U>
-constexpr T &get(pair<T, U> &p) noexcept {
+constexpr T &get(pair<type_identity_t<T>, U> &p) noexcept {
     static_assert(!is_same<T, U>::value, "no type or more than one type");
     return static_cast<T &>(p.first);
 }
 
 template<class T, class U>
-constexpr const T &get(const pair<T, U> &p) noexcept {
+constexpr const T &get(const pair<type_identity_t<T>, U> &p) noexcept {
     static_assert(!is_same<T, U>::value, "no type or more than one type");
     return static_cast<const T &>(p.first);
 }
 
 template<class T, class U>
-constexpr T &&get(pair<T, U> &&p) noexcept {
+constexpr T &&get(pair<type_identity_t<T>, U> &&p) noexcept {
     static_assert(!is_same<T, U>::value, "no type or more than one type");
     return static_cast<T &&>(p.first);
 }
 
 template<class T, class U>
-constexpr const T &&get(const pair<T, U> &&p) noexcept {
+constexpr const T &&get(const pair<type_identity_t<T>, U> &&p) noexcept {
     static_assert(!is_same<T, U>::value, "no type or more than one type");
     return static_cast<const T &&>(p.first);
 }
 
 template<class T, class U>
-constexpr T &get(pair<U, T> &p) noexcept {
+constexpr T &get(pair<U, type_identity_t<T>> &p) noexcept {
     static_assert(!is_same<T, U>::value, "no type or more than one type");
     return static_cast<T &>(p.second);
 }
 
 template<class T, class U>
-constexpr const T &get(const pair<U, T> &p) noexcept {
+constexpr const T &get(const pair<U, type_identity_t<T>> &p) noexcept {
     static_assert(!is_same<T, U>::value, "no type or more than one type");
     return static_cast<const T &>(p.second);
 }
 
 template<class T, class U>
-constexpr T &&get(pair<U, T> &&p) noexcept {
+constexpr T &&get(pair<U, type_identity_t<T>> &&p) noexcept {
     static_assert(!is_same<T, U>::value, "no type or more than one type");
     return static_cast<T &&>(p.second);
 }
 
 template<class T, class U>
-constexpr const T &&get(const pair<U, T> &&p) noexcept {
+constexpr const T &&get(const pair<U, type_identity_t<T>> &&p) noexcept {
     static_assert(!is_same<T, U>::value, "no type or more than one type");
     return static_cast<const T &&>(p.second);
 }

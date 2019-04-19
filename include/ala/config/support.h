@@ -1,6 +1,12 @@
 #ifndef _ALA_CONFIG_SUPPORT_H
 #define _ALA_CONFIG_SUPPORT_H
 
+#if defined __is_identifier
+#define ALA_IS_IDENTIFIER(x) __is_identifier(x)
+#else
+#define ALA_IS_IDENTIFIER(x) 0
+#endif
+
 #if defined(_ALA_MSVC)
 
 #if defined(__has_cpp_attribute)

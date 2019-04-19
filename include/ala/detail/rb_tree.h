@@ -53,6 +53,42 @@ constexpr rb_node<Data> *right_leaf(rb_node<Data> *node) {
     return node;
 }
 
+template<class Data>
+constexpr void next_node(rb_node<Data> *&_ptr) {
+    if (_ptr == nullptr || (_ptr->_is_nil && _ptr->_nil_type))
+        return;
+    else if (_ptr->_right != nullptr)
+        _ptr = left_leaf(_ptr->_right);
+    else
+        while (true) {
+            if (_ptr->_parent->_left == _ptr) {
+                _ptr = _ptr->_parent;
+                break;
+            }
+            _ptr = _ptr->_parent;
+        }
+}
+
+template<class Data>
+constexpr void prev_node(rb_node<Data> *&_ptr) {
+    if (_ptr == nullptr || (_ptr->_is_nil && !_ptr->_nil_type))
+        return;
+    else if (_ptr->_left != nullptr)
+        _ptr = right_leaf(_ptr->_left);
+    else {
+        while (true) {
+            if (_ptr->_parent->_right == _ptr) {
+                _ptr = _ptr->_parent;
+                break;
+            }
+            _ptr = _ptr->_parent;
+        }
+    }
+}
+
+template<class Ptr>
+struct rb_const_iterator;
+
 template<class Ptr>
 struct rb_iterator {
     typedef bidirectional_iterator_tag iterator_category;
@@ -61,7 +97,7 @@ struct rb_iterator {
     typedef value_type *pointer;
     typedef value_type &reference;
 
-    constexpr rb_iterator(): _ptr(nullptr) {}
+    constexpr rb_iterator() {}
     constexpr rb_iterator(const rb_iterator &other): _ptr(other._ptr) {}
     constexpr rb_iterator(const Ptr &ptr): _ptr(ptr) {}
 
@@ -74,26 +110,23 @@ struct rb_iterator {
     }
 
     constexpr bool operator==(const rb_iterator &rhs) const {
-        return (_ptr == rhs._ptr) || (is_nil(_ptr) && is_nil(rhs._ptr));
+        return (_ptr == rhs._ptr);
     }
 
     constexpr bool operator!=(const rb_iterator &rhs) const {
         return !(_ptr == rhs._ptr);
     }
 
+    constexpr bool operator==(const rb_const_iterator<Ptr> &rhs) const {
+        return (_ptr == rhs._ptr);
+    }
+
+    constexpr bool operator!=(const rb_const_iterator<Ptr> &rhs) const {
+        return !(_ptr == rhs._ptr);
+    }
+
     constexpr rb_iterator &operator++() {
-        if (_ptr == nullptr || (_ptr->_is_nil && _ptr->_nil_type))
-            return *this;
-        else if (_ptr->_right != nullptr)
-            _ptr = left_leaf(_ptr->_right);
-        else
-            while (true) {
-                if (_ptr->_parent->_left == _ptr) {
-                    _ptr = _ptr->_parent;
-                    break;
-                }
-                _ptr = _ptr->_parent;
-            }
+        next_node(_ptr);
         return *this;
     }
 
@@ -104,19 +137,7 @@ struct rb_iterator {
     }
 
     constexpr rb_iterator &operator--() {
-        if (_ptr == nullptr || (_ptr->_is_nil && !_ptr->_nil_type))
-            return *this;
-        else if (_ptr->_left != nullptr)
-            _ptr = right_leaf(_ptr->_left);
-        else {
-            while (true) {
-                if (_ptr->_parent->_right == _ptr) {
-                    _ptr = _ptr->_parent;
-                    break;
-                }
-                _ptr = _ptr->_parent;
-            }
-        }
+        prev_node(_ptr);
         return *this;
     }
 
@@ -135,7 +156,82 @@ protected:
     friend class set;
     template<class, class, class>
     friend class multiset;
-    Ptr _ptr;
+    friend class rb_const_iterator<Ptr>;
+    Ptr _ptr = nullptr;
+};
+
+template<class Ptr>
+struct rb_const_iterator {
+    typedef bidirectional_iterator_tag iterator_category;
+    typedef decltype(declval<Ptr>()->_data) value_type;
+    typedef typename pointer_traits<Ptr>::difference_type difference_type;
+    typedef value_type *pointer;
+    typedef value_type &reference;
+
+    constexpr rb_const_iterator() {}
+    constexpr rb_const_iterator(const rb_const_iterator &other)
+        : _ptr(other._ptr) {}
+    constexpr rb_const_iterator(const Ptr &ptr): _ptr(ptr) {}
+    constexpr rb_const_iterator(const rb_iterator<Ptr> &other)
+        : _ptr(other._ptr) {}
+
+    constexpr reference operator*() const {
+        return _ptr->_data;
+    }
+
+    constexpr pointer operator->() const {
+        return ala::addressof(_ptr->_data);
+    }
+
+    constexpr bool operator==(const rb_const_iterator &rhs) const {
+        return (_ptr == rhs._ptr);
+    }
+
+    constexpr bool operator!=(const rb_const_iterator &rhs) const {
+        return !(_ptr == rhs._ptr);
+    }
+
+    constexpr bool operator==(const rb_iterator<Ptr> &rhs) const {
+        return (_ptr == rhs._ptr);
+    }
+
+    constexpr bool operator!=(const rb_iterator<Ptr> &rhs) const {
+        return !(_ptr == rhs._ptr);
+    }
+
+    constexpr rb_const_iterator &operator++() {
+        next_node(_ptr);
+        return *this;
+    }
+
+    constexpr rb_const_iterator operator++(int) {
+        rb_const_iterator tmp(*this);
+        ++*this;
+        return tmp;
+    }
+
+    constexpr rb_const_iterator &operator--() {
+        prev_node(_ptr);
+        return *this;
+    }
+
+    constexpr rb_const_iterator operator--(int) {
+        rb_const_iterator tmp(*this);
+        --*this;
+        return tmp;
+    }
+
+protected:
+    template<class, class, class, class>
+    friend class map;
+    template<class, class, class, class>
+    friend class multimap;
+    template<class, class, class>
+    friend class set;
+    template<class, class, class>
+    friend class multiset;
+    Ptr _ptr = nullptr;
+    friend class rb_iterator<Ptr>;
 };
 
 template<class Data, class Comp, class Alloc, bool Uniq>

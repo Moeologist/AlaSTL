@@ -142,57 +142,6 @@ constexpr reverse_iterator<Iter> make_reverse_iterator(Iter i) {
 };
 
 template<class Iter>
-struct const_iterator: public Iter {
-    typedef typename Iter::iterator_category iterator_category;
-    typedef typename Iter::difference_type difference_type;
-    typedef const typename Iter::value_type value_type;
-    typedef const value_type *pointer;
-    typedef const value_type &reference;
-
-    constexpr const_iterator(const Iter &base): Iter(base) {}
-
-    constexpr reference operator*() const {
-        return this->Iter::operator*();
-    }
-
-    constexpr pointer operator->() const {
-        return this->Iter::operator->();
-    }
-
-    constexpr reference operator[](difference_type n) const {
-        return this->Iter::operator[](n);
-    }
-};
-
-template<class Iter1, class Iter2>
-constexpr bool operator==(const const_iterator<Iter1> &lhs,
-                          const const_iterator<Iter2> &rhs) {
-    return static_cast<const Iter1 &>(lhs) == static_cast<const Iter2 &>(rhs);
-}
-
-template<class Iter1, class Iter2>
-constexpr bool operator!=(const const_iterator<Iter1> &lhs,
-                          const const_iterator<Iter2> &rhs) {
-    return static_cast<const Iter1 &>(lhs) != static_cast<const Iter2 &>(rhs);
-}
-
-template<class Iter1, class Iter2>
-constexpr bool operator<(const const_iterator<Iter1> &lhs,
-                         const const_iterator<Iter2> &rhs);
-
-template<class Iter1, class Iter2>
-constexpr bool operator<=(const const_iterator<Iter1> &lhs,
-                          const const_iterator<Iter2> &rhs);
-
-template<class Iter1, class Iter2>
-constexpr bool operator>(const const_iterator<Iter1> &lhs,
-                         const const_iterator<Iter2> &rhs);
-
-template<class Iter1, class Iter2>
-constexpr bool operator>=(const const_iterator<Iter1> &lhs,
-                          const const_iterator<Iter2> &rhs);
-
-template<class Iter>
 constexpr enable_if_t<is_base_of<random_access_iterator_tag,
                                  typename iterator_traits<Iter>::iterator_category>::value,
                       typename iterator_traits<Iter>::difference_type>

@@ -245,14 +245,14 @@ template<typename T> ALA_VAR_INLINE constexpr bool is_nothrow_destructible_v    
 template<typename T> ALA_VAR_INLINE constexpr bool has_virtual_destructor_v             = has_virtual_destructor<T>::value;
 template<typename T> ALA_VAR_INLINE constexpr bool is_literal_type_v                    = is_literal_type<T>::value;
 
-#if (defined(_ALA_CLANG) && !__is_identifier(__has_unique_object_representations)) || \
+#if (defined(_ALA_CLANG) && !ALA_IS_IDENTIFIER(__has_unique_object_representations)) || \
     (defined(_ALA_GCC) && __GNUC__ >= 7) || \
     (defined(_ALA_MSVC) && MSC_VER >= 1911)
 template<typename T> struct has_unique_object_representations;
 template<typename T> ALA_VAR_INLINE constexpr bool has_unique_object_representations_v = has_unique_object_representations<T>::value;
 #endif
 
-#if (defined(_ALA_CLANG) && !__is_identifier(__is_aggregate)) || \
+#if (defined(_ALA_CLANG) && !ALA_IS_IDENTIFIER(__is_aggregate)) || \
     (defined(_ALA_GCC) && __GNUC__ * 1000 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__ >= 7001) || \
     (defined(_ALA_MSVC) && MSC_VER >= 1915)
 template<typename T> struct is_aggregate;

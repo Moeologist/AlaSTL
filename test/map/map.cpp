@@ -35,7 +35,7 @@ struct PointPtrCmp {
 void test1() {
     // (1) 默认构造函数
     ala::map<std::string, int> map1;
-    ala::map<std::string, int>::iterator it = map1.cbegin();
+    ala::map<std::string, int>::iterator it = map1.begin();
     map1["something"] = 69;
     map1["anything"] = 199;
     map1["that thing"] = 50;

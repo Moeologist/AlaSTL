@@ -28,7 +28,6 @@ struct NODE {
     typedef typename pointer_traits<NodePtr>::element_type _ele_type;
     typedef allocator_traits<allocator_type> _alloc_traits;
     typedef typename _alloc_traits::template rebind_alloc<_ele_type> _node_alloc;
-    typedef typename _alloc_traits::template rebind_traits<_ele_type> _node_alloc_traits;
 
     constexpr NODE() noexcept: _ptr(nullptr) {}
 

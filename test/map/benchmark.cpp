@@ -1,11 +1,12 @@
 #include <ala/map.h>
 #include <ala/set.h>
 #include <map>
+#include <set>
 #include <ala/random.h>
 #include <ala/timer.h>
 #include <iostream>
 
-constexpr auto bp = 10000;
+constexpr auto bp = 100;
 
 void test() {
     using namespace ala;
@@ -56,7 +57,7 @@ void test1() {
         // std::cout << m.size() << std::endl;
     }
 }
-//@build_type=rel
+//@build_type=dbg
 
 // cflags=-fsanitize=address
 template<typename _type_, typename = ala::void_t<>>
@@ -80,8 +81,13 @@ static_assert(_has_p<t>::value);
 int main() {
     std::cout << ala::timer(test);
     std::cout << ala::timer(test1);
-    ala::set<int> st;
-    ala::multimap<int, char> mmp;
+    std::set<int> st;
+    auto bl = std::set<int>::iterator() == st.end();
+    using namespace ala;
+    // auto x = get<int>(pair(1, 1));
+    multimap<int, char> mmp;
+    // multimap<int, char>::iterator i = mmp.cbegin();
+    multimap<int, char>::const_iterator ci = mmp.begin();
     mmp.insert(ala::pair(123, 'c'));
     mmp.insert(ala::pair(123, 'c'));
     mmp.insert(ala::pair(123, 'c'));
