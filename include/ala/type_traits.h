@@ -53,6 +53,12 @@ template<typename T>
 constexpr ALA_VAR_INLINE bool is_implicitly_default_constructible_v =
     is_implicitly_default_constructible<T>::value;
 
+template<typename Type, template<typename...> class >
+struct is_specification : false_type {};
+
+template<template<typename...> class Templt, typename... TArgs>
+struct is_specification<Templt<TArgs...>, Templt> : true_type {};
+
 template<typename T>
 struct _class_of_memptr;
 
@@ -62,11 +68,14 @@ struct _class_of_memptr<Ret Class::*> { typedef Class type; };
 template<typename T>
 using _class_of_memptr_t = typename _class_of_memptr<T>::type;
 
-template<typename Type, template<typename...> class >
-struct is_specification : false_type {};
+template<typename T>
+struct reference_wrapper;
 
-template<template<typename...> class Templt, typename... TArgs>
-struct is_specification<Templt<TArgs...>, Templt> : true_type {};
+template<class T>
+struct is_reference_wrapper: false_type {};
+
+template<class U>
+struct is_reference_wrapper<reference_wrapper<U>>: true_type {};
 
 } // namespace ala
 
@@ -77,12 +86,12 @@ namespace ala {
 template<typename...> struct _or_;
 template<> struct _or_<> : false_type {};
 template<typename B1> struct _or_<B1> : B1 {};
-template<typename B1, typename... Bs> struct _or_<B1, Bs...> : conditional_t<(bool)B1::value, B1, _or_<Bs...>> {};
+template<typename B1, typename... Bs> struct _or_<B1, Bs...> : conditional_t<bool(B1::value), B1, _or_<Bs...>> {};
 
 template<typename...> struct _and_;
 template<> struct _and_<> : true_type {};
 template<typename B1> struct _and_<B1> : B1 {};
-template<typename B1, typename... Bs> struct _and_<B1, Bs...> : conditional_t<(bool)B1::value, _and_<Bs...>, B1> {};
+template<typename B1, typename... Bs> struct _and_<B1, Bs...> : conditional_t<bool(B1::value), _and_<Bs...>, B1> {};
 
 template<typename B>
 struct _not_ : bool_constant<!bool(B::value)> {};
@@ -125,14 +134,13 @@ template<typename T> struct is_class : bool_constant<__is_class(T)> {};
 
 template<typename> struct is_function : false_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args...)> :                     true_type {};
-template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...)> :                true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args...) const> :               true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args...) volatile> :            true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args...) const volatile> :      true_type {};
+template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...)> :                true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) const> :          true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) volatile> :       true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) const volatile> : true_type {};
-
 template<typename Ret, typename... Args> struct is_function<Ret(Args...) &> :                      true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args...) const &> :                true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args...) volatile &> :             true_type {};
@@ -152,10 +160,10 @@ template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) co
 
 #if _ALA_ENABLE_NOEXCEPT_TYPE
 template<typename Ret, typename... Args> struct is_function<Ret(Args...) noexcept> :                        true_type {};
-template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) noexcept> :                   true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args...) const noexcept> :                  true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args...) volatile noexcept> :               true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args...) const volatile noexcept> :         true_type {};
+template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) noexcept> :                   true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) const noexcept> :             true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) volatile noexcept> :          true_type {};
 template<typename Ret, typename... Args> struct is_function<Ret(Args..., ...) const volatile noexcept> :    true_type {};
@@ -545,11 +553,11 @@ template<typename T> struct remove_reference<T&>  { typedef T type; };
 template<typename T> struct remove_reference<T&&> { typedef T type; };
 
 template<typename T, typename = void> struct _add_lvalue_reference_helper { typedef T  type; };
-template<typename T> struct _add_lvalue_reference_helper<T, void_t<T&>>       { typedef T& type; };
+template<typename T> struct _add_lvalue_reference_helper<T, void_t<T&>>   { typedef T& type; };
 template<typename T> struct add_lvalue_reference : _add_lvalue_reference_helper<T> {};
 
 template<typename T, typename = void> struct _add_rvalue_reference_helper { typedef T   type; };
-template<typename T> struct _add_rvalue_reference_helper<T, void_t<T&&>>      { typedef T&& type; };
+template<typename T> struct _add_rvalue_reference_helper<T, void_t<T&&>>  { typedef T&& type; };
 template<typename T> struct add_rvalue_reference : _add_rvalue_reference_helper<T> {};
 
 template<typename T> struct make_signed                          { typedef T                               type; };
@@ -729,19 +737,75 @@ template<typename T> struct _underlying_type_helper<T, true> { typedef __underly
 
 template<typename T> struct underlying_type : _underlying_type_helper<T> {};
 
-#if !defined(_ALA_MSVC) || _MSC_VER >= 1910
+template<bool Noexcept, typename Base, typename T, typename Derived, typename... Args>
+auto _invoke_result_test(T Base::*pmf, Derived &&ref, Args &&... args) -> enable_if_t<
+        is_function<T>::value &&
+        !is_reference_wrapper<decay_t<Derived>>::value &&
+        is_base_of<Base, decay_t<Derived>>::value,
+        conditional_t<Noexcept,bool_constant<noexcept((ala::forward<Derived>(ref).*pmf)(ala::forward<Args>(args)...))>,
+                                             decltype((ala::forward<Derived>(ref).*pmf)(ala::forward<Args>(args)...))>>;
 
-template<typename Void, typename Fn, typename... Args>
-struct _invoke_result_impl {};
+template<bool Noexcept, typename Base, typename T, typename Ptr, typename... Args>
+auto _invoke_result_test(T Base::*pmf, Ptr &&ptr, Args &&... args) -> enable_if_t<
+    is_function<T>::value &&
+    !is_reference_wrapper<decay_t<Ptr>>::value &&
+    !is_base_of<Base, decay_t<Ptr>>::value,
+    conditional_t<Noexcept, bool_constant<noexcept(((*ala::forward<Ptr>(ptr)).*pmf)(ala::forward<Args>(args)...))>,
+                                          decltype(((*ala::forward<Ptr>(ptr)).*pmf)(ala::forward<Args>(args)...))>>;
+
+template<bool Noexcept, typename Base, typename T, typename RefWrap, typename... Args>
+auto _invoke_result_test(T Base::*pmf, RefWrap &&ref, Args &&... args) -> enable_if_t<
+    is_function<T>::value &&
+    is_reference_wrapper<decay_t<RefWrap>>::value,
+    conditional_t<Noexcept, bool_constant<noexcept((ref.get().*pmf)(ala::forward<Args>(args)...))>,
+                                          decltype((ref.get().*pmf)(ala::forward<Args>(args)...))>>;
+
+template<bool Noexcept, typename Base, typename T, typename Derived>
+auto _invoke_result_test(T Base::*pmd, Derived &&ref) -> enable_if_t<
+    !is_function<T>::value &&
+    !is_reference_wrapper<decay_t<Derived>>::value &&
+    is_base_of<Base, decay_t<Derived>>::value,
+    conditional_t<Noexcept, bool_constant<noexcept(ala::forward<Derived>(ref).*pmd)>,
+                                          decltype(ala::forward<Derived>(ref).*pmd)>>;
+
+template<bool Noexcept, typename Base, typename T, typename Ptr>
+auto _invoke_result_test(T Base::*pmd, Ptr &&ptr) -> enable_if_t<
+    !is_function<T>::value &&
+    !is_reference_wrapper<decay_t<Ptr>>::value &&
+    !is_base_of<Base, decay_t<Ptr>>::value,
+    conditional_t<Noexcept, bool_constant<noexcept((*ala::forward<Ptr>(ptr)).*pmd)>,
+                                          decltype((*ala::forward<Ptr>(ptr)).*pmd)>>;
+
+template<bool Noexcept, typename Base, typename T, typename RefWrap>
+auto _invoke_result_test(T Base::*pmd, RefWrap &&ref) -> enable_if_t<
+    !is_function<T>::value &&
+    is_reference_wrapper<decay_t<RefWrap>>::value,
+    conditional_t<Noexcept, bool_constant<noexcept(ref.get().*pmd)>,
+                                          decltype(ref.get().*pmd)>>;
+
+template<bool Noexcept, typename Fn, typename... Args>
+auto _invoke_result_test(Fn &&f, Args &&... args) -> enable_if_t<
+    !is_member_pointer<decay_t<Fn>>::value,
+    conditional_t<Noexcept, bool_constant<noexcept(ala::forward<Fn>(f)(ala::forward<Args>(args)...))>,
+                                          decltype(ala::forward<Fn>(f)(ala::forward<Args>(args)...))>>;
+
+template<typename Void, typename, typename...>
+struct _invoke_result_sfinae {};
 
 template<typename Fn, typename... Args>
-struct _invoke_result_impl<void_t<decltype(invoke(declval<Fn>(), declval<Args>()...))>, Fn, Args...> {};
+struct _invoke_result_sfinae<
+    void_t<decltype(_invoke_result_test<false>(declval<Fn>(), declval<Args>()...))>, Fn, Args...> {
+    using type = decltype(_invoke_result_test<false>(declval<Fn>(), declval<Args>()...));
+};
 
 template<typename Fn, typename... Args>
-struct invoke_result : _invoke_result_impl<Fn, Args...>::type {};
+struct invoke_result: _invoke_result_sfinae<void, Fn, Args...> {};
+
+template<typename>
+struct result_of;
 
 template<typename Fn, typename... Args>
-struct result_of<Fn(Args...)> : invoke_result<Fn, Args...> {};
+struct result_of<Fn(Args...)>: invoke_result<Fn, Args...> {};
 
 template<typename Result, typename Ret, typename = void>
 struct _is_invocable_impl : false_type {};
@@ -754,10 +818,10 @@ template<typename Fn, typename... Args>
 struct is_invocable : _is_invocable_impl<invoke_result<Fn, Args...>, void> {};
 
 template<typename Ret, typename Fn, typename... Args>
-struct is_invocable_r : _is_invocable_impl<_is_invocable_impl<Fn, Args...>, Ret> {};
+struct is_invocable_r : _is_invocable_impl<invoke_result<Fn, Args...>, Ret> {};
 
 template<typename Fn, typename... Args>
-struct _is_nt_invocable : bool_constant<noexcept(invoke(declval<Fn>(), declval<Args>()...))> {};
+struct _is_nt_invocable : decltype(_invoke_result_test<true>(declval<Fn>(), declval<Args>()...)) {};
 
 template<typename Result, typename Ret, typename = void>
 struct _is_nt_invocable_r_impl : false_type {};
@@ -770,9 +834,7 @@ template<typename Fn, typename... Args>
 struct is_nothrow_invocable : _and_<is_invocable<Fn, Args...>, _is_nt_invocable<Fn, Args...>> {};
 
 template<typename Ret, typename Fn, typename... Args>
-struct is_nothrow_invocable_r : _and_<_is_nt_invocable_r_impl<typename invoke_result<Fn, Args...>::type, Ret>,
-                                      _is_nt_invocable<Fn, Args...>> {};
-#endif
+struct is_nothrow_invocable_r : _and_<_is_nt_invocable_r_impl<invoke_result<Fn, Args...>, Ret>, _is_nt_invocable<Fn, Args...>> {};
 
 template<typename... B> struct conjunction : _and_<B...> {};
 template<typename... B> struct disjunction : _or_<B...> {};

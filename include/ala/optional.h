@@ -1,7 +1,7 @@
 #ifndef _ALA_OPTIONAL_H
 #define _ALA_OPTIONAL_H
 
-#include <ala/type_traits.h>
+#include <ala/utility.h>
 
 namespace ala {
 
@@ -12,8 +12,6 @@ struct bad_optional_access: logic_error {
 struct nullopt_t {
     explicit constexpr nullopt_t(int) {}
 };
-
-struct in_place_t {};
 
 template<class T>
 struct _optional_base {
@@ -28,7 +26,7 @@ template<class T>
 struct _optional_destroy<T, false>: _optional_base<T> {
     ~_optional_destroy() {
         if (this->_valid)
-            (*(T *)&(this->_data)).T::~T();
+            (*(T *)&(this->_data)).~T();
     }
     constexpr _optional_destroy() = default;
     constexpr _optional_destroy(const _optional_destroy &other) = default;
@@ -115,14 +113,14 @@ struct _optional_copy_asgn<T, true, false>: _optional_move<T> {
     constexpr _optional_copy_asgn(_optional_copy_asgn &&) = default;
     constexpr _optional_copy_asgn(const _optional_copy_asgn &) = default;
     _optional_copy_asgn &operator=(const _optional_copy_asgn &other) {
-        if (this->_valid) {
-            (*(T *)&(other._data)).T::~T();
-            this->_valid = false;
-        }
-        if (other._valid)
+        if (this->_valid && other._valid) {
             *(T *)&(this->_data) = *(T *)&(other._data);
-        this->_valid = other._valid;
-        return *this;
+        } else if (other._valid) {
+            ::new ((void *)&(this->_data)) T(*(T *)&(other._data));
+            this->_valid = true;
+        } else if (this->_valid) {
+            (*(T *)&(this->_data)).~T();
+        }
     }
     _optional_copy_asgn &operator=(_optional_copy_asgn &&) = default;
 };
@@ -151,13 +149,14 @@ struct _optional_move_asgn<T, true, false>: _optional_copy_asgn<T> {
     _optional_move_asgn &operator=(const _optional_move_asgn &) = default;
     _optional_move_asgn &operator=(_optional_move_asgn &&other) noexcept(
         is_nothrow_move_assignable<T>::value &&is_nothrow_move_constructible<T>::value) {
-        if (this->_valid) {
-            (*(T *)&(other._data)).T::~T();
-            this->_valid = false;
-        }
-        if (other._valid)
+        if (this->_valid && other._valid) {
+            *(T *)&(this->_data) = ala::move(*(T *)&(other._data));
+        } else if (other._valid) {
             ::new ((void *)&(this->_data)) T(ala::move(*(T *)&(other._data)));
-        this->_valid = other._valid;
+            this->_valid = true;
+        } else if (this->_valid) {
+            (*(T *)&(this->_data)).~T();
+        }
         return *this;
     }
 };
@@ -267,10 +266,15 @@ public:
                     is_assignable_v<T &, const U &>,
                 optional> &
     operator=(const optional<U> &other) {
-        reset();
-        if (other)
+        if (this->_valid && other._valid) {
+            *(T *)&(this->_data) = *other;
+        } else if (other._valid) {
             ::new ((void *)&(this->_data)) T(*other);
-        this->_valid = (bool)other;
+            this->_valid = true;
+        } else if (this->_valid) {
+            (*(T *)&(this->_data)).~T();
+        }
+        return *this;
     }
 
     template<class U>
@@ -278,10 +282,15 @@ public:
                     is_assignable_v<T &, U>,
                 optional> &
     operator=(optional<U> &&other) {
-        reset();
-        if (other)
+        if (this->_valid && other._valid) {
+            *(T *)&(this->_data) = ala::move(*other);
+        } else if (other._valid) {
             ::new ((void *)&(this->_data)) T(ala::move(*other));
-        this->_valid = (bool)other;
+            this->_valid = true;
+        } else if (this->_valid) {
+            (*(T *)&(this->_data)).~T();
+        }
+        return *this;
     }
 
     template<class... Args>
@@ -299,7 +308,8 @@ public:
         this->_valid = true;
     }
     // swap
-    void swap(optional &other) noexcept {
+    void swap(optional &other) noexcept(
+        is_nothrow_move_constructible<T>::value &&is_nothrow_swappable<T>::value) {
         if (!*this && !other)
             return;
         else if (!*this && other)
@@ -380,7 +390,7 @@ public:
     // modifiers
     void reset() noexcept {
         if (*this)
-            value().T::~T();
+            (**this).~T();
         this->_valid = false;
     }
 };
@@ -409,7 +419,7 @@ constexpr bool operator<(const optional<T> &lhs, const optional<U> &rhs) {
         return false;
     else if (bool(lhs) == false)
         return true;
-    return *lhs < *rhs
+    return *lhs < *rhs;
 }
 
 template<class T, class U>
@@ -418,7 +428,7 @@ constexpr bool operator<=(const optional<T> &lhs, const optional<U> &rhs) {
         return true;
     else if (bool(rhs) == false)
         return false;
-    return *lhs <= *rhs
+    return *lhs <= *rhs;
 }
 
 template<class T, class U>
@@ -427,7 +437,7 @@ constexpr bool operator>(const optional<T> &lhs, const optional<U> &rhs) {
         return false;
     else if (bool(rhs) == false)
         return true;
-    return *lhs > *rhs
+    return *lhs > *rhs;
 }
 
 template<class T, class U>
@@ -436,12 +446,12 @@ constexpr bool operator>=(const optional<T> &lhs, const optional<U> &rhs) {
         return true;
     else if (bool(lhs) == false)
         return false;
-    return *lhs >= *rhs
+    return *lhs >= *rhs;
 }
 // comparison with nullopt
 
 template<class T>
-constexpr bool operator==(const optional<T> &opt, nullopt_t opt) noexcept {
+constexpr bool operator==(const optional<T> &opt, nullopt_t) noexcept {
     return !opt;
 }
 
@@ -502,62 +512,62 @@ constexpr bool operator>=(nullopt_t, const optional<T> &opt) noexcept {
 // comparison with T
 
 template<class T>
-constexpr bool operator==(const optional<T> opt &, const T &) {
+constexpr bool operator==(const optional<T> &opt, const T &value) {
     return bool(opt) ? *opt == value : false;
 }
 
 template<class T>
-constexpr bool operator==(const T &, const optional<T> opt &) {
+constexpr bool operator==(const T &value, const optional<T> &opt) {
     return bool(opt) ? value == *opt : false;
 }
 
 template<class T>
-constexpr bool operator!=(const optional<T> opt &, const T &) {
+constexpr bool operator!=(const optional<T> &opt, const T &value) {
     return bool(opt) ? *opt != value : true;
 }
 
 template<class T>
-constexpr bool operator!=(const T &, const optional<T> opt &) {
+constexpr bool operator!=(const T &value, const optional<T> &opt) {
     return bool(opt) ? value != *opt : true;
 }
 
 template<class T>
-constexpr bool operator<(const optional<T> &opt, const T &) {
+constexpr bool operator<(const optional<T> &opt, const T &value) {
     return bool(opt) ? *opt < value : true;
 }
 
 template<class T>
-constexpr bool operator<(const T &, const optional<T> &opt) {
+constexpr bool operator<(const T &value, const optional<T> &opt) {
     return bool(opt) ? value < *opt : false;
 }
 
 template<class T>
-constexpr bool operator<=(const optional<T> opt &, const T &) {
+constexpr bool operator<=(const optional<T> &opt, const T &value) {
     return bool(opt) ? *opt <= value : true;
 }
 
 template<class T>
-constexpr bool operator<=(const T &, const optional<T> opt &) {
+constexpr bool operator<=(const T &value, const optional<T> &opt) {
     return bool(opt) ? value <= *opt : false;
 }
 
 template<class T>
-constexpr bool operator>(const optional<T> &opt, const T &) {
+constexpr bool operator>(const optional<T> &opt, const T &value) {
     return bool(opt) ? *opt > value : false;
 }
 
 template<class T>
-constexpr bool operator>(const T &, const optional<T> &opt) {
+constexpr bool operator>(const T &value, const optional<T> &opt) {
     return bool(opt) ? value > *opt : true;
 }
 
 template<class T>
-constexpr bool operator>=(const optional<T> opt &, const T &) {
+constexpr bool operator>=(const optional<T> &opt, const T &value) {
     return bool(opt) ? *opt >= value : false;
 }
 
 template<class T>
-constexpr bool operator>=(const T &, const optional<T> opt &) {
+constexpr bool operator>=(const T &value, const optional<T> &opt) {
     return bool(opt) ? value >= *opt : true;
 }
 
@@ -567,7 +577,7 @@ void swap(optional<T> &lhs, optional<T> &rhs) noexcept(noexcept(lhs.swap(rhs))) 
 }
 
 template<class T>
-constexpr optional<decay_t<T>> make_optional(T &&) {
+constexpr optional<decay_t<T>> make_optional(T &&value) {
     return optional<decay_t<T>>(forward<T>(value));
 }
 

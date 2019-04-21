@@ -9,7 +9,6 @@
     struct _name_ { \
         using result_type = bool; \
         using first_argument_type = T; \
-        using second_argument_type = T; \
         constexpr bool operator()(const T &rhs) const { \
             return _op_ rhs; \
         } \

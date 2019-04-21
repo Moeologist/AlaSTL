@@ -6,7 +6,7 @@
 #include <ala/timer.h>
 #include <iostream>
 
-constexpr auto bp = 100;
+constexpr auto bp = 2000;
 
 void test() {
     using namespace ala;
@@ -25,14 +25,14 @@ void test() {
         // m.merge(n);
         // m.merge(map<int, char>{});
         // assert(sm == m.size() + n.size());
-        for (int i = 0; i < sz; ++i)
-            m.erase(i);
-        for (auto i = m.begin(); i != m.end();)
-            i = m.erase(i);
+        // for (int i = 0; i < sz; ++i)
+        //     m.erase(i);
+        // for (auto i = m.begin(); i != m.end();)
+        //     i = m.erase(i);
         // std::cout << m.size() << std::endl;
     }
 }
-
+//@compiler=cl
 void test1() {
     using namespace std;
     map<int, char> m, n;
@@ -50,14 +50,14 @@ void test1() {
         // m.merge(n);
         // m.merge(map<int, char>{});
         // assert(sm == m.size() + n.size());
-        for (int i = 0; i < sz; ++i)
-            m.erase(i);
-        for (auto i = m.begin(); i != m.end();)
-            i = m.erase(i);
+        // for (int i = 0; i < sz; ++i)
+        //     m.erase(i);
+        // for (auto i = m.begin(); i != m.end();)
+        //     i = m.erase(i);
         // std::cout << m.size() << std::endl;
     }
 }
-//@build_type=dbg
+//@build_type=rel
 
 // cflags=-fsanitize=address
 template<typename _type_, typename = ala::void_t<>>
@@ -73,10 +73,10 @@ struct t {
 
 ALA_HAS_MEM(f)
 ALA_HAS_MEM(p)
-ALA_HAS_MEM(cc)
 
-static_assert(_has_f<t>::value);
+static_assert(!_has_f<t>::value);
 static_assert(_has_p<t>::value);
+static_assert(!_has_p<ala::pair<int, int>>::value);
 
 int main() {
     std::cout << ala::timer(test);

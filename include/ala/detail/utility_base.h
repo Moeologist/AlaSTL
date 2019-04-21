@@ -52,104 +52,71 @@ swap(T (&lhs)[N], T (&rhs)[N]) noexcept(is_nothrow_swappable<T>::value) {
     }
 }
 
-struct _invoker_mf {
-    template<class Mf, class Class, class... Args>
-    static decltype(auto) _call(Mf mf, Class &&ins, Args &&... args) noexcept(
-        noexcept((ala::forward<Class>(ins).*mf)(ala::forward<Args>(args)...))) {
-        return (ala::forward<Class>(ins).*mf)(ala::forward<Args>(args)...);
-    }
-};
+template<class Base, class T, class Derived, class... Args>
+auto _invoke_helper(T Base::*pmf, Derived &&ref, Args &&... args) -> enable_if_t<
+    is_function<T>::value && !is_reference_wrapper<decay_t<Derived>>::value &&
+        is_base_of<Base, decay_t<Derived>>::value,
+    decltype((ala::forward<Derived>(ref).*pmf)(ala::forward<Args>(args)...))> {
+    return (ala::forward<Derived>(ref).*pmf)(ala::forward<Args>(args)...);
+}
 
-struct _invoker_mf_refw {
-    template<class Mf, class Class, class... Args>
-    static decltype(auto)
-    _call(Mf mf, Class &&ins, Args &&... args) noexcept(noexcept(
-        (ala::forward<Class>(ins).get().*mf)(ala::forward<Args>(args)...))) {
-        return (ala::forward<Class>(ins).get().*mf)(ala::forward<Args>(args)...);
-    }
-};
+template<class Base, class T, class Ptr, class... Args>
+auto _invoke_helper(T Base::*pmf, Ptr &&ptr, Args &&... args) -> enable_if_t<
+    is_function<T>::value && !is_reference_wrapper<decay_t<Ptr>>::value &&
+        !is_base_of<Base, decay_t<Ptr>>::value,
+    decltype(((*ala::forward<Ptr>(ptr)).*pmf)(ala::forward<Args>(args)...))> {
+    return ((*ala::forward<Ptr>(ptr)).*pmf)(ala::forward<Args>(args)...);
+}
 
-struct _invoker_mf_deref {
-    template<class Mf, class Class, class... Args>
-    static decltype(auto) _call(Mf mf, Class &&ins, Args &&... args) noexcept(
-        noexcept(((*ala::forward<Class>(ins)).*mf)(ala::forward<Args>(args)...))) {
-        return ((*ala::forward<Class>(ins)).*mf)(ala::forward<Args>(args)...);
-    }
-};
+template<class Base, class T, class RefWrap, class... Args>
+auto _invoke_helper(T Base::*pmf, RefWrap &&ref, Args &&... args)
+    -> enable_if_t<is_function<T>::value && is_reference_wrapper<decay_t<RefWrap>>::value,
+                   decltype((ref.get().*pmf)(ala::forward<Args>(args)...))> {
+    return (ref.get().*pmf)(ala::forward<Args>(args)...);
+}
 
-struct _invoker_mo {
-    template<class Mo, class Class>
-    static decltype(auto)
-    _call(Mo mo, Class &&ins) noexcept(noexcept(ala::forward<Class>(ins).*mo)) {
-        return ala::forward<Class>(ins).*mo;
-    }
-};
+template<class Base, class T, class Derived>
+auto _invoke_helper(T Base::*pmd, Derived &&ref)
+    -> enable_if_t<!is_function<T>::value &&
+                       !is_reference_wrapper<decay_t<Derived>>::value &&
+                       is_base_of<Base, decay_t<Derived>>::value,
+                   decltype(ala::forward<Derived>(ref).*pmd)> {
+    return ala::forward<Derived>(ref).*pmd;
+}
 
-struct _invoker_mo_refw {
-    template<class Mo, class Class>
-    static decltype(auto)
-    _call(Mo mo,
-          Class &&ins) noexcept(noexcept(ala::forward<Class>(ins).get().*mo)) {
-        return ala::forward<Class>(ins).get().*mo;
-    }
-};
+template<class Base, class T, class Ptr>
+auto _invoke_helper(T Base::*pmd, Ptr &&ptr)
+    -> enable_if_t<!is_function<T>::value && !is_reference_wrapper<decay_t<Ptr>>::value &&
+                       !is_base_of<Base, decay_t<Ptr>>::value,
+                   decltype((*ala::forward<Ptr>(ptr)).*pmd)> {
+    return (*ala::forward<Ptr>(ptr)).*pmd;
+}
 
-struct _invoker_mo_deref {
-    template<class Mo, class Class>
-    static decltype(auto)
-    _call(Mo mo, Class &&ins) noexcept(noexcept((*ala::forward<Class>(ins)).*mo)) {
-        return (*ala::forward<Class>(ins)).*mo;
-    }
-};
+template<class Base, class T, class RefWrap>
+auto _invoke_helper(T Base::*pmd, RefWrap &&ref)
+    -> enable_if_t<!is_function<T>::value &&
+                       is_reference_wrapper<decay_t<RefWrap>>::value,
+                   decltype(ref.get().*pmd)> {
+    return ref.get().*pmd;
+}
 
-struct _invoker_functor {
-    template<class Call, class... Args>
-    static decltype(auto) _call(Call &&call, Args &&... args) noexcept(
-        noexcept(ala::forward<Call>(call)(ala::forward<Args>(args)...))) {
-        return ala::forward<Call>(call)(ala::forward<Args>(args)...);
-    }
-};
+template<class Fn, class... Args>
+auto _invoke_helper(Fn &&f, Args &&... args)
+    -> enable_if_t<!is_member_pointer<decay_t<Fn>>::value,
+                   decltype(ala::forward<Fn>(f)(ala::forward<Args>(args)...))> {
+    return ala::forward<Fn>(f)(ala::forward<Args>(args)...);
+}
 
-template<class Call, class T, class RMcvref = remove_cvref_t<Call>,
-         bool IsMfp = is_member_function_pointer<RMcvref>::value,
-         bool IsMop = is_member_object_pointer<RMcvref>::value>
-struct _invoker_helper;
-
-template<class Mf, class Class, class RMcvref>
-struct _invoker_helper<Mf, Class, RMcvref, true, false>
-    : conditional_t<is_base_of<_class_of_memptr_t<Mf>, remove_reference_t<Class>>::value,
-                    _invoker_mf,
-                    conditional_t<is_specification<Class, reference_wrapper>::value,
-                                  _invoker_mf_refw, _invoker_mf_deref>> {};
-
-template<class Mo, class Class, class RMcvref>
-struct _invoker_helper<Mo, Class, RMcvref, false, true>
-    : conditional_t<is_base_of<_class_of_memptr_t<Mo>, remove_reference_t<Class>>::value,
-                    _invoker_mo,
-                    conditional_t<is_specification<Class, reference_wrapper>::value,
-                                  _invoker_mo_refw, _invoker_mo_deref>> {};
-
-template<class Call, class T, class RMcvref>
-struct _invoker_helper<Call, T, RMcvref, false, false>: _invoker_functor {};
-
-template<class Call, class... Args>
-struct _invoker;
-
-template<class Call>
-struct _invoker<Call>: _invoker_functor {};
-
-template<class Call, class T, class... Args>
-struct _invoker<Call, T, Args...>: _invoker_helper<Call, T> {};
-
-// use decltype(auto) trigger msvc bug
-template<class Call, class... Args>
-auto invoke(Call &&call, Args &&... args) noexcept(
-    noexcept(_invoker<Call, Args...>::_call(ala::forward<Call>(call),
-                                            ala::forward<Args>(args)...)))
-    -> decltype(_invoker<Call, Args...>::_call(ala::forward<Call>(call),
-                                               ala::forward<Args>(args)...)) {
-    return (_invoker<Call, Args...>::_call(ala::forward<Call>(call),
-                                           ala::forward<Args>(args)...));
+template<class Fn, class... Args>
+invoke_result_t<Fn, Args...>
+invoke(Fn &&f,
+       Args &&... args) noexcept(is_nothrow_invocable<Fn, Args...>::value) {
+    static_assert(
+        is_same<invoke_result_t<Fn, Args...>,
+                decltype(_invoke_helper(ala::forward<Fn>(f),
+                                        ala::forward<Args>(args)...))>::value,
+        "invoke_result not compatible with invoke");
+    return _invoke_helper(ala::forward<Fn>(f), ala::forward<Args>(args)...);
 }
 
 } // namespace ala

@@ -63,7 +63,7 @@
 #define ALA_VAR_INLINE
 #endif
 
-#if ALA_ENABLE_CPP_MACRO && __cpp_noexcept_function_type >= 201510L || \
+#if _ALA_ENABLE_CPP_MACRO && __cpp_noexcept_function_type >= 201510L || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1912 && _ALA_CPP_STD >= 17)
 #define _ALA_ENABLE_NOEXCEPT_TYPE 1
 #else

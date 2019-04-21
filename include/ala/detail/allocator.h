@@ -5,6 +5,11 @@
 #include <ala/type_traits.h>
 #include <ala/detail/macro.h>
 
+#ifdef _ALA_MSVC
+#pragma warning(push)
+#pragma warning(disable : 4348)
+#endif
+
 namespace ala {
 
 template<class T>
@@ -31,17 +36,13 @@ struct pointer_traits {
         typedef T type;
     };
 
-    template<template<typename...> class...>
-    using _void_tplt = void;
-
-    template<typename T, typename = void>
+    template<typename T, typename U,  typename = void>
     struct _has_rebind_template: false_type {};
 
-    template<typename T>
-    struct _has_rebind_template<T, _void_tplt<T::template rebind>>
-        : true_type {};
+    template<typename T, typename U>
+    struct _has_rebind_template<T, U, void_t<typename T::template rebind<U>>>: true_type {};
 
-    template<typename T, typename U, bool = _has_rebind_template<T>::value>
+    template<typename T, typename U, bool = _has_rebind_template<T, U>::value>
     struct _get_rebind;
 
     template<typename T, typename U>
@@ -156,17 +157,14 @@ struct allocator_traits {
     ALA_HAS_MEM_TYPEDEF(allocator_type, is_always_equal,                        false_type)
     // clang-format on
 
-    template<template<typename...> class...>
-    using void_tplt = void;
-
-    template<typename T, typename = void>
+    template<typename T, typename U, typename = void>
     struct _has_rebind_template: false_type {};
 
-    template<typename T>
-    struct _has_rebind_template<T, void_tplt<T::template rebind>>
+    template<typename T, typename U>
+    struct _has_rebind_template<T, U, void_t<typename T::template rebind<U>::other>>
         : true_type {};
 
-    template<typename T, typename U, bool = _has_rebind_template<T>::value>
+    template<typename T, typename U, bool = _has_rebind_template<T, U>::value>
     struct _get_rebind;
 
     template<typename T, typename U>
@@ -188,28 +186,36 @@ struct allocator_traits {
 
     ALA_HAS_MEM(select_on_container_copy_construction)
 
-    template<typename Dummy>
-    static enable_if_t<_has_select_on_container_copy_construction<Dummy>::value, Dummy>
-    _select_on_container_copy_construction(const Dummy &a) {
+    template<typename Void, typename A>
+    struct _has_select: false_type {};
+
+    template<typename A>
+    struct _has_select<
+        void_t<decltype(declval<A>().select_on_container_copy_construction())>, A>
+        : true_type {};
+
+    template<typename Dummy = allocator_type>
+    static enable_if_t<_has_select<void, Dummy>::value, Dummy>
+    select_on_container_copy_construction(const Dummy &a) {
         return a.select_on_container_copy_construction();
     }
 
-    template<typename Dummy>
-    static enable_if_t<!_has_select_on_container_copy_construction<Dummy>::value, Dummy>
-    _select_on_container_copy_construction(const Dummy &a) {
+    template<typename Dummy = allocator_type>
+    static enable_if_t<!_has_select<void, Dummy>::value, Dummy>
+    select_on_container_copy_construction(const Dummy &a) {
         return a;
     }
 
     template<typename Void, typename A, typename P, typename... Args>
-    struct _has_construct: ala::false_type {};
+    struct _has_construct: false_type {};
 
     template<typename A, typename P, typename... Args>
     struct _has_construct<
         void_t<decltype(declval<A>().construct(declval<P>(), declval<Args>()...))>,
-        A, P, Args...>: ala::true_type {};
+        A, P, Args...>: true_type {};
 
     template<typename Void, typename A, typename P>
-    struct _has_destroy: ala::false_type {};
+    struct _has_destroy: false_type {};
 
     template<typename A, typename P>
     struct _has_destroy<void_t<decltype(declval<A>().destroy(declval<P>()))>, A, P>
@@ -238,14 +244,12 @@ struct allocator_traits {
     destroy(allocator_type &a, T *p) {
         p->~T();
     }
-
-    static allocator_type
-    select_on_container_copy_construction(const allocator_type &a) {
-        return allocator_traits::template _select_on_container_copy_construction<
-            allocator_type>(a);
-    }
 };
 
 } // namespace ala
+
+#ifdef _ALA_MSVC
+#pragma warning(pop)
+#endif
 
 #endif

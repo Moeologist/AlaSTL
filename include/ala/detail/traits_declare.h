@@ -151,7 +151,7 @@ template<typename>                     struct result_of;
 template<typename F, typename... Args> struct invoke_result;
 
 template<size_t Len, size_t Align = alignof(max_align_t)> using aligned_storage_t = typename aligned_storage<Len, Align>::type;
-template<size_t Len, typename... Types>                   using aligned_union_t   = typename aligned_union<Len, Types...>::type;
+template<size_t Len, typename... Ts>                      using aligned_union_t   = typename aligned_union<Len, Ts...>::type;
 template<typename T>                                      using decay_t           = typename decay<T>::type;
 template<typename T>                                      using remove_cvref_t    = typename remove_cvref<T>::type;
 template<bool b, typename T = void>                       using enable_if_t       = typename enable_if<b, T>::type;
@@ -164,6 +164,7 @@ template<typename F, typename... Args>                    using invoke_result_t 
 #if _ALA_CPP_STD >= 17
 template<typename...> using void_t = void;
 #else
+// http://open-std.org/JTC1/SC22/WG21/docs/cwg_defects.html#1558
 template<typename... Ts> struct _void_t_impl { typedef void type; };
 template<typename... Ts> using void_t = typename _void_t_impl<Ts...>::type;
 #endif

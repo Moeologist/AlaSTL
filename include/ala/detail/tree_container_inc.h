@@ -505,7 +505,7 @@ public:
     iterator erase(const_iterator position) {
         const_iterator tmp = position++;
         tree.remove(tmp._ptr);
-        return position;
+        return iterator(position._ptr);
     }
 #endif
 

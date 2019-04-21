@@ -5,13 +5,17 @@ using namespace ala;
 
 struct X {
     X() = delete;
+    // ~X() {
+    //     std::cout << "des";
+    // }
+    ~X() = default;
     X(int) {
         std::cout << "int";
     }
     // X(const X &) {
     //     std::cout << "cp";
     // }
-    // X(const X &) = default;
+    X(const X &) = default;
     X(X &&) {
         std::cout << "mv";
     }
@@ -20,71 +24,88 @@ struct X {
     X &operator=(const X &) = default;
 };
 
-struct Bind {
-    template<class T>
-    using rebind = int;
-};
-
-template<typename T, typename = void>
-struct _has_rebind_template: false_type {};
-
-template<typename T>
-struct _has_rebind_template<T, void_t<typename T::template rebind<T>>>
-    : true_type {};
-
-template<template<typename...> class...>
-using void_template = void;
-
-template<typename T, typename = void_template<>>
-struct _has_rebind_template1: false_type {};
-
-template<typename T>
-struct _has_rebind_template1<T, void_template<T::template rebind>>: true_type {};
-
-template<bool B, typename T>
-struct ab {};
-template<typename T>
-struct ab<true, T> {
-    typedef T type;
-};
-
-static_assert(_has_rebind_template<Bind>::value);
-static_assert(_has_rebind_template1<Bind>::value);
-
 // template<class T>
 struct _optional_ba {
     // aligned_storage_t<sizeof(T), alignof(T)> _data; // exposition only
-    bool _valid = false;
+    bool _valid;
     int x;
-    // constexpr _optional_ba() = default;
+    _optional_ba(){};
 };
 
-//@cflags=-stdlib=libc++
+// cflags=-stdlib=libc++
+
+template<class T>
+struct Q {
+    // char _d[sizeof(T)];
+    aligned_storage_t<sizeof(T), alignof(T)> _d;
+    ~Q() {
+        (*(T *)&_d).~T();
+    }
+    Q(const T &t) {
+        ::new ((void *)&_d) T(t);
+    }
+};
+
+void tst() {
+    Q<int> qq({});
+}
+
+template<typename S, size_t... N>
+constexpr integer_sequence<int, S::get()[N]...>
+prepare_impl(S, index_sequence<N...>) {
+    return {};
+}
+
+template<typename S>
+constexpr decltype(auto) prepare(S s) {
+    return prepare_impl(s, make_index_sequence<sizeof(S::get()) / 4>{});
+}
+
+template<typename S>
+struct FK;
 
 int main() {
+    auto ring = prepare([] {
+        struct tmp {
+            typedef const int (&rf)[4];
+            static constexpr rf get() {
+                constexpr int d[] = {1, 2, 3, 4};
+                return d;
+            }
+        };
+        return tmp{};
+    }());
+    FK<decltype("1234")> fk;
+    tst();
+    int h, j;
     _optional_ba t{}; // 成员必初始化
-    assert(!t._valid);
+    assert((t._valid));
+    assert(!(t._valid));
 
     _optional_ba t1; // 使用msvc时成员没有初始化
-    assert(!t1._valid); // Assertion failed
+    if ((bool)t1._valid) {
+        std::cout << "shit";
+    }
 
     bool bl{};
-    const ala::optional<int> opt(10);
+    ala::optional<int> opt(10);
     auto x = opt.value();
     auto y = optional<int>(9).value();
 
     ala::optional<X> opt1{1};
-    // ala::optional<X> opt2 = ala::move(opt1);
     ala::optional<X> opt2;
     ala::optional<X> opt3;
     assert(!opt2);
     assert(!opt3);
+    opt1.reset();
 
-    assert(opt3.has_value());
-    // opt3 = opt1;
-    // opt3 = ala::move(opt1);
+    assert(!opt3.has_value());
+    opt3 = ala::move(opt1);
 
-    static_assert(!is_trivially_copy_constructible<ala::optional<X>>::value);
+    static_assert(is_trivially_copy_constructible<ala::optional<X>>::value);
+    static_assert(std::is_trivially_copy_constructible<ala::optional<X>>::value);
+    static_assert(std::is_trivially_copy_constructible<X>::value);
+
     static_assert(is_trivially_copy_constructible<ala::optional<int>>::value);
     static_assert(!is_trivially_default_constructible<ala::optional<int>>::value);
     // static_assert(is_trivially_move_constructible<ala::optional<X>>::value);
