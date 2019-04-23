@@ -49,9 +49,11 @@ template<typename T>
 struct is_implicitly_default_constructible
     : _is_implicitly_default_constructible_helper<T, is_default_constructible<T>::value> {};
 
+#if _ALA_ENABLE_INLINE_VAR
 template<typename T>
-constexpr ALA_VAR_INLINE bool is_implicitly_default_constructible_v =
+inline constexpr bool is_implicitly_default_constructible_v =
     is_implicitly_default_constructible<T>::value;
+#endif
 
 template<typename Type, template<typename...> class >
 struct is_specification : false_type {};
@@ -874,27 +876,27 @@ template<typename T>
 struct is_unbounded_array<T[]> : true_type {};
 
 template<typename T1, typename T2,
-         bool = is_const<T1>::value || is_const<T2>::value,
-         bool = is_volatile<T1>::value || is_volatile<T2>::value>
+         bool = is_const<remove_reference_t<T1>>::value || is_const<remove_reference_t<T2>>::value,
+         bool = is_volatile<remove_reference_t<T1>>::value || is_volatile<remove_reference_t<T2>>::value>
 struct _combo_cv;
 
 template<typename T1, typename T2>
-struct _combo_cv<T1, T2, true, true> { typedef const volatile T1 tp1; typedef const volatile T2 tp2; };
+struct _combo_cv<T1, T2, true, true> { typedef const volatile T1 t1; typedef const volatile T2 t2; };
 
 template<typename T1, typename T2>
-struct _combo_cv<T1, T2, true, false> { typedef const T1 tp1; typedef const T2 tp2; };
+struct _combo_cv<T1, T2, true, false> { typedef const T1 t1; typedef const T2 t2; };
 
 template<typename T1, typename T2>
-struct _combo_cv<T1, T2, false, true> { typedef volatile T1 tp1; typedef volatile T2 tp2; };
+struct _combo_cv<T1, T2, false, true> { typedef volatile T1 t1; typedef volatile T2 t2; };
 
 template<typename T1, typename T2>
-struct _combo_cv<T1, T2, false, false> { typedef T1 tp1; typedef T2 tp2; };
+struct _combo_cv<T1, T2, false, false> { typedef T1 t1; typedef T2 t2; };
 
 template<typename T1, typename T2>
-using _combo_cv_t1 = typename _combo_cv<T1, T2>::tp1;
+using _combo_cv_t1 = typename _combo_cv<T1, T2>::t1;
 
 template<typename T1, typename T2>
-using _combo_cv_t2 = typename _combo_cv<T1, T2>::tp2;
+using _combo_cv_t2 = typename _combo_cv<T1, T2>::t2;
 
 template<typename T1, typename T2>
 using _scm_ref_helper_t = decltype(false ? declval<_combo_cv_t2<T1, T2>>() : declval<_combo_cv_t2<T1, T2>>());
@@ -955,7 +957,7 @@ template<typename T, bool = is_const<T>::value, bool = is_volatile<T>::value>
 struct _get_cv;
 
 template<typename T>
-struct _get_cv<T, false, false> { template<typename U> using _bind_t = T; };
+struct _get_cv<T, false, false> { template<typename U> using _bind_t = U; };
 
 template<typename T>
 struct _get_cv<T, true, false> { template<typename U> using _bind_t = const U; };

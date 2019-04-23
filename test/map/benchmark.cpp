@@ -4,6 +4,7 @@
 #include <set>
 #include <ala/random.h>
 #include <ala/timer.h>
+#include <ala/functional.h>
 #include <iostream>
 
 constexpr auto bp = 2000;
@@ -32,7 +33,7 @@ void test() {
         // std::cout << m.size() << std::endl;
     }
 }
-//@compiler=cl
+
 void test1() {
     using namespace std;
     map<int, char> m, n;
@@ -74,7 +75,8 @@ struct t {
 ALA_HAS_MEM(f)
 ALA_HAS_MEM(p)
 
-static_assert(!_has_f<t>::value);
+// static_assert(!_has_f<t>::value);
+static_assert(ala::is_same_v<ala::function<void()>, ala::function<void(void)>>);
 static_assert(_has_p<t>::value);
 static_assert(!_has_p<ala::pair<int, int>>::value);
 

@@ -33,4 +33,6 @@
 
 *.pdb
 /deprecated
-/.vscode
+.vscode
+.vs
+out

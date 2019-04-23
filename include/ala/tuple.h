@@ -497,7 +497,9 @@ struct _ignore_t {
     }
 };
 
-ALA_VAR_INLINE constexpr _ignore_t ignore{};
+#if _ALA_ENABLE_INLINE_VAR
+inline constexpr _ignore_t ignore{};
+#endif
 
 template<typename F, typename Tuple, size_t... I>
 constexpr decltype(auto) _apply_impl(F &&f, Tuple &&tpl, index_sequence<I...>) {

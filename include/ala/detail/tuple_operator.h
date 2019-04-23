@@ -42,8 +42,10 @@ struct tuple_element<I, const volatile T> {
     typedef add_cv_t<typename tuple_element<I, T>::type> type;
 };
 
+#if _ALA_ENABLE_INLINE_VAR
 template<typename T>
-ALA_VAR_INLINE constexpr size_t tuple_size_v = tuple_size<T>::value;
+inline constexpr size_t tuple_size_v = tuple_size<T>::value;
+#endif
 
 template<size_t I, typename T>
 using tuple_element_t = typename tuple_element<I, T>::type;

@@ -3,27 +3,6 @@
 #include <functional>
 #include <iostream>
 
-struct Foo {
-    Foo(int num): num_(num) {}
-    void print_add(int i) const {
-        std::cout << num_ + i << '\n';
-    }
-    int num_;
-};
-
-void print_num(int i) {
-    std::cout << i << '\n';
-}
-
-struct PrintNum {
-    void operator()(int i) const {
-        std::cout << i << '\n';
-    }
-};
-
-template<class...>
-class FK;
-
 struct X {
     X() {
         std::cout << "def";
@@ -50,39 +29,48 @@ struct X {
     X &operator=(const X &) = default;
 };
 
-int f(int, int) {
-    return 1;
-}
-int g(int, int) {
-    return 2;
-}
-void test(ala::function<int(int, int)> const &arg) {
-    using namespace ala;
-    std::cout << "test function: ";
-    if (arg.target<plus<int>>())
-        std::cout << "it is plus\n";
-    if (arg.target<minus<int>>())
-        std::cout << "it is minus\n";
+struct Foo {
+    Foo(int num): num_(num) {}
+    void print_add(int i) && {
+        std::cout << num_ + i << '\n';
+    }
+    int num_;
+};
 
-    int (*const *ptr)(int, int) = arg.target<int (*)(int, int)>();
-    if (ptr && *ptr == f)
-        std::cout << "it is the function f\n";
-    if (ptr && *ptr == g)
-        std::cout << "it is the function g\n";
+void print_num(int i) {
+    std::cout << i << '\n';
 }
 
-void xmain() {
-    using namespace ala;
-    test(function<int(int, int)>(plus<int>()));
-    test(function<int(int, int)>(minus<int>()));
-    test(function<int(int, int)>(f));
-    test(function<int(int, int)>(g));
+struct PrintNum {
+    void operator()(int i) & {
+        std::cout << i << '\n';
+    }
+};
+
+template<class...>
+class FK;
+
+struct placeholder {};
+
+static_assert(ala::is_nothrow_move_constructible_v<placeholder>);
+
+int osp(int x, int y, int z) {
+    return x + y + z;
+}
+
+int osp(int x, int y) {
+    return x + y;
 }
 
 int main() {
-    xmain();
     using namespace ala;
+    int (*po)(int, int, int) = osp;
 
+    auto bd = bind(po, 1,
+                   bind(po, placeholders::_1, placeholders::_2, placeholders::_3),
+                   placeholders::_2);
+
+    auto bdr = bd(1, 2, 3);
     // FK<decltype(mp)> ohshit;
 
     // 存储自由函数
@@ -98,17 +86,28 @@ int main() {
     // 存储 lambda
     function<void()> f_display_42 = []() { print_num(42); };
     f_display_42();
+    auto t = 0b1000;
+    // FK<decltype(t)> ohshit;
 
     // 存储到 bind 调用的结果
     // function<void()> f_display_31337 = bind(print_num, 31337);
     // f_display_31337();
 
     // 存储到成员函数的调用
+    function att = PrintNum();
+    att(1);
+
+    typedef int ftp(int,int);
 
     const auto &padds = &Foo::print_add;
-    function<void(const Foo &, int)> f_add_display = padds;
-    const Foo foo(314159);
-    f_add_display(foo, 1);
+
+
+    function<void( Foo &&, int)> f_add_display = padds;
+    function f_add_display1 = padds;
+    static_assert(is_same<decltype(f_add_display), decltype(f_add_display1)>::value);
+    static_assert(is_member_function_pointer_v<decltype(&Foo::print_add)>);
+    Foo foo(314159);
+    f_add_display(ala::move(foo), 1);
     f_add_display(314159, 1);
 
     // 存储到数据成员访问器的调用

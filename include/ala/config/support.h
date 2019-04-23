@@ -58,9 +58,9 @@
 
 #if _ALA_ENABLE_CPP_MACRO && __cpp_inline_variables >= 201606L || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1912 && _ALA_CPP_STD >= 17)
-#define ALA_VAR_INLINE inline
+#define _ALA_ENABLE_INLINE_VAR 1
 #else
-#define ALA_VAR_INLINE
+#define _ALA_ENABLE_INLINE_VAR 0
 #endif
 
 #if _ALA_ENABLE_CPP_MACRO && __cpp_noexcept_function_type >= 201510L || \

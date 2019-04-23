@@ -12,8 +12,9 @@ struct tuple;
 
 struct piecewise_construct_t {};
 
-ALA_VAR_INLINE constexpr piecewise_construct_t piecewise_construct =
-    piecewise_construct_t();
+#if _ALA_ENABLE_INLINE_VAR
+inline constexpr piecewise_construct_t piecewise_construct{};
+#endif
 
 template<typename T1, typename T2>
 struct pair {
