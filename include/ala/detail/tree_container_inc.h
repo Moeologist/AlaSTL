@@ -90,7 +90,7 @@ public:
     typedef key_compare value_compare;
 #endif
 protected:
-    typedef rb_tree<value_type, value_compare, allocator_type, IS_UNIQ> tree_type;
+    typedef rb_tree<value_type, value_compare, allocator_type, (bool)IS_UNIQ> tree_type;
     tree_type tree;
 
 #if IS_UNIQ

@@ -1,7 +1,6 @@
 #include <iostream>
 #include <ala/functional.h>
 #include <functional>
-#include <iostream>
 
 struct X {
     X() {
@@ -62,8 +61,32 @@ int osp(int x, int y) {
     return x + y;
 }
 
+enum E {};
+// cflags=-stdlib=libc++
+
 int main() {
     using namespace ala;
+    static_assert(is_array_v<const int[]>);
+    static_assert(is_const_v<const int[]>);
+    static_assert(is_lvalue_reference_v<const int &>);
+    static_assert(!is_const_v<const int &>);
+    static_assert(is_destructible_v<int>);
+    static_assert(is_convertible_v<int(int), int(int)>);
+    static_assert(is_convertible_v<void, void>);
+    static_assert(std::is_convertible_v<int(int), int(int)>);
+    static_assert(std::is_convertible_v<void, void>);
+    static_assert(noexcept(_convert<Int>(0)));
+
+    static_assert(is_constructible_v<E, double>);
+    static_assert(_is_a_constructible_impl<E, double>::value);
+    static_assert(std::is_constructible<E, double>::value);
+
+    decltype(E(declval<int>())) i;
+
+    static_assert(is_const_v<const int[]>);
+    static_assert(is_pointer_v<const int *const>);
+    static_assert(is_same_v<remove_pointer_t<const int *const>, const int>);
+    static_assert(is_same_v<remove_const_t<const int *const>, const int *>);
     int (*po)(int, int, int) = osp;
 
     auto bd = bind(po, 1,
@@ -97,14 +120,14 @@ int main() {
     function att = PrintNum();
     att(1);
 
-    typedef int ftp(int,int);
+    typedef int ftp(int, int);
 
     const auto &padds = &Foo::print_add;
 
-
-    function<void( Foo &&, int)> f_add_display = padds;
+    function<void(Foo &&, int)> f_add_display = padds;
     function f_add_display1 = padds;
-    static_assert(is_same<decltype(f_add_display), decltype(f_add_display1)>::value);
+    static_assert(
+        is_same<decltype(f_add_display), decltype(f_add_display1)>::value);
     static_assert(is_member_function_pointer_v<decltype(&Foo::print_add)>);
     Foo foo(314159);
     f_add_display(ala::move(foo), 1);

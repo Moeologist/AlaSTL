@@ -238,7 +238,7 @@ struct _generate_real_traits<T, 8> {
 };
 
 template<class Gen, class UInt = typename Gen::result_type>
-constexpr auto generate_real(Gen &g) {
+constexpr auto generate_real(Gen &&g) {
     typedef _generate_real_traits<UInt> _traits;
     typedef typename _traits::value_type Real;
     constexpr UInt I = sizeof(UInt) * 8;

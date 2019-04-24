@@ -51,14 +51,14 @@ void tst() {
 }
 
 template<typename S, size_t... N>
-constexpr integer_sequence<int, S::get()[N]...>
+constexpr integer_sequence<char, S::get()[N]...>
 prepare_impl(S, index_sequence<N...>) {
     return {};
 }
 
 template<typename S>
 constexpr decltype(auto) prepare(S s) {
-    return prepare_impl(s, make_index_sequence<sizeof(S::get()) / 4>{});
+    return prepare_impl(s, make_index_sequence<sizeof(S::get()) - 1>{});
 }
 
 template<typename S>
@@ -67,14 +67,13 @@ struct FK;
 int main() {
     auto ring = prepare([] {
         struct tmp {
-            typedef const int (&rf)[4];
-            static constexpr rf get() {
-                constexpr int d[] = {1, 2, 3, 4};
-                return d;
+            static constexpr decltype(auto) get() {
+                return "1234";
             }
         };
         return tmp{};
     }());
+    FK<decltype(ring)> fk;
     FK<decltype("1234")> fk;
     tst();
     int h, j;

@@ -2,7 +2,6 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wignored-qualifiers"
 
-
 #include <ala/type_traits.h>
 #include <iostream>
 #include <type_traits>
@@ -13,7 +12,9 @@
 
 #pragma warning(push)
 #pragma warning(disable : 4180)
-int x(int p) {return p;}
+int x(int p) {
+    return p;
+}
 int main() {
     TEST(is_void)
     TEST(is_null_pointer)
@@ -86,12 +87,12 @@ int main() {
     TEST_NOVOID(is_trivially_move_assignable)
     TEST_NOVOID(is_nothrow_move_assignable)
 
-    #if _ALA_CPP_STD >= 17
+#if _ALA_CPP_STD >= 17
     TEST_2(is_swappable_with)
     TEST(is_swappable)
     TEST_2(is_nothrow_swappable_with)
     TEST(is_nothrow_swappable)
-    #endif
+#endif
 
     TEST(has_virtual_destructor)
     // TEST(is_aggregate)
@@ -123,34 +124,50 @@ int main() {
     typedef int (CC::*pmf)(int);
     // std::cout<<typeid(decltype(&CC::x)).name();
     // std::cout<<typeid(pmf).name();
-    static_assert(ala::is_constructible<C0, C0 &>::value == std::is_constructible<C0, C0 &>::value, "oh");
-    static_assert(ala::is_constructible<C0&, C0 &>::value == std::is_constructible<C0&, C0 &>::value, "oh");
-    static_assert(ala::is_constructible<C0&, C0 &&>::value == std::is_constructible<C0&, C0 &&>::value, "oh");
-    static_assert(ala::is_constructible<C0, C0 &&>::value == std::is_constructible<C0, C0 &&>::value, "oh");
-    static_assert(ala::is_constructible<C0&&, C0 &&>::value == std::is_constructible<C0&&, C0 &&>::value, "oh");
-    static_assert(ala::is_constructible<C0&, Cd &&>::value == std::is_constructible<C0&, Cd &&>::value, "oh");
-    static_assert(ala::is_constructible<C0&, Cd &&>::value == false, "oh");
+    static_assert(ala::is_constructible<C0, C0 &>::value ==
+                      std::is_constructible<C0, C0 &>::value,
+                  "oh");
+    static_assert(ala::is_constructible<C0 &, C0 &>::value ==
+                      std::is_constructible<C0 &, C0 &>::value,
+                  "oh");
+    static_assert(ala::is_constructible<C0 &, C0 &&>::value ==
+                      std::is_constructible<C0 &, C0 &&>::value,
+                  "oh");
+    static_assert(ala::is_constructible<C0, C0 &&>::value ==
+                      std::is_constructible<C0, C0 &&>::value,
+                  "oh");
+    static_assert(ala::is_constructible<C0 &&, C0 &&>::value ==
+                      std::is_constructible<C0 &&, C0 &&>::value,
+                  "oh");
+    static_assert(ala::is_constructible<C0 &, Cd &&>::value ==
+                      std::is_constructible<C0 &, Cd &&>::value,
+                  "oh");
+    static_assert(ala::is_constructible<C0 &, Cd &&>::value == false, "oh");
 
-    #if !defined(_ALA_MSVC) || _ALA_CPP_STD >= 17
+#if !defined(_ALA_MSVC) || _ALA_CPP_STD >= 17
 
-    static_assert(ala::is_same<ala::invoke_result_t<pmf, CC, int>, int>::value, "oh");
-    static_assert(ala::is_same<ala::invoke_result_t<decltype(&CC::v), CC>, double>::value, "oh");
-    #endif
+    static_assert(ala::is_same<ala::invoke_result_t<pmf, CC, int>, int>::value,
+                  "oh");
+    static_assert(ala::is_same<ala::invoke_result_t<decltype(&CC::v), CC>,
+                               std::invoke_result_t<decltype(&CC::v), CC>>::value,
+                  "oh");
+#endif
 
     struct A {};
-    struct B { explicit B() = default; };
+    struct B {
+        explicit B() = default;
+    };
 
     A a1 = {};
-    A a2 {};
+    A a2{};
 
     // B b1 = {}; // Error, would use explicit default constructor
-    B b2 {};
+    B b2{};
     static_assert(ala::is_implicitly_default_constructible<A>::value, "oh");
     static_assert(!ala::is_implicitly_default_constructible<B>::value, "oh");
 
-
-
-    return ala::invoke(x, 10086);;
+    return ala::invoke(x, 10086);
+    ;
 }
 
 #pragma warning(pop)

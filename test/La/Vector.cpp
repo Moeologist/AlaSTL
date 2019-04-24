@@ -1,13 +1,13 @@
 #include <cassert>
 #include <cmath>
 #include <cstdio>
-#include <ala/La/vector.h>
-typedef ala::La::vector<float, 3> Vec;
-typedef ala::La::vector<float, 2> Vec2;
+#include <ala/La/Vector.h>
+typedef ala::La::Vector<float, 3> Vec;
+typedef ala::La::Vector<float, 2> Vec2;
 
 
 int main() {
-	ala::La::vector ax{1., 2, 3};
+	ala::La::Vector ax{1., 2, 3};
 	Vec a {1, 2, 3};
 	const Vec b = Vec{3, 4, 5};
 
@@ -38,7 +38,7 @@ int main() {
 	c = ala::La::cross(Vec{1, 0, 0}, Vec{0, 1, 0});
 	auto xx = ala::La::dot(Vec{1, 2, 3}, Vec{4, 5, 6});
 
-	ala::La::vector<double ,3> xd = c.cast<double>();
+	ala::La::Vector<double ,3> xd = c.cast<double>();
 	// auto xd = ala::La::vector<double ,3>{1,2,3};
 	// Vec xf = xd;
 
