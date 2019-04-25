@@ -6,8 +6,26 @@ struct X {
     ala::vector<X> data;
 };
 
+struct B;
+
+struct A {
+    A() {}
+    A(const B &) {}
+    // operator B() {}
+};
+
+struct B {
+    B() {}
+    B(const A &) {}
+    operator A() {
+    }
+};
+
 int main() {
     using namespace ala;
+
+    B bb;
+    auto aa = A(bb);
     X x;
     vector<int> v = {1, 2, 3, 4};
     auto k = v.erase(v.begin());

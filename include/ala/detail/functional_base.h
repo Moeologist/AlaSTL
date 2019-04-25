@@ -18,7 +18,8 @@
     struct _name_<void> { \
         using is_transparent = int; \
         template<class U> \
-        constexpr decltype(auto) operator()(U &&rhs) const { \
+        constexpr auto operator()(U &&rhs) const \
+            -> decltype(_op_ ala::forward<U>(rhs)) { \
             return _op_ ala::forward<U>(rhs); \
         } \
     };
@@ -38,7 +39,8 @@
     struct _name_<void> { \
         using is_transparent = int; \
         template<class T, class U> \
-        constexpr decltype(auto) operator()(T &&lhs, U &&rhs) const { \
+        constexpr auto operator()(T &&lhs, U &&rhs) const \
+            -> decltype(ala::forward<T>(lhs) _op_ ala::forward<U>(rhs)) { \
             return ala::forward<T>(lhs) _op_ ala::forward<U>(rhs); \
         } \
     };

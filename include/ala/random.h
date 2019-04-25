@@ -237,8 +237,8 @@ struct _generate_real_traits<T, 8> {
     static constexpr size_t fraction = 52;
 };
 
-template<class Gen, class UInt = typename Gen::result_type>
-constexpr auto generate_real(Gen &&g) {
+template<class URBG, class UInt = typename remove_cvref_t<URBG>::result_type>
+constexpr typename _generate_real_traits<UInt>::value_type generate_real(URBG &&g) {
     typedef _generate_real_traits<UInt> _traits;
     typedef typename _traits::value_type Real;
     constexpr UInt I = sizeof(UInt) * 8;

@@ -403,7 +403,7 @@ public:
 
     template<class K>
     node_pointer find(const K &key) const {
-        decltype(auto) comp = _key_comp();
+        const auto &comp = _key_comp();
         node_pointer current = _root;
         while (!is_nil(current))
             if (comp(key, _key(current->_data)))
@@ -417,7 +417,7 @@ public:
 
     template<class K>
     size_t count(const K &key, node_pointer current) const {
-        decltype(auto) comp = _key_comp();
+        const auto &comp = _key_comp();
         size_t eql = 0;
         while (!is_nil(current)) {
             if (comp(key, _key(current->_data)))
@@ -439,7 +439,7 @@ public:
 
     template<class K>
     bool contains(const K &key) const {
-        decltype(auto) comp = _key_comp();
+        const auto &comp = _key_comp();
         node_pointer current = _root;
         while (!is_nil(current))
             if (comp(key, _key(current->_data)))
@@ -456,7 +456,7 @@ public:
 
     template<class K>
     bool erase(const K &key) {
-        decltype(auto) comp = _key_comp();
+        const auto &comp = _key_comp();
         node_pointer current = _root;
         while (!is_nil(current)) {
             if (comp(key, _key(current->_data)))
@@ -567,7 +567,7 @@ protected:
 
     template<typename Dummy = value_type,
              typename = enable_if_t<_has_first<Dummy>::value>>
-    const auto &_key(const value_type &v) const {
+    auto _key(const value_type &v) const -> decltype(v.first) {
         return v.first;
     }
 
@@ -579,7 +579,7 @@ protected:
 
     template<typename Dummy = value_compare,
              typename = enable_if_t<_has_comp<Dummy>::value>>
-    const auto &_key_comp() const {
+    auto _key_comp() const -> decltype(_comp.comp) {
         return _comp.comp;
     }
 
@@ -744,10 +744,10 @@ protected:
     }
 
     /*---------------------------------------------------------------------------------
-    |     G(B)                  G(B)                  G(B)                  P(B)      |
-    |     / \       U.c=B       / \       RotL(P)     / \       RotR(G)     / \       |
+    |     G(B)     P.c=U.c=B    G(B)                  G(B)                  P(B)      |
+    |     / \       G.c=R       / \       RotL(P)     / \       RotR(G)     / \       |
     |  P(R) U(R)    ====>?   P(R) U(B)    ====>    P(R) U(B)    ====>    X(R) G(R)    |
-    |  / \          loop(X)  / \          P<->X    / \          P.c=B         / \     |
+    |  / \          X=G      / \          P<->X    / \          P.c=B         / \     |
     |    X(R)                  X(R)              X(R)           G.c=R           U(B)  |
     ---------------------------------------------------------------------------------*/
     // remove continuous red
@@ -828,19 +828,20 @@ protected:
     }
 
     /*----------------------------------------------------------------------------------------------------
-    |     P(B)      P.c<->B.c   P(?)                  P(?)      B.l.c=B     P(?)      B.c=P.c     B(?)   |
-    |     / \       RotL(P)     / \       B.c=R       / \       B.c=R       / \       P.c=B       / \    |
-    |  X(B) B(R)    ====>^   X(B) B(B)    ====>?   X(B) B(B)    ====>    X(B) B(B)    ====>    P(B) (B)  |
-    |       / \     B=P.r         / \     loop(X)       / \     RotR(B)       / \     B.r.c=B  /         |
-    |      $B       fork        (B) (B)               (R) (B)   B=P.r          ~B(R)  RotL(B) X          |
+    |     P(B)      P.c=R       P(?)                  P(?)      Y.l.c=B     P(?)      Y.c=P.c     Y(?)   |
+    |     / \       Y.c=B       / \       Y.c=R       / \       Y.c=R       / \       P.c=B       / \    |
+    |  X(B) Y(R)    ====>^   X(B) Y(B)    ====>?   X(B) Y(B)    ====>    X(B) Y(B)    ====>    P(B) (B)  |
+    |       / \     RotL(P)       / \     loop(X)       / \     RotR(Y)       / \     Y.r.c=B  /         |
+    |      $Y       Y=P.r       (B) (B)               (R) (B)   Y=P.r          ~Y(R)  RotL(Y) X          |
     ----------------------------------------------------------------------------------------------------*/
-    // make brother black-height -1
+    // make current black-height + 1
 
     void rebalance_for_detach(node_pointer current, node_pointer parent) noexcept {
         node_pointer brother;
         while (current != _root && is_black(current)) {
             if (parent->_left == current) {
                 brother = parent->_right;
+                assert(!is_nil(brother));
                 if (brother->_color == ALA_RED) {
                     brother->_color = ALA_BLACK;
                     parent->_color = ALA_RED;

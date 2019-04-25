@@ -49,10 +49,6 @@ struct PrintNum {
 template<class...>
 class FK;
 
-struct placeholder {};
-
-static_assert(ala::is_nothrow_move_constructible_v<placeholder>);
-
 int osp(int x, int y, int z) {
     return x + y + z;
 }
@@ -66,18 +62,7 @@ enum E {};
 
 int main() {
     using namespace ala;
-    static_assert(is_array_v<const int[]>);
-    static_assert(is_const_v<const int[]>);
-    static_assert(is_lvalue_reference_v<const int &>);
-    static_assert(!is_const_v<const int &>);
-    static_assert(is_destructible_v<int>);
-    static_assert(!is_convertible_v<int(int), int(int)>);
-    static_assert(is_convertible_v<void, void>);
-
-    static_assert(is_const_v<const int[]>);
-    static_assert(is_pointer_v<const int *const>);
-    static_assert(is_same_v<remove_pointer_t<const int *const>, const int>);
-    static_assert(is_same_v<remove_const_t<const int *const>, const int *>);
+    auto bid = bind(print_num, ala::placeholders::_1);
 
     int (*po)(int, int, int) = osp;
 
@@ -91,6 +76,7 @@ int main() {
     // 存储自由函数
     function<void(int)> f_display = print_num;
     f_display(-9);
+    auto pppp = f_display.target<void (*)(int)>();
 
     function<void(int)> f_di = ala::move(f_display);
     f_display(-9);
@@ -109,30 +95,28 @@ int main() {
     // f_display_31337();
 
     // 存储到成员函数的调用
-    function att = PrintNum();
-    att(1);
+    // function att = PrintNum();
+    // att(1);
 
     typedef int ftp(int, int);
 
     const auto &padds = &Foo::print_add;
 
     function<void(Foo &, int)> f_add_display = padds;
-    function f_add_display1 = padds;
-    static_assert(
-        is_same<decltype(f_add_display), decltype(f_add_display1)>::value);
-    static_assert(is_member_function_pointer_v<decltype(&Foo::print_add)>);
+    // function f_add_display1 = padds;
+    // static_assert(is_same<decltype(f_add_display), decltype(f_add_display1)>::value);
+    // static_assert(is_member_function_pointer_v<decltype(&Foo::print_add)>);
     Foo foo(314159);
     f_add_display(foo, 1);
     // f_add_display(314159, 1);
 
-    FK<callable_traits<decltype(padds)>::type> fk;
+    // FK<callable_traits<decltype(padds)>::type> fk;
 
     auto memfn = mem_fn(&Foo::print_add);
     memfn(foo, 2);
 
-        // 存储到数据成员访问器的调用
-        function<int(Foo const &)>
-            f_num = &Foo::num_;
+    // 存储到数据成员访问器的调用
+    function<int(Foo const &)> f_num = &Foo::num_;
     std::cout << "num_: " << f_num(foo) << '\n';
 
     // 存储到成员函数及对象的调用
@@ -154,3 +138,16 @@ int main() {
 
     return 0;
 }
+
+// static_assert(is_array_v<const int[]>);
+// static_assert(is_const_v<const int[]>);
+// static_assert(is_lvalue_reference_v<const int &>);
+// static_assert(!is_const_v<const int &>);
+// static_assert(is_destructible_v<int>);
+// static_assert(!is_convertible_v<int(int), int(int)>);
+// static_assert(is_convertible_v<void, void>);
+
+// static_assert(is_const_v<const int[]>);
+// static_assert(is_pointer_v<const int *const>);
+// static_assert(is_same_v<remove_pointer_t<const int *const>, const int>);
+// static_assert(is_same_v<remove_const_t<const int *const>, const int *>);

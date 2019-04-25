@@ -97,7 +97,7 @@ int read_bmp(const void *buffer, const char *filename, int *width, int *height,
     return 1;
 }
 
-#define write_bmp(buffer, width, height, filename) \
-    write_bmp(buffer, width, height, filename, 0)
-#define read_bmp(buffer, width, height, filename) \
-    read_bmp(buffer, width, height, filename, NULL)
+#define write_bmp(buffer, filename, width, height) \
+    write_bmp(buffer, filename, width, height, 0)
+#define read_bmp(buffer, filename, width, height) \
+    read_bmp(buffer, filename, width, height, NULL)

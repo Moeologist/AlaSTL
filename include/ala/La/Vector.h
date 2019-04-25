@@ -4,6 +4,7 @@
 #define _ALALIB_USE_ALA
 #ifdef _ALALIB_USE_ALA
 #include <ala/type_traits.h>
+#include <ala/utility.h>
 #include <ala/La/external.h>
 #else
 #include <type_traits>
@@ -17,6 +18,8 @@ namespace La {
 #ifdef _ALALIB_USE_ALA
 using ala::size_t;
 using ala::common_type_t;
+using ala::index_sequence;
+using ala::make_index_sequence;
 #else
 using std::size_t;
 using std::common_type_t;
@@ -27,16 +30,18 @@ struct Vector {
     typedef T value_type;
     typedef size_t size_type;
     constexpr static size_t size = Size;
-    T _m[Size];
+    T _m[Size] = {};
 
-    static_assert(Size >= 2, "Vector size must >= 2");
+    // static_assert(Size >= 2, "Vector size must >= 2");
 
-    template<class Cast>
-    constexpr Vector<Cast, Size> cast() noexcept {
-        Vector<Cast, Size> tmp;
-        for (int i = 0; i < Size; ++i)
-            tmp._m[i] = _m[i];
-        return tmp;
+    template<class U>
+    constexpr Vector<U, Size> to_type() noexcept {
+        return _to_type_helper<U>(make_index_sequence<Size>());
+    }
+
+    template<class U, size_t... Is>
+    constexpr Vector<U, Size> _to_type_helper(index_sequence<Is...>) noexcept {
+        return {U(_m[Is])...};
     }
 
     constexpr Vector &fill(T value) noexcept {
@@ -238,9 +243,19 @@ constexpr T cross(const Vector<T, 2> &lhs, const Vector<T, 2> &rhs) {
 }
 
 #if _ALA_ENABLE_DEDUCTION_GUIDES
-template<typename... Ts>
+template<class... Ts>
 Vector(Ts...)->Vector<common_type_t<Ts...>, sizeof...(Ts)>;
 #endif
+
+template<class... Args>
+Vector<common_type_t<Args...>, sizeof...(Args)> make_vector(Args &&... args) {
+    return {common_type_t<Args...>(args)...};
+}
+
+template<class T, class... Args>
+Vector<T, sizeof...(Args)> make_vector(Args &&... args) {
+    return {T(args)...};
+}
 
 } // namespace La
 } // namespace ala

@@ -465,14 +465,14 @@ public:
 #if IS_MAP && IS_UNIQ
     template<class... Args>
     pair<iterator, bool> try_emplace(const key_type &k, Args &&... args) {
-        return tree.emplace(nullptr, ala::piecewise_construct,
+        return tree.emplace(nullptr, ala::piecewise_construct_t(),
                             ala::forward_as_tuple(k),
                             ala::forward_as_tuple(ala::forward<Args>(args)...));
     }
 
     template<class... Args>
     pair<iterator, bool> try_emplace(key_type &&k, Args &&... args) {
-        return tree.emplace(nullptr, ala::piecewise_construct,
+        return tree.emplace(nullptr, ala::piecewise_construct_t(),
                             ala::forward_as_tuple(ala::move(k)),
                             ala::forward_as_tuple(ala::forward<Args>(args)...));
     }
@@ -480,7 +480,7 @@ public:
     template<class... Args>
     iterator try_emplace(const_iterator hint, const key_type &k, Args &&... args) {
         return tree
-            .emplace(hint, ala::piecewise_construct, ala::forward_as_tuple(k),
+            .emplace(hint, ala::piecewise_construct_t(), ala::forward_as_tuple(k),
                      ala::forward_as_tuple(ala::forward<Args>(args)...))
             .first;
     }
@@ -488,7 +488,7 @@ public:
     template<class... Args>
     iterator try_emplace(const_iterator hint, key_type &&k, Args &&... args) {
         return tree
-            .emplace(hint, ala::piecewise_construct,
+            .emplace(hint, ala::piecewise_construct_t(),
                      ala::forward_as_tuple(ala::move(k)),
                      ala::forward_as_tuple(ala::forward<Args>(args)...))
             .first;

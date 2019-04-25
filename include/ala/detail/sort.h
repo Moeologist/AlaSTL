@@ -149,7 +149,7 @@ void shell_sort(RandomIter first, RandomIter last) {
 namespace detail {
 
 template<class T>
-decltype(auto) median(T &&a, T &&b, T &&c) {
+T &&median(T &&a, T &&b, T &&c) {
     if (a < b)
         if (b < c)
             return forward<T>(b);

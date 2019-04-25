@@ -83,10 +83,14 @@
 #define _ALA_DEBUG
 #endif
 
-#if __cplusplus >= 201703
+#if __cplusplus >= 201703L
 #define _ALA_CPP_STD 17
-#else
+#elif __cplusplus >= 201402L
 #define _ALA_CPP_STD 14
+#elif __cplusplus >= 201103L
+#define _ALA_CPP_STD 11
+#else
+#error "ala need modern c++"
 #endif // language standard
 
 #endif // HEAD

@@ -1,4 +1,4 @@
-// surfix: _impl - aux class, _helper - aux base class, _test - aux function
+// surfix: _impl - sfinae class, _helper - base class, _test - aux function
 #ifndef _ALA_TYPE_TRAITS_H
 #define _ALA_TYPE_TRAITS_H
 
@@ -694,14 +694,14 @@ template<typename T1, typename T2>
 using _cm_tp_helper_t = decay_t<decltype(false ? declval<T1>() : declval<T2>())>;
 
 template<typename T1, typename T2, typename = void>
-struct _common_type_2_helper {};
+struct _common_type_2_impl {};
 
 template<typename T1, typename T2>
-struct _common_type_2_helper<T1, T2, void_t<_cm_tp_helper_t<const T1&, const T2&>>>
+struct _common_type_2_impl<T1, T2, void_t<_cm_tp_helper_t<const T1&, const T2&>>>
 { typedef _cm_tp_helper_t<const T1&, const T2&> type; };
 
 template<typename T1, typename T2, typename = void>
-struct _common_type_2_sfinae : _common_type_2_helper<T1, T2> {};
+struct _common_type_2_sfinae : _common_type_2_impl<T1, T2> {};
 
 template<typename T1, typename T2>
 struct _common_type_2_sfinae<T1, T2, void_t<_cm_tp_helper_t<T1, T2>>>

@@ -196,7 +196,7 @@ constexpr bool operator>=(const pair<T1, T2> &lhs, const pair<T1, T2> &rhs) {
 }
 
 template<class T1, class T2>
-constexpr decltype(auto) make_pair(T1 &&t1, T2 &&t2) {
+constexpr auto make_pair(T1 &&t1, T2 &&t2) -> pair<decay_t<T1>, decay_t<T2>> {
     return pair<decay_t<T1>, decay_t<T2>>(ala::forward<T1>(t1),
                                           ala::forward<T2>(t2));
 }

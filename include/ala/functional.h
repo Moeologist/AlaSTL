@@ -11,7 +11,7 @@
 
 namespace ala {
 #if ALA_USE_RTTI
-using ::type_info;
+using std::type_info;
 #endif
 
 struct identity {
@@ -176,36 +176,43 @@ struct _bind_t {
 
     template<class Tuple, class T,
              class = enable_if_t<!is_bind_expression<remove_cvref_t<T>>::value>>
-    decltype(auto) _select(Tuple &&, T &&val) {
+    T &&_select(Tuple &&, T &&val) {
         return ala::forward<T>(val);
     }
 
     template<class Tuple, class Bind, class = void,
              class = enable_if_t<is_bind_expression<remove_cvref_t<Bind>>::value>>
-    decltype(auto) _select(Tuple &&tp, Bind &&inner_bind) {
+    auto _select(Tuple &&tp, Bind &&inner_bind)
+        -> decltype(inner_bind._call(ala::forward<Tuple>(tp))) {
         return inner_bind._call(ala::forward<Tuple>(tp));
     }
 
     template<class Tuple, int N>
-    decltype(auto) _select(Tuple &&tp, _placeholder_t<N>) {
+    auto _select(Tuple &&tp, _placeholder_t<N>)
+        -> decltype(ala::get<N - 1>(ala::forward<Tuple>(tp))) {
         static_assert(N > 0 && N <= tuple_size<remove_cvref_t<Tuple>>::value,
                       "illegal index");
         return ala::get<N - 1>(ala::forward<Tuple>(tp));
     }
 
     template<class Tuple, class T>
-    decltype(auto) _select(Tuple &&tp, reference_wrapper<T> refwarp) {
+    auto _select(Tuple &&tp, reference_wrapper<T> refwarp)
+        -> decltype(refwarp.get()) {
         return refwarp.get();
     }
 
     template<class Tuple, size_t... N>
-    decltype(auto) _call_helper(Tuple &&tp, index_sequence<N...>) {
+    auto _call_helper(Tuple &&tp, index_sequence<N...>)
+        -> decltype(ala::invoke(_fn, _select(ala::forward<Tuple>(tp),
+                                             ala::get<N>(_tuple))...)) {
         return ala::invoke(_fn, _select(ala::forward<Tuple>(tp),
                                         ala::get<N>(_tuple))...);
     }
 
     template<class Tuple>
-    decltype(auto) _call(Tuple &&tp) {
+    auto _call(Tuple &&tp)
+        -> decltype(this->_call_helper(ala::forward<Tuple>(tp),
+                                       ala::index_sequence_for<Args...>())) {
         return this->_call_helper(ala::forward<Tuple>(tp),
                                   ala::index_sequence_for<Args...>());
     }
@@ -546,7 +553,8 @@ mem_fn(MemPtr pm) noexcept {
 }
 
 template<class Fn, class... Args>
-decltype(auto) bind(Fn &&fn, Args &&... args) {
+auto bind(Fn &&fn, Args &&... args)
+    -> _bind_t<typename callable_traits<Fn>::result_type, Fn, Args...> {
     using _call_traits = callable_traits<Fn>;
     static_assert(sizeof...(Args) == _call_traits::args_count,
                   "bind size not compatible");
@@ -556,13 +564,15 @@ decltype(auto) bind(Fn &&fn, Args &&... args) {
 }
 
 template<class R, class Fn, class... Args>
-decltype(auto) bind(Fn &&fn, Args &&... args) {
+auto bind(Fn &&fn, Args &&... args) -> _bind_t<R, Fn, Args...> {
     using _call_traits = callable_traits<Fn>;
     static_assert(sizeof...(Args) == _call_traits::args_count,
                   "bind size not compatible");
     return _bind_t<R, Fn, Args...>(ala::forward<Fn>(fn),
                                    ala::forward<Args>(args)...);
 }
+
+// C++20
 
 template<class Fn, class... Args>
 struct _bind_front_t {
@@ -572,7 +582,9 @@ struct _bind_front_t {
     _tuple_t _tuple;
 
     template<size_t... N, class... Args1>
-    decltype(auto) _call(index_sequence<N...>, Args1... args1) {
+    auto _call(index_sequence<N...>, Args1... args1)
+        -> decltype(ala::invoke(_fn, ala::get<N>(_tuple)...,
+                                ala::forward<Args1>(args1)...)) {
         return ala::invoke(_fn, ala::get<N>(_tuple)...,
                            ala::forward<Args1>(args1)...);
     }
@@ -593,12 +605,14 @@ struct _bind_front_t {
         : _fn(ala::move(other._fn)), _tuple(ala::move(other._tuple)) {}
 
     template<class... Args1>
-    decltype(auto) operator()(Args1 &&... args1) {
+    auto operator()(Args1 &&... args1)
+        -> decltype(this->_call(index_sequence_for<Args...>(),
+                                ala::forward<Args1>(args1)...)) {
         static_assert(sizeof...(Args) + sizeof...(Args1) ==
                           callable_traits<_fn_t>::args_count,
                       "arguments count not compatible");
-        return _call(index_sequence_for<Args...>(),
-                     ala::forward<Args1>(args1)...);
+        return this->_call(index_sequence_for<Args...>(),
+                           ala::forward<Args1>(args1)...);
     }
 };
 
@@ -606,8 +620,8 @@ template<class Fn, class... Args>
 _bind_front_t<Fn, Args...> bind_front(Fn &&fn, Args &&... args) {
     static_assert(sizeof...(Args) <= callable_traits<Fn>::args_count,
                   "arguments count too many");
-    return _bind_front_t<Fn, Args>(ala::forward<Fn>(fn),
-                                   ala::forward<Args>(args)...);
+    return _bind_front_t<Fn, Args...>(ala::forward<Fn>(fn),
+                                      ala::forward<Args>(args)...);
 }
 
 } // namespace ala

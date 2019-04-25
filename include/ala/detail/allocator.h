@@ -112,11 +112,19 @@ struct allocator {
     ~allocator() {}
 
     ALA_NODISCARD T *allocate(ala::size_t n) {
+#if _ALA_CPP_STD >= 17
+        return static_cast<T *>(::operator new(n * sizeof(T), alignof(T)));
+#else
         return static_cast<T *>(::operator new(n * sizeof(T)));
+#endif
     }
 
     void deallocate(T *p, ala::size_t n) {
-        ::operator delete(static_cast<void *>(p), n * sizeof(T));
+#if _ALA_CPP_STD >= 17
+        ::operator delete(static_cast<void *>(p), alignof(T));
+#else
+        ::operator delete(static_cast<void *>(p));
+#endif
     }
 
     template<class U, class... Args>
