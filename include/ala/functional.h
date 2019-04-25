@@ -1,26 +1,38 @@
 #ifndef _ALA_FUNCTIONAL_H
 #define _ALA_FUNCTIONAL_H
 
+#if ALA_USE_RTTI
 #include <typeinfo>
+#endif
+
 #include <ala/detail/functional_base.h>
 #include <ala/detail/allocator.h>
 #include <ala/tuple.h>
 
 namespace ala {
+#if ALA_USE_RTTI
+using ::type_info;
+#endif
+
+struct identity {
+    using is_transparent = int;
+    template<class T>
+    constexpr T &&operator()(T &&t) const noexcept {
+        return ala::forward<T>(t);
+    }
+};
 
 template<class T>
 struct reference_wrapper {
     using type = T;
 
-    static T &_test(T &t) noexcept {
-        return t;
-    }
+    static void _test(T &t) noexcept;
     static void _test(T &&) = delete;
 
     template<class U, class = decltype(_test(declval<U>())),
-             class = enable_if_t<!is_same<reference_wrapper, remove_cvref_t<U>>::value>>
-    reference_wrapper(U &&u) noexcept(noexcept(_test(ala::forward<U>(u))))
-        : _ptr(ala::addressof(_test(ala::forward<U>(u)))) {}
+             class = enable_if_t<!is_same<remove_cvref_t<U>, reference_wrapper>::value>>
+    reference_wrapper(U &&u) noexcept(noexcept(_test(declval<U>())))
+        : _ptr(ala::addressof(ala::forward<U>(u))) {}
     reference_wrapper(const reference_wrapper &other) noexcept = default;
     reference_wrapper &operator=(const reference_wrapper &x) = default;
     operator T &() const noexcept {
@@ -36,6 +48,73 @@ struct reference_wrapper {
     }
     T *_ptr;
 };
+
+#if _ALA_ENABLE_DEDUCTION_GUIDES
+template<class T>
+reference_wrapper(T &)->reference_wrapper<T>;
+#endif
+
+template<class T>
+reference_wrapper<T> ref(T &t) noexcept {
+    return reference_wrapper<T>(t);
+}
+
+template<class T>
+reference_wrapper<T> ref(reference_wrapper<T> t) noexcept {
+    return ref(t.get());
+}
+
+template<class T>
+void ref(const T &&) = delete;
+
+template<class T>
+reference_wrapper<const T> cref(const T &t) noexcept {
+    return reference_wrapper<const T>(t);
+}
+
+template<class T>
+reference_wrapper<const T> cref(reference_wrapper<T> t) noexcept {
+    return cref(t.get());
+}
+
+template<class T>
+void cref(const T &&) = delete;
+
+template<class Fn>
+struct _not_fn_t {
+    typedef decay_t<Fn> _fn_t;
+    _fn_t _fn;
+
+    explicit _not_fn_t(Fn &&fn): _fn(forward<Fn>(fn)) {}
+    _not_fn_t(_not_fn_t &&fn) = default;
+    _not_fn_t(const _not_fn_t &fn) = default;
+
+    template<class... Args>
+    auto operator()(Args &&... args) & -> decltype(
+        !declval<invoke_result_t<_fn_t &, Args...>>()) {
+        return !invoke(_fn, forward<Args>(args)...);
+    }
+    template<class... Args>
+    auto operator()(Args &&... args) const & -> decltype(
+        !declval<invoke_result_t<_fn_t const &, Args...>>()) {
+        return !invoke(_fn, forward<Args>(args)...);
+    }
+    template<class... Args>
+    auto operator()(Args &&... args) && -> decltype(
+        !declval<invoke_result_t<_fn_t, Args...>>()) {
+        return !invoke(ala::move(_fn), forward<Args>(args)...);
+    }
+    template<class... Args>
+    auto operator()(Args &&... args) const && -> decltype(
+        !declval<invoke_result_t<_fn_t const, Args...>>()) {
+        return !invoke(ala::move(_fn), forward<Args>(args)...);
+    }
+};
+
+template<class Fn>
+_not_fn_t<Fn> not_fn(Fn &&fn) {
+    return _not_fn_t<Fn>(ala::forward<Fn>(fn));
+}
 
 template<int N>
 struct _placeholder_t {};
@@ -90,9 +169,9 @@ inline constexpr bool is_bind_expression_v = is_bind_expression<T>::value;
 template<class R, class Fn, class... Args>
 struct _bind_t {
     typedef R result_type;
-    typedef decay_t<Fn> _f_t;
+    typedef decay_t<Fn> _fn_t;
     typedef tuple<decay_t<Args>...> _tuple_t;
-    _f_t _f;
+    _fn_t _fn;
     _tuple_t _tuple;
 
     template<class Tuple, class T,
@@ -121,8 +200,8 @@ struct _bind_t {
 
     template<class Tuple, size_t... N>
     decltype(auto) _call_helper(Tuple &&tp, index_sequence<N...>) {
-        return ala::invoke(_f, _select(ala::forward<Tuple>(tp),
-                                       ala::get<N>(_tuple))...);
+        return ala::invoke(_fn, _select(ala::forward<Tuple>(tp),
+                                        ala::get<N>(_tuple))...);
     }
 
     template<class Tuple>
@@ -131,29 +210,25 @@ struct _bind_t {
                                   ala::index_sequence_for<Args...>());
     }
 
-public:
-    _bind_t(Fn &&f, Args &&... args)
-        : _f(ala::forward<Fn>(f)),
-          _tuple(ala::forward_as_tuple(ala::forward<Args>(args)...)) {}
+    _bind_t(Fn &&fn, Args &&... args)
+        : _fn(ala::forward<Fn>(fn)), _tuple(ala::forward<Args>(args)...) {}
 
     template<bool Dummy = true,
              class = enable_if_t<Dummy && is_copy_constructible<_tuple_t>::value &&
-                                 is_copy_constructible<_f_t>::value>>
-    _bind_t(const _bind_t &other): _f(other._f), _tuple(other._tuple) {}
+                                 is_copy_constructible<_fn_t>::value>>
+    _bind_t(const _bind_t &other): _fn(other._fn), _tuple(other._tuple) {}
 
     template<bool Dummy = true, class = void,
              class = enable_if_t<Dummy && is_move_constructible<_tuple_t>::value &&
-                                 is_move_constructible<_f_t>::value>>
+                                 is_move_constructible<_fn_t>::value>>
     _bind_t(_bind_t &&other)
-        : _f(ala::move(other._f)), _tuple(ala::move(other._tuple)) {}
+        : _fn(ala::move(other._fn)), _tuple(ala::move(other._tuple)) {}
 
     template<class... Args1>
-    decltype(auto) operator()(Args1 &&... args) {
+    result_type operator()(Args1 &&... args) {
         return _call(ala::forward_as_tuple(ala::forward<Args1>(args)...));
     }
 };
-
-using std::type_info;
 
 enum Operation { Copy, Move, Destroy, TypeID };
 
@@ -214,7 +289,7 @@ struct function<R(Args...)> {
         }
     };
     template<class Fn, class = enable_if_t<is_invocable_r<R, Fn &, Args...>::value>>
-    function(Fn f) {
+    function(Fn fn) {
         static_assert(sizeof(Fn) <= sizeof(_data),
                       "functor size is too large, "
                       "ala::function has no dynamic memory allocation, "
@@ -222,7 +297,7 @@ struct function<R(Args...)> {
         typedef _function_handle<R(Args...), Fn> handle_t;
         _invoker = &handle_t::invoke;
         _operator = &handle_t::operate;
-        _operator((void *)&_data, (void *)&f, Move);
+        _operator((void *)&_data, (void *)&fn, Move);
         _valid = true;
     }
     function &operator=(const function &other) {
@@ -242,9 +317,9 @@ struct function<R(Args...)> {
     }
     template<class Fn>
     enable_if_t<is_invocable_r<R, Fn, Args...>::value, function> &
-    operator=(Fn &&f) {
+    operator=(Fn &&fn) {
         _valid = false;
-        function(ala::forward<Fn>(f)).swap(*this);
+        function(ala::forward<Fn>(fn)).swap(*this);
         return *this;
     }
     template<class Fn>
@@ -354,14 +429,14 @@ template<class R, class... Args>
 struct _function_traits_helper<R(Args...)> {
     typedef R type(Args...);
     typedef R result_type;
-    static constexpr size_t arg_num = sizeof...(Args);
+    static constexpr size_t args_count = sizeof...(Args);
 };
 
 template<class R, class... Args>
 struct _function_traits_helper<R(Args..., ...)> {
     typedef R type(Args..., ...);
     typedef R result_type;
-    static constexpr size_t arg_num = sizeof...(Args);
+    static constexpr size_t args_count = sizeof...(Args);
     typedef int is_va;
 };
 
@@ -372,7 +447,7 @@ template<class Fn>
 struct _function_helper<Fn, void_t<typename _function_traits<Fn>::type>> {
     typedef typename _function_traits<Fn>::type type;
     typedef typename _function_traits_helper<type>::result_type result_type;
-    static constexpr size_t arg_num = _function_traits_helper<type>::arg_num;
+    static constexpr size_t args_count = _function_traits_helper<type>::args_count;
 };
 
 template<class MemPtr>
@@ -395,7 +470,7 @@ struct _functor_helper<Class, void_t<decltype(&Class::operator())>> {
                   "function can not bind to &&-qualify functor");
     typedef typename _function_traits<Fn>::type type;
     typedef typename _function_helper<type>::result_type result_type;
-    static constexpr size_t arg_num = _function_helper<type>::arg_num;
+    static constexpr size_t args_count = _function_helper<type>::args_count;
 };
 
 template<class Fn, class This>
@@ -416,7 +491,7 @@ struct _memptr_helper<MemPtr, true, false> {
     typedef typename _memptr_traits<MemPtr>::_class _class;
     typedef _mem type(typename _get_cvref<_mem>::template bind_t<_class> &);
     typedef typename _function_helper<type>::result_type result_type;
-    static constexpr size_t arg_num = _function_helper<type>::arg_num;
+    static constexpr size_t args_count = _function_helper<type>::args_count;
 };
 
 template<class MemPtr>
@@ -432,7 +507,7 @@ struct _memptr_helper<MemPtr, false, true> {
         rcv_type;
     typedef typename _add_this_param<raw, rcv_type>::type type;
     typedef typename _function_helper<type>::result_type result_type;
-    static constexpr size_t arg_num = _function_helper<type>::arg_num;
+    static constexpr size_t args_count = _function_helper<type>::args_count;
 };
 
 template<class Fn, bool = is_class<Fn>::value, bool = is_member_pointer<Fn>::value>
@@ -442,7 +517,8 @@ template<class Functor>
 struct _callable_traits<Functor, true, false>: _functor_helper<Functor> {};
 
 template<class MemPtr>
-struct _callable_traits<MemPtr, false, true>: _memptr_helper<MemPtr> {};
+struct _callable_traits<MemPtr, false, true>
+    : _memptr_helper<remove_cv_t<MemPtr>> {};
 
 template<class Callable>
 struct callable_traits: _callable_traits<remove_reference_t<Callable>> {};
@@ -462,22 +538,75 @@ template<class Callable>
 function(Callable)->function<typename callable_traits<Callable>::type>;
 #endif
 
+template<class MemPtr>
+enable_if_t<is_member_pointer<MemPtr>::value,
+            function<typename callable_traits<MemPtr>::type>>
+mem_fn(MemPtr pm) noexcept {
+    return function<typename _memptr_helper<remove_reference_t<MemPtr>>::type>(pm);
+}
+
 template<class Fn, class... Args>
-decltype(auto) bind(Fn &&f, Args &&... args) {
+decltype(auto) bind(Fn &&fn, Args &&... args) {
     using _call_traits = callable_traits<Fn>;
-    static_assert(sizeof...(Args) == _call_traits::arg_num,
+    static_assert(sizeof...(Args) == _call_traits::args_count,
                   "bind size not compatible");
     using R = typename _call_traits::result_type;
-    return _bind_t<R, Fn, Args...>(ala::forward<Fn>(f),
+    return _bind_t<R, Fn, Args...>(ala::forward<Fn>(fn),
                                    ala::forward<Args>(args)...);
 }
 
 template<class R, class Fn, class... Args>
-decltype(auto) bind(Fn &&f, Args &&... args) {
+decltype(auto) bind(Fn &&fn, Args &&... args) {
     using _call_traits = callable_traits<Fn>;
-    static_assert(sizeof...(Args) == _call_traits::arg_num,
+    static_assert(sizeof...(Args) == _call_traits::args_count,
                   "bind size not compatible");
-    return _bind_t<R, Fn, Args...>(ala::forward<Fn>(f),
+    return _bind_t<R, Fn, Args...>(ala::forward<Fn>(fn),
+                                   ala::forward<Args>(args)...);
+}
+
+template<class Fn, class... Args>
+struct _bind_front_t {
+    typedef decay_t<Fn> _fn_t;
+    typedef tuple<unwrap_ref_decay_t<Args>...> _tuple_t;
+    _fn_t _fn;
+    _tuple_t _tuple;
+
+    template<size_t... N, class... Args1>
+    decltype(auto) _call(index_sequence<N...>, Args1... args1) {
+        return ala::invoke(_fn, ala::get<N>(_tuple)...,
+                           ala::forward<Args1>(args1)...);
+    }
+
+    _bind_front_t(Fn &&fn, Args &&... args)
+        : _fn(ala::forward<Fn>(fn)), _tuple(ala::forward<Args>(args)...) {}
+
+    template<bool Dummy = true,
+             class = enable_if_t<Dummy && is_copy_constructible<_tuple_t>::value &&
+                                 is_copy_constructible<_fn_t>::value>>
+    _bind_front_t(const _bind_front_t &other)
+        : _fn(other._fn), _tuple(other._tuple) {}
+
+    template<bool Dummy = true, class = void,
+             class = enable_if_t<Dummy && is_move_constructible<_tuple_t>::value &&
+                                 is_move_constructible<_fn_t>::value>>
+    _bind_front_t(_bind_front_t &&other)
+        : _fn(ala::move(other._fn)), _tuple(ala::move(other._tuple)) {}
+
+    template<class... Args1>
+    decltype(auto) operator()(Args1 &&... args1) {
+        static_assert(sizeof...(Args) + sizeof...(Args1) ==
+                          callable_traits<_fn_t>::args_count,
+                      "arguments count not compatible");
+        return _call(index_sequence_for<Args...>(),
+                     ala::forward<Args1>(args1)...);
+    }
+};
+
+template<class Fn, class... Args>
+_bind_front_t<Fn, Args...> bind_front(Fn &&fn, Args &&... args) {
+    static_assert(sizeof...(Args) <= callable_traits<Fn>::args_count,
+                  "arguments count too many");
+    return _bind_front_t<Fn, Args>(ala::forward<Fn>(fn),
                                    ala::forward<Args>(args)...);
 }
 

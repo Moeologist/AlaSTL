@@ -30,7 +30,7 @@ struct X {
 
 struct Foo {
     Foo(int num): num_(num) {}
-    void print_add(int i) && {
+    void print_add(int i) {
         std::cout << num_ + i << '\n';
     }
     int num_;
@@ -71,22 +71,14 @@ int main() {
     static_assert(is_lvalue_reference_v<const int &>);
     static_assert(!is_const_v<const int &>);
     static_assert(is_destructible_v<int>);
-    static_assert(is_convertible_v<int(int), int(int)>);
+    static_assert(!is_convertible_v<int(int), int(int)>);
     static_assert(is_convertible_v<void, void>);
-    static_assert(std::is_convertible_v<int(int), int(int)>);
-    static_assert(std::is_convertible_v<void, void>);
-    static_assert(noexcept(_convert<Int>(0)));
-
-    static_assert(is_constructible_v<E, double>);
-    static_assert(_is_a_constructible_impl<E, double>::value);
-    static_assert(std::is_constructible<E, double>::value);
-
-    decltype(E(declval<int>())) i;
 
     static_assert(is_const_v<const int[]>);
     static_assert(is_pointer_v<const int *const>);
     static_assert(is_same_v<remove_pointer_t<const int *const>, const int>);
     static_assert(is_same_v<remove_const_t<const int *const>, const int *>);
+
     int (*po)(int, int, int) = osp;
 
     auto bd = bind(po, 1,
@@ -124,17 +116,23 @@ int main() {
 
     const auto &padds = &Foo::print_add;
 
-    function<void(Foo &&, int)> f_add_display = padds;
+    function<void(Foo &, int)> f_add_display = padds;
     function f_add_display1 = padds;
     static_assert(
         is_same<decltype(f_add_display), decltype(f_add_display1)>::value);
     static_assert(is_member_function_pointer_v<decltype(&Foo::print_add)>);
     Foo foo(314159);
-    f_add_display(ala::move(foo), 1);
-    f_add_display(314159, 1);
+    f_add_display(foo, 1);
+    // f_add_display(314159, 1);
 
-    // 存储到数据成员访问器的调用
-    function<int(Foo const &)> f_num = &Foo::num_;
+    FK<callable_traits<decltype(padds)>::type> fk;
+
+    auto memfn = mem_fn(&Foo::print_add);
+    memfn(foo, 2);
+
+        // 存储到数据成员访问器的调用
+        function<int(Foo const &)>
+            f_num = &Foo::num_;
     std::cout << "num_: " << f_num(foo) << '\n';
 
     // 存储到成员函数及对象的调用

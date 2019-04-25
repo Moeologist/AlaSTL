@@ -25,6 +25,9 @@ constexpr add_const_t<T> &as_const(T &t) noexcept {
     return t;
 }
 
+template<class T>
+void as_const(const T &&) = delete;
+
 namespace rel_ops {
 template<class T>
 bool operator!=(const T &lhs, const T &rhs) {
@@ -50,7 +53,6 @@ bool operator>=(const T &lhs, const T &rhs) {
 struct in_place_t {
     explicit in_place_t() = default;
 };
-
 
 template<class T>
 struct in_place_type_t {
