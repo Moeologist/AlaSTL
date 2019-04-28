@@ -11,14 +11,6 @@ namespace ala {
 template<size_t I, typename T>
 struct _tuple_base {
     T value;
-    _tuple_base &operator=(const _tuple_base &) = delete;
-
-public:
-    _tuple_base() noexcept(is_nothrow_constructible<T>::value): value() {
-        static_assert(
-            !is_reference<T>::value,
-            "Attempt to default construct a reference element in a tuple");
-    }
 
     template<typename U,
              typename = enable_if_t<_and_<_not_<is_same<remove_cvref_t<U>, _tuple_base>>,
@@ -27,14 +19,17 @@ public:
         is_nothrow_constructible<U, T>::value)
         : value(ala::forward<U>(u)) {}
 
-    _tuple_base(const _tuple_base &tb) = default;
-    _tuple_base(_tuple_base &&tb) = default;
-
     template<typename U>
     _tuple_base &operator=(U &&u) noexcept(is_nothrow_assignable<T &, U>::value) {
         value = ala::forward<U>(u);
         return *this;
     }
+
+    _tuple_base() = default;
+    _tuple_base(const _tuple_base &tb) = default;
+    _tuple_base(_tuple_base &&tb) = default;
+    _tuple_base &operator=(const _tuple_base &) = default;
+    _tuple_base &operator=(_tuple_base &&) = default;
 
     void swap(_tuple_base &tb) noexcept(is_nothrow_swappable<_tuple_base>::value) {
         ala::swap(value, tb.value);
@@ -97,9 +92,6 @@ struct _tuple_impl;
 
 template<size_t... Ids, typename... Ts>
 struct _tuple_impl<index_sequence<Ids...>, Ts...>: _tuple_base<Ids, Ts>... {
-    constexpr _tuple_impl() noexcept(
-        _and_<is_nothrow_default_constructible<Ts>...>::value) {}
-
     template<typename... Us>
     explicit constexpr _tuple_impl(Us &&... us) noexcept(
         _and_<is_nothrow_constructible<Ts, Us>...>::value)
@@ -128,22 +120,11 @@ struct _tuple_impl<index_sequence<Ids...>, Ts...>: _tuple_base<Ids, Ts>... {
         return *this;
     }
 
-    _tuple_impl(const _tuple_impl &) = default;
-    _tuple_impl(_tuple_impl &&) = default;
-
-    constexpr _tuple_impl &operator=(const _tuple_impl &tpl) noexcept(
-        _and_<is_nothrow_copy_assignable<Ts>...>::value) {
-        _va_packer(_tuple_base<Ids, Ts>::operator=(
-            static_cast<const _tuple_base<Ids, Ts> &>(tpl).get())...);
-        return *this;
-    }
-
-    constexpr _tuple_impl &operator=(_tuple_impl &&tpl) noexcept(
-        _and_<is_nothrow_move_assignable<Ts>...>::value) {
-        _va_packer(_tuple_base<Ids, Ts>::operator=(ala::forward<Ts>(
-            static_cast<_tuple_base<Ids, Ts> &>(tpl).get()))...);
-        return *this;
-    }
+    constexpr _tuple_impl() = default;
+    constexpr _tuple_impl(const _tuple_impl &) = default;
+    constexpr _tuple_impl(_tuple_impl &&) = default;
+    constexpr _tuple_impl &operator=(const _tuple_impl &tpl) = default;
+    constexpr _tuple_impl &operator=(_tuple_impl &&tpl) = default;
 
     constexpr void
     swap(_tuple_impl &tpl) noexcept(_and_<is_nothrow_swappable<Ts>...>::value) {
@@ -449,8 +430,7 @@ struct _tuple_cat_type;
 
 template<typename... Ts, typename... T1Ts, typename... Tuples>
 struct _tuple_cat_type<tuple<Ts...>, tuple<T1Ts...>, Tuples...> {
-    typedef
-        typename _tuple_cat_type<tuple<Ts..., T1Ts...>, Tuples...>::type type;
+    typedef typename _tuple_cat_type<tuple<Ts..., T1Ts...>, Tuples...>::type type;
 };
 
 template<typename... Ts>

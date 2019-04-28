@@ -30,6 +30,8 @@ struct X {
 };
 int main() {
     static_assert(ala::get<double>(ala::tuple{1, 2, 1.0}) == 1);
+    ala::tuple lv{1., 2};
+    lv = ala::tuple{100, 2};
     static_assert(!(ala::tuple{1, 2} == ala::tuple{1, 2, 1}));
     static_assert(!(ala::tuple{1, 2} == ala::tuple{1, 2, 1}));
     static_assert(ala::tuple{1, 2} < ala::tuple{1, 2, 1});
@@ -49,7 +51,8 @@ int main() {
     // FK<ala::_tuple_cat_t<ala::tuple<float&&>, ala::tuple<int>>> pp;
     int a1 = 111, a2 = 2;
     // FK<decltype(ala::tuple_cat(ala::tuple<int&, int&>(a1, a2), ala::tuple<int&>(a2)))> fk;
-    auto cat = ala::tuple_cat( ala::tuple<int>(1), ala::tuple<const int &, int &, int &>(a1, a2, a2),
+    auto cat = ala::tuple_cat(ala::tuple<int>(1),
+                              ala::tuple<const int &, int &, int &>(a1, a2, a2),
                               ala::tuple<int &, const X &&>(a2, X()));
     auto con = ala::choice<ala::is_reference>(cat);
     // FK<decltype(cat)> fffffff;

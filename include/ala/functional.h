@@ -1,13 +1,13 @@
 #ifndef _ALA_FUNCTIONAL_H
 #define _ALA_FUNCTIONAL_H
 
-#if ALA_USE_RTTI
-#include <typeinfo>
-#endif
-
 #include <ala/detail/functional_base.h>
 #include <ala/detail/allocator.h>
 #include <ala/tuple.h>
+
+#if ALA_USE_RTTI
+#include <typeinfo>
+#endif
 
 namespace ala {
 #if ALA_USE_RTTI
@@ -183,8 +183,8 @@ struct _bind_t {
     template<class Tuple, class Bind, class = void,
              class = enable_if_t<is_bind_expression<remove_cvref_t<Bind>>::value>>
     auto _select(Tuple &&tp, Bind &&inner_bind)
-        -> decltype(inner_bind._call(ala::forward<Tuple>(tp))) {
-        return inner_bind._call(ala::forward<Tuple>(tp));
+        -> decltype(ala::forward<Bind>(inner_bind)._call(ala::forward<Tuple>(tp))) {
+        return ala::forward<Bind>(inner_bind)._call(ala::forward<Tuple>(tp));
     }
 
     template<class Tuple, int N>

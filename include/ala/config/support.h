@@ -26,15 +26,23 @@
 #else
 #if !defined(__has_cpp_attribute)
 #error "unsupported compiler; ala need __has_cpp_attribute in non-MSVC."
+#define _ALA_NO_CPP_ATTR_MACRO
 #endif
 #if !defined(__cpp_lambdas)
 #error "unsupported compiler; ala need __cpp_[feature] in non-MSVC."
+#define _ALA_NO_CPP_MACRO
 #endif
 #define _ALA_ENABLE_CPP_ATTR_MACRO 1
 #define _ALA_ENABLE_CPP_MACRO 1
 #endif
 
-#if _ALA_ENABLE_CPP_MACRO && __cpp_deduction_guides >= 201606 || \
+#if _ALA_ENABLE_CPP_MACRO && __cpp_aligned_new >= 201606L
+#define _ALA_ENABLE_ALIGNED_NEW 1
+#else
+#define _ALA_ENABLE_ALIGNED_NEW 0
+#endif
+
+#if _ALA_ENABLE_CPP_MACRO && __cpp_deduction_guides >= 201606L || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1914 && _ALA_CPP_STD >= 17)
 #define _ALA_ENABLE_DEDUCTION_GUIDES 1
 #else

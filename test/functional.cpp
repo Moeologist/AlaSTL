@@ -62,6 +62,10 @@ enum E {};
 
 int main() {
     using namespace ala;
+    int a=1;
+    tuple<int&> tp(a);
+    // _tuple_base<0, int&> a;
+
     auto bid = bind(print_num, ala::placeholders::_1);
 
     int (*po)(int, int, int) = osp;

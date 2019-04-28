@@ -2,39 +2,40 @@
 #define _ALA_CONFIG_PLATFORM_H
 
 #if defined(_MSC_VER) // msvc or clang (msvc target)
-#if defined(__clang__) && defined(__clang_major__)
+#if defined(__clang__) && defined(__clang_major__) && defined(__clang_patchlevel__)
 
 #define _ALA_CLANG
 #define _ALA_CLANG_MSVC
 
-#if __clang_major__ * 10 + __clang_minor < 35
-#error "unsupported compiler; ala need c++14 compiler at least."
+#if (__clang_major__ * 100 + __clang_minor * 10 + __clang_patchlevel__) < 350
+#error "unsupported compiler; ala needs clang 3.5 at least."
 #endif
 
 #else // __clang__
 #define _ALA_MSVC
 
 #if _MSC_VER < 1910
-#error "unsupported compiler; ala needs c++14 compiler at least."
+#error "unsupported compiler; ala needs visual studio 2017 at least."
 #endif
 
 #endif // __clang__
 
 #elif defined(__GNUC__) // gcc or clang (gnu target)
-#if defined(__clang__) && defined(__clang_major__)
+#if defined(__clang__) && defined(__clang_major__) && defined(__clang_patchlevel__)
 
 #define _ALA_CLANG
 #define _ALA_CLANG_GNU
-#if __clang_major__ * 10 + __clang_minor < 35
-#error "unsupported compiler; ala needs c++14 compiler at least."
+
+#if (__clang_major__ * 100 + __clang_minor * 10 + __clang_patchlevel__) < 350
+#error "unsupported compiler; ala needs clang 3.5 at least."
 #endif
 
 #else // __clang__
 
 #define _ALA_GCC
 
-#if __GNUC__ < 5
-#error "unsupported compiler; ala needs c++14 compiler at least."
+#if (__GNUC__ * 1000 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__) < 5000
+#error "unsupported compiler; ala needs gcc 5 at least."
 #endif
 
 #endif // __clang__
@@ -90,7 +91,7 @@
 #elif __cplusplus >= 201103L
 #define _ALA_CPP_STD 11
 #else
-#error "ala need modern c++"
+#define _ALA_CPP_STD 17
 #endif // language standard
 
 #endif // HEAD

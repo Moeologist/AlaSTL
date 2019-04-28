@@ -1,6 +1,8 @@
 #ifndef _ALA_DETAIL_ALLOCATOR_H
 #define _ALA_DETAIL_ALLOCATOR_H
 
+#include <new>
+
 #include <ala/detail/external.h>
 #include <ala/type_traits.h>
 #include <ala/detail/macro.h>
@@ -11,6 +13,9 @@
 #endif
 
 namespace ala {
+#if _ALA_ENABLE_ALIGNED_NEW
+using std::align_val_t;
+#endif
 
 template<class T>
 const T *addressof(const T &&) = delete;
@@ -36,11 +41,12 @@ struct pointer_traits {
         typedef T type;
     };
 
-    template<typename T, typename U,  typename = void>
+    template<typename T, typename U, typename = void>
     struct _has_rebind_template: false_type {};
 
     template<typename T, typename U>
-    struct _has_rebind_template<T, U, void_t<typename T::template rebind<U>>>: true_type {};
+    struct _has_rebind_template<T, U, void_t<typename T::template rebind<U>>>
+        : true_type {};
 
     template<typename T, typename U, bool = _has_rebind_template<T, U>::value>
     struct _get_rebind;
@@ -112,16 +118,17 @@ struct allocator {
     ~allocator() {}
 
     ALA_NODISCARD T *allocate(ala::size_t n) {
-#if _ALA_CPP_STD >= 17
-        return static_cast<T *>(::operator new(n * sizeof(T), alignof(T)));
+#if _ALA_ENABLE_ALIGNED_NEW
+        return static_cast<T *>(
+            ::operator new(n * sizeof(T), (align_val_t)alignof(T)));
 #else
         return static_cast<T *>(::operator new(n * sizeof(T)));
 #endif
     }
 
     void deallocate(T *p, ala::size_t n) {
-#if _ALA_CPP_STD >= 17
-        ::operator delete(static_cast<void *>(p), alignof(T));
+#if _ALA_ENABLE_ALIGNED_NEW
+        ::operator delete(static_cast<void *>(p), (align_val_t)alignof(T));
 #else
         ::operator delete(static_cast<void *>(p));
 #endif
@@ -199,7 +206,7 @@ struct allocator_traits {
 
     template<typename A>
     struct _has_select<
-        void_t<decltype(declval<A>().select_on_container_copy_construction())>, A>
+        void_t<decltype(declval<const A &>().select_on_container_copy_construction())>, A>
         : true_type {};
 
     template<typename Dummy = allocator_type>
@@ -219,14 +226,14 @@ struct allocator_traits {
 
     template<typename A, typename P, typename... Args>
     struct _has_construct<
-        void_t<decltype(declval<A>().construct(declval<P>(), declval<Args>()...))>,
+        void_t<decltype(declval<A &>().construct(declval<P>(), declval<Args>()...))>,
         A, P, Args...>: true_type {};
 
     template<typename Void, typename A, typename P>
     struct _has_destroy: false_type {};
 
     template<typename A, typename P>
-    struct _has_destroy<void_t<decltype(declval<A>().destroy(declval<P>()))>, A, P>
+    struct _has_destroy<void_t<decltype(declval<A &>().destroy(declval<P>()))>, A, P>
         : ala::true_type {};
 
     template<typename T, typename... Args>
