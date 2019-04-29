@@ -1,24 +1,19 @@
-#include <iostream>
-#include <ala/detail/pair.h>
-using namespace std;
+#include <utility>
+#include <ala/utility.h>
+using namespace ala;
 
-template<class Data>
-struct rb_node {
-    Data _data;
-    rb_node *_left, *_right, *_parent;
-    bool _nil_type;
-    bool _is_nil;
-    bool _is_construct;
-    bool _color;
-};
+template<class ...T>
+void dummy(T...a) {
 
-struct big {
-    int p[1024];
-};
+}
+
+template<size_t... Is>
+void ok(int *i, index_sequence<Is...>) {
+    (i[Is] = 0)...;
+}
 
 int main() {
-    cout << sizeof(big) << endl;
-    cout << sizeof(pair<int,big>) << endl;
-    cout << sizeof(rb_node<pair<int,big>>) << endl;
+    int i [4];
+    ok(i, make_index_sequence<4>());
     return 0;
 }

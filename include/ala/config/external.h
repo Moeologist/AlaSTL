@@ -1,5 +1,5 @@
-#ifndef _ALA_DETAIL_EXTERNAL_H
-#define _ALA_DETAIL_EXTERNAL_H
+#ifndef _ALA_CONFIG_EXTERNAL_H
+#define _ALA_CONFIG_EXTERNAL_H
 
 #include <stdexcept>
 #include <initializer_list>

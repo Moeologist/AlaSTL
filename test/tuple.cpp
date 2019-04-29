@@ -9,7 +9,7 @@
 template<typename...>
 struct FK;
 
-//@cflags=-Xclang -stdlib=libc++
+// cflags=-Xclang -stdlib=libc++
 
 struct X {
     int x = 1;

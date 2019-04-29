@@ -1,6 +1,5 @@
-
-#include "integer_sequence.h"
 #include <ala/type_traits.h>
+#include <ala/detail/integer_sequence.h>
 #include <iostream>
 using namespace ala;
 template<class T> struct FK {static constexpr bool value = false;

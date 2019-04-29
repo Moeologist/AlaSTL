@@ -1,9 +1,10 @@
-#ifndef _ALA_DETAIL_EXTERNAL_H
-#define _ALA_DETAIL_EXTERNAL_H
+#ifndef _ALA_LA_EXTERNAL_H
+#define _ALA_LA_EXTERNAL_H
 
 #include <cmath>
 
 namespace ala {
+namespace La {
 
 using std::abs;
 using std::fabs;
@@ -40,6 +41,7 @@ using std::asinh;
 using std::acosh;
 using std::atanh;
 
+} // namespace La
 } // namespace ala
 
 #endif

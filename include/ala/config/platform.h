@@ -91,7 +91,7 @@
 #elif __cplusplus >= 201103L
 #define _ALA_CPP_STD 11
 #else
-#define _ALA_CPP_STD 17
+#define _ALA_CPP_STD 14
 #endif // language standard
 
 #endif // HEAD

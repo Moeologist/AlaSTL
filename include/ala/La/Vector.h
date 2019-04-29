@@ -1,29 +1,17 @@
 #ifndef _ALA_LA_VECTOR_H
 #define _ALA_LA_VECTOR_H
 
-#define _ALALIB_USE_ALA
-#ifdef _ALALIB_USE_ALA
 #include <ala/type_traits.h>
 #include <ala/utility.h>
 #include <ala/La/external.h>
-#else
-#include <type_traits>
-#include <cmath>
-#include <initializer_list>
-#endif
 
 namespace ala {
 namespace La {
 
-#ifdef _ALALIB_USE_ALA
 using ala::size_t;
 using ala::common_type_t;
 using ala::index_sequence;
 using ala::make_index_sequence;
-#else
-using std::size_t;
-using std::common_type_t;
-#endif
 
 template<class T, size_t Size>
 struct Vector {
@@ -75,7 +63,7 @@ struct Vector {
         T sum{};
         for (int i = 0; i < Size; ++i)
             sum += _m[i] * _m[i];
-        return sqrt(sum);
+        return ::sqrt(sum);
     }
 
     constexpr Vector &normlize() noexcept {
@@ -86,6 +74,12 @@ struct Vector {
     constexpr Vector normlized() const noexcept {
         Vector tmp(*this);
         return tmp.normlize();
+    }
+
+    constexpr Vector &sqrt() noexcept {
+        for (int i = 0; i < Size; ++i)
+            _m[i] = ::sqrt(_m[i]);
+        return *this;
     }
 
     constexpr bool operator==(const Vector &rhs) const noexcept {
@@ -105,20 +99,10 @@ struct Vector {
         return *this;
     }
 
-    constexpr Vector operator+(const Vector &rhs) const noexcept {
-        Vector tmp(*this);
-        return tmp += rhs;
-    }
-
     constexpr Vector &operator+=(const T &rhs) noexcept {
         for (int i = 0; i < Size; ++i)
             _m[i] += rhs;
         return *this;
-    }
-
-    constexpr Vector operator+(const T &rhs) const noexcept {
-        Vector tmp(*this);
-        return tmp += rhs;
     }
 
     constexpr Vector &operator-=(const Vector &rhs) noexcept {
@@ -127,20 +111,10 @@ struct Vector {
         return *this;
     }
 
-    constexpr Vector operator-(const Vector &rhs) const noexcept {
-        Vector tmp(*this);
-        return tmp -= rhs;
-    }
-
     constexpr Vector &operator-=(const T &rhs) noexcept {
         for (int i = 0; i < Size; ++i)
             _m[i] -= rhs;
         return *this;
-    }
-
-    constexpr Vector operator-(const T &rhs) const noexcept {
-        Vector tmp(*this);
-        return tmp -= rhs;
     }
 
     constexpr Vector &operator*=(const Vector &rhs) noexcept {
@@ -149,20 +123,10 @@ struct Vector {
         return *this;
     }
 
-    constexpr Vector operator*(const Vector &rhs) const noexcept {
-        Vector tmp(*this);
-        return tmp *= rhs;
-    }
-
     constexpr Vector &operator*=(const T &rhs) noexcept {
         for (int i = 0; i < Size; ++i)
             _m[i] *= rhs;
         return *this;
-    }
-
-    constexpr Vector const operator*(const T &rhs) const noexcept {
-        Vector tmp(*this);
-        return tmp *= rhs;
     }
 
     constexpr Vector &operator/=(const Vector &rhs) noexcept {
@@ -171,20 +135,10 @@ struct Vector {
         return *this;
     }
 
-    constexpr Vector operator/(const Vector &rhs) const noexcept {
-        Vector tmp(*this);
-        return tmp /= rhs;
-    }
-
     constexpr Vector &operator/=(const T &rhs) noexcept {
         for (int i = 0; i < Size; ++i)
             _m[i] /= rhs;
         return *this;
-    }
-
-    constexpr Vector operator/(const T &rhs) const noexcept {
-        Vector tmp(*this);
-        return tmp /= rhs;
     }
 
     constexpr T &operator[](size_t index) noexcept {
@@ -198,29 +152,90 @@ struct Vector {
     constexpr T *data() noexcept {
         return _m;
     }
-    constexpr T *const data() const noexcept {
+
+    constexpr const T *data() const noexcept {
         return _m;
     }
 };
 
-template<class T, size_t Size, class U>
-constexpr Vector<T, Size> operator+(const U &lhs, const Vector<T, Size> &rhs) {
+template<class T, size_t Size>
+constexpr Vector<T, Size> operator+(const Vector<T, Size> &lhs,
+                                    const Vector<T, Size> &rhs) {
+    Vector<T, Size> tmp{lhs};
+    return tmp += rhs;
+}
+
+template<class T, size_t Size>
+constexpr Vector<T, Size> operator+(const Vector<T, Size> &lhs,
+                                    const type_identity_t<T> &rhs) {
+    Vector<T, Size> tmp{lhs};
+    return tmp += rhs;
+}
+
+template<class T, size_t Size>
+constexpr Vector<T, Size> operator+(const type_identity_t<T> &lhs,
+                                    const Vector<T, Size> &rhs) {
     return rhs + lhs;
 }
 
-template<class T, size_t Size, class U>
-constexpr Vector<T, Size> operator-(const U &lhs, const Vector<T, Size> &rhs) {
+template<class T, size_t Size>
+constexpr Vector<T, Size> operator-(const Vector<T, Size> &lhs,
+                                    const Vector<T, Size> &rhs) {
+    Vector<T, Size> tmp{lhs};
+    return tmp -= rhs;
+}
+
+template<class T, size_t Size>
+constexpr Vector<T, Size> operator-(const Vector<T, Size> &lhs,
+                                    const type_identity_t<T> &rhs) {
+    Vector<T, Size> tmp{lhs};
+    return tmp -= rhs;
+}
+
+template<class T, size_t Size>
+constexpr Vector<T, Size> operator-(const type_identity_t<T> &lhs,
+                                    const Vector<T, Size> &rhs) {
     Vector<T, Size> tmp{};
     return tmp.fill(lhs) -= rhs;
 }
 
-template<class T, size_t Size, class U>
-constexpr Vector<T, Size> operator*(const U &lhs, const Vector<T, Size> &rhs) {
+template<class T, size_t Size>
+constexpr Vector<T, Size> operator*(const Vector<T, Size> &lhs,
+                                    const Vector<T, Size> &rhs) {
+    Vector<T, Size> tmp{lhs};
+    return tmp *= rhs;
+}
+
+template<class T, size_t Size>
+constexpr Vector<T, Size> operator*(const Vector<T, Size> &lhs,
+                                    const type_identity_t<T> &rhs) {
+    Vector<T, Size> tmp{lhs};
+    return tmp *= rhs;
+}
+
+template<class T, size_t Size>
+constexpr Vector<T, Size> operator*(const type_identity_t<T> &lhs,
+                                    const Vector<T, Size> &rhs) {
     return rhs * lhs;
 }
 
-template<class T, size_t Size, class U>
-constexpr Vector<T, Size> operator/(const U &lhs, const Vector<T, Size> &rhs) {
+template<class T, size_t Size>
+constexpr Vector<T, Size> operator/(const Vector<T, Size> &lhs,
+                                    const Vector<T, Size> &rhs) {
+    Vector<T, Size> tmp{lhs};
+    return tmp /= rhs;
+}
+
+template<class T, size_t Size>
+constexpr Vector<T, Size> operator/(const Vector<T, Size> &lhs,
+                                    const type_identity_t<T> &rhs) {
+    Vector<T, Size> tmp{lhs};
+    return tmp /= rhs;
+}
+
+template<class T, size_t Size>
+constexpr Vector<T, Size> operator/(const type_identity_t<T> &lhs,
+                                    const Vector<T, Size> &rhs) {
     Vector<T, Size> tmp{};
     return tmp.fill(lhs) /= rhs;
 }
@@ -239,17 +254,7 @@ constexpr Vector<T, 3> cross(const Vector<T, 3> &lhs, const Vector<T, 3> &rhs) {
 
 template<class T>
 constexpr T cross(const Vector<T, 2> &lhs, const Vector<T, 2> &rhs) {
-    return abs(lhs[0] * rhs[1] - lhs[1] * rhs[0]);
-}
-
-#if _ALA_ENABLE_DEDUCTION_GUIDES
-template<class... Ts>
-Vector(Ts...)->Vector<common_type_t<Ts...>, sizeof...(Ts)>;
-#endif
-
-template<class... Args>
-Vector<common_type_t<Args...>, sizeof...(Args)> make_vector(Args &&... args) {
-    return {common_type_t<Args...>(args)...};
+    return lhs[0] * rhs[1] - lhs[1] * rhs[0];
 }
 
 template<class T, class... Args>
