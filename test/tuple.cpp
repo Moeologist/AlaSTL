@@ -15,21 +15,26 @@ struct X {
     int x = 1;
     ~X() {
         x = 0;
-        std::cout << "dest";
+        std::cout << "destroy\n";
     }
     X() {
         x = 1;
-        std::cout << "cons";
+        std::cout << "default\n";
     }
+
     X(const X &) {
-        std::cout << "copy";
+        std::cout << "copy\n";
     }
     X(X &&) {
-        std::cout << "move";
+        std::cout << "move\n";
     }
 };
 int main() {
-    static_assert(ala::get<double>(ala::tuple{1, 2, 1.0}) == 1);
+     ala::tuple<int,X> tmp{1,X{}};
+    const ala::tuple<double,X> qp=tmp;
+    const ala::tuple<double,int> qp1;
+    auto cpy = tmp;
+    // static_assert(ala::get<double>(ala::tuple{1, 2, 1.0}) == 1);
     ala::tuple lv{1., 2};
     lv = ala::tuple{100, 2};
     static_assert(!(ala::tuple{1, 2} == ala::tuple{1, 2, 1}));
@@ -41,11 +46,11 @@ int main() {
     static_assert(!(ala::tuple{1, 2, 1.0} < ala::tuple{1, 2, 1}));
     static_assert(ala::tuple{} < ala::tuple{1, 2, 1});
     static_assert(!(ala::tuple{} < ala::tuple{}));
-    static_assert(ala::tuple() == ala::tuple{});
+    // static_assert(ala::tuple() == ala::tuple{});
     static_assert(!(ala::tuple{} == ala::tuple{1, 2, 1}));
     static_assert(!(ala::tuple{1, 2, 1} == ala::tuple{}));
-    static_assert(ala::tuple_cat(ala::tuple{1, 2}, ala::tuple{3, 3.0}) ==
-                  ala::tuple{1.0, 2, 3, 3});
+    // static_assert(ala::tuple_cat(ala::tuple{1, 2}, ala::tuple{3, 3.0}) ==
+    //               ala::tuple{1.0, 2, 3, 3});
     ala::tuple_cat(ala::tuple(1), ala::tuple(2));
 
     // FK<ala::_tuple_cat_t<ala::tuple<float&&>, ala::tuple<int>>> pp;
@@ -68,7 +73,7 @@ int main() {
     ala::tie(ala::ignore, x) = ala::tuple(1, 3);
     assert(x == 3);
 
-    const auto &[a, b] = ala::tuple<float, char>(1.2, 'c');
+    // auto &&[bd1, bd2] = ala::tuple<float, char>{1.2, 'c'};
 
     struct A {
         A() = delete;
@@ -82,9 +87,9 @@ int main() {
     ala::tuple<A, B> tpp{0, {}};
 
     // ala::tuple fsdkj{ala::tuple{1, 2}};
-    auto fff = ala::get<int>(ala::pair<int, double>());
-    ala::tuple fsdkj{ala::pair{1, 2}};
+    // auto fff = ala::get<int>(ala::pair<int, double>());
+    // ala::tuple fsdkj{ala::pair{1, 2}};
 
-    auto cccc = ala::choice<ala::is_class>(tpp);
+    // auto cccc = ala::choice<ala::is_class>(tpp);
     // FK<decltype(cccc)> xyz;
 }

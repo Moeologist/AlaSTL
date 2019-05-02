@@ -3,7 +3,7 @@
 
 #include <new>
 
-#include <ala/detail/external.h>
+#include <ala/config/external.h>
 #include <ala/type_traits.h>
 #include <ala/detail/macro.h>
 

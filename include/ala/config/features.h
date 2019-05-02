@@ -6,7 +6,7 @@
 #endif
 
 #ifndef ALA_FUNCTION_MEMORY_SIZE
-#define ALA_FUNCTION_MEMORY_SIZE sizeof(intptr_t)
+#define ALA_FUNCTION_MEMORY_SIZE 0
 #endif
 
 #ifndef ALA_USE_RTTI

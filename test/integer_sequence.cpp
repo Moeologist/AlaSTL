@@ -23,12 +23,19 @@ int main() {
     static_assert(tuple_element<XX>::value);
     static_assert(is_same_v<make_integer_sequence<int, 3>, integer_sequence<int, 0, 1, 2>>);
     static_assert(is_same_v<make_integer_range<int, 3, 5>, integer_sequence<int, 3, 4>>);
+
+    static_assert(is_same_v<get_integer_sequence<1, make_integer_range<int, 3, 5>>, integral_constant<int, 4>>);
+
+    static_assert(is_same_v<cat_integer_sequence<make_integer_range<int, 3, 5>, make_integer_range<int, 3, 5>>, integer_sequence<int, 3, 4, 3,4>>);
+
+
     static_assert(is_same_v<make_integer_range<int, 3, 4>, integer_sequence<int, 3>>);
     static_assert(is_same_v<make_integer_range<int, 3, 5, 3>, integer_sequence<int, 3>>);
     static_assert(is_same_v<make_integer_range<int, 3, 3>, integer_sequence<int>>);
     static_assert(is_same_v<make_integer_range<int, 5, 3>, integer_sequence<int, 5, 4>>);
     static_assert(is_same_v<make_integer_range<int, 5, 2>, integer_sequence<int, 5, 4, 3>>);
     static_assert(is_same_v<make_integer_range<int, 10, 2, 3>, integer_sequence<int, 10, 7, 4>>);
+    static_assert(is_same_v<make_integer_range<int, 0, 30, 17>, integer_sequence<int, 0, 17>>);
     static_assert(is_same_v<make_integer_range<int, 10, 0, 3>, integer_sequence<int, 10, 7, 4, 1>>);
     static_assert(is_same_v<make_integer_range<int, -5, -8, 2>, integer_sequence<int, -5, -7>>);
     static_assert(is_same_v<make_integer_range<int, -5, -8, 3>, integer_sequence<int, -5>>);

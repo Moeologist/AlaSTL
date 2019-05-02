@@ -269,12 +269,12 @@ public:
 
     void reserve(size_type n) {
         if (n > _capacity)
-            move_realloc(n);
+            resize_alloc(n);
     }
 
     void shrink_to_fit() {
         if (_capacity > _size)
-            move_realloc(_size);
+            resize_alloc(_size);
     }
 
     // element access:
