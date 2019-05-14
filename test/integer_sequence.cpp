@@ -2,33 +2,23 @@
 #include <ala/detail/integer_sequence.h>
 #include <iostream>
 using namespace ala;
-template<class T> struct FK {static constexpr bool value = false;
-static_assert(is_array_v<T>);};
 
-class XX;
-
-template<typename T>
-struct tuple_element : false_type {};
-
-template<>
-struct tuple_element<XX> : true_type {};
-
-template<typename X, bool b= _or_<true_type, FK<X>>::value>
-struct z : false_type {};
-
-template<typename X>
-struct z<X, true> : true_type {};
+template<class...>
+struct FK;
 
 int main() {
-    static_assert(tuple_element<XX>::value);
+
+    // FK<make_integer_range<int, numeric_limits<int>::max(), numeric_limits<int>::max()-10, 1>> fk1;
+    // FK<make_integer_range<int, -10, numeric_limits<int>::max(), 1>> fk1;
+    // FK<reverse_range<make_integer_range<unsigned, 10, 2, 3>>> fk;
+    static_assert(!is_same_v<make_integer_range<int, 0, 100000>, integer_sequence<int>>);
+    // static_assert(make_integer_range<int, 0, 100000>::get(10086)==10086);
     static_assert(is_same_v<make_integer_sequence<int, 3>, integer_sequence<int, 0, 1, 2>>);
     static_assert(is_same_v<make_integer_range<int, 3, 5>, integer_sequence<int, 3, 4>>);
-
-    static_assert(is_same_v<get_integer_sequence<1, make_integer_range<int, 3, 5>>, integral_constant<int, 4>>);
-
+    static_assert(is_same_v<make_integer_range<int, 0, 1000, 500>, integer_sequence<int, 0, 500>>);
+    static_assert(is_same_v<make_integer_range<int, 0, 1, 500>, integer_sequence<int, 0>>);
+    static_assert(is_same_v<make_integer_range<int, 0, 0>, integer_sequence<int>>);
     static_assert(is_same_v<cat_integer_sequence<make_integer_range<int, 3, 5>, make_integer_range<int, 3, 5>>, integer_sequence<int, 3, 4, 3,4>>);
-
-
     static_assert(is_same_v<make_integer_range<int, 3, 4>, integer_sequence<int, 3>>);
     static_assert(is_same_v<make_integer_range<int, 3, 5, 3>, integer_sequence<int, 3>>);
     static_assert(is_same_v<make_integer_range<int, 3, 3>, integer_sequence<int>>);
@@ -41,12 +31,6 @@ int main() {
     static_assert(is_same_v<make_integer_range<int, -5, -8, 3>, integer_sequence<int, -5>>);
     static_assert(is_same_v<make_integer_range<int, -8, -8, 3>, integer_sequence<int>>);
     static_assert(is_same_v<make_integer_range<int, -4, 4, 3>, integer_sequence<int, -4, -1, 2>>);
-
     static_assert(is_same_v<make_integer_range<unsigned, 10, 2, 3>, integer_sequence<unsigned, 10, 7, 4>>);
-    static_assert(is_same_v<reverse_integer_sequence<make_integer_range<unsigned, 10, 2, 3>>, integer_sequence<unsigned, 4, 7, 10>>);
-    // static_assert(is_same_v<reverse_range<make_integer_range<unsigned, 10, 2, 3>>, integer_sequence<unsigned, 10, 7, 4>>);
-    // FK<reverse_range<make_integer_range<unsigned, 10, 2, 3>>> fk;
-
-    static_assert(z<int>::value);
-    std::cout << (unsigned)9 % (unsigned)3;
+    static_assert(is_same_v<make_integer_range<unsigned, 6, 0, 3>, integer_sequence<unsigned, 6, 3>>);
 }

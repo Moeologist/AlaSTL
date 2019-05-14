@@ -25,11 +25,11 @@
 
 #else
 #if !defined(__has_cpp_attribute)
-#error "unsupported compiler; ala need __has_cpp_attribute in non-MSVC."
+#error unsupported compiler; ala need __has_cpp_attribute in non-MSVC.
 #define _ALA_NO_CPP_ATTR_MACRO
 #endif
 #if !defined(__cpp_lambdas)
-#error "unsupported compiler; ala need __cpp_[feature] in non-MSVC."
+#error unsupported compiler; ala need __cpp_[feature] in non-MSVC.
 #define _ALA_NO_CPP_MACRO
 #endif
 #define _ALA_ENABLE_CPP_ATTR_MACRO 1
@@ -43,14 +43,14 @@
 #endif
 
 #if _ALA_ENABLE_CPP_MACRO && __cpp_deduction_guides >= 201606L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1914 && _ALA_CPP_STD >= 17)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1914 && _ALA_LANG >= 201703L)
 #define _ALA_ENABLE_DEDUCTION_GUIDES 1
 #else
 #define _ALA_ENABLE_DEDUCTION_GUIDES 0
 #endif
 
 #if _ALA_ENABLE_CPP_MACRO && __cpp_if_constexpr	>= 201606L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_CPP_STD >= 17)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_LANG >= 201703L)
 #define ALA_CONST_IF if constexpr
 #else
 #define ALA_CONST_IF if
@@ -58,28 +58,28 @@
 
 // compatibility macro
 #if _ALA_ENABLE_CPP_ATTR_MACRO && __has_cpp_attribute(nodiscard) || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_CPP_STD >= 17)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_LANG >= 201703L)
 #define ALA_NODISCARD [[nodiscard]]
 #else
 #define ALA_NODISCARD
 #endif
 
 #if _ALA_ENABLE_CPP_MACRO && __cpp_inline_variables >= 201606L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1912 && _ALA_CPP_STD >= 17)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1912 && _ALA_LANG >= 201703L)
 #define _ALA_ENABLE_INLINE_VAR 1
 #else
 #define _ALA_ENABLE_INLINE_VAR 0
 #endif
 
 #if _ALA_ENABLE_CPP_MACRO && __cpp_noexcept_function_type >= 201510L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1912 && _ALA_CPP_STD >= 17)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1912 && _ALA_LANG >= 201703L)
 #define _ALA_ENABLE_NOEXCEPT_TYPE 1
 #else
 #define _ALA_ENABLE_NOEXCEPT_TYPE 0
 #endif
 
 #if _ALA_ENABLE_CPP_MACRO && __cpp_structured_bindings >= 201606L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_CPP_STD >= 17)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_LANG >= 201703L)
 #define _ALA_ENABLE_STRUCT_BIND 1
 #else
 #define _ALA_ENABLE_STRUCT_BIND 0

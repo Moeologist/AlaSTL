@@ -535,7 +535,9 @@ struct _ignore_t {
 };
 
 #if _ALA_ENABLE_INLINE_VAR
-inline constexpr _ignore_t ignore{};
+inline constexpr _ignore_t ignore;
+#else
+const _ignore_t ignore;
 #endif
 
 template<typename F, typename Tuple, size_t... I>
@@ -600,28 +602,28 @@ template<typename T, typename... Ts>
 constexpr T &get(tuple<Ts...> &t) noexcept {
     typedef _type_pick_same_t<T, Ts...> Index;
     static_assert(Index::size() == 1, "no type or more than one type");
-    return get<get_integer_sequence<0, Index>::value>(t);
+    return get<Index::get(0)>(t);
 }
 
 template<typename T, typename... Ts>
 constexpr T &&get(tuple<Ts...> &&t) noexcept {
     typedef _type_pick_same_t<T, Ts...> Index;
     static_assert(Index::size() == 1, "no type or more than one type");
-    return get<get_integer_sequence<0, Index>::value>(ala::move(t));
+    return get<Index::get(0)>(ala::move(t));
 }
 
 template<typename T, typename... Ts>
 constexpr const T &get(const tuple<Ts...> &t) noexcept {
     typedef _type_pick_same_t<T, Ts...> Index;
     static_assert(Index::size() == 1, "no type or more than one type");
-    return get<get_integer_sequence<0, Index>::value>(t);
+    return get<Index::get(0)>(t);
 }
 
 template<typename T, typename... Ts>
 constexpr const T &&get(const tuple<Ts...> &&t) noexcept {
     typedef _type_pick_same_t<T, Ts...> Index;
     static_assert(Index::size() == 1, "no type or more than one type");
-    return get<get_integer_sequence<0, Index>::value>(ala::move(t));
+    return get<Index::get(0)>(ala::move(t));
 }
 
 #if _ALA_ENABLE_DEDUCTION_GUIDES

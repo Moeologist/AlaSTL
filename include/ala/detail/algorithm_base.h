@@ -86,6 +86,22 @@ move(InputIter first, InputIter last, OutputIter out) {
     return out + (last - first);
 }
 
+template<class InputIter, class OutputIter>
+constexpr enable_if_t<
+    is_nothrow_move_constructible<typename iterator_traits<InputIter>::value_type>::value,
+    OutputIter>
+move_if_noexcept(InputIter first, InputIter last, OutputIter out) {
+    return ala::move(first, last, out);
+}
+
+template<class InputIter, class OutputIter>
+constexpr enable_if_t<!is_nothrow_move_constructible<
+                          typename iterator_traits<InputIter>::value_type>::value,
+                      OutputIter>
+move_if_noexcept(InputIter first, InputIter last, OutputIter out) {
+    return ala::copy(first, last, out);
+}
+
 template<class ForwardIter, class T>
 constexpr void fill(ForwardIter first, ForwardIter last, const T &value) {
     for (; first != last; ++first)

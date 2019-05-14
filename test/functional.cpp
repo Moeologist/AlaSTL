@@ -58,12 +58,47 @@ int osp(int x, int y) {
 }
 
 enum E {};
-// cflags=-stdlib=libc++
+//@cflags=-stdlib=libc++
+
+struct Cls {
+    template<class T>
+    using Mem = T;
+
+    template<class... Ts>
+    struct MemCls;
+
+    template<class... Args>
+    void operator()(Args &&...) {
+        std::cout << "call" << '\n';
+    }
+};
+using namespace ala;
+template<template<class...> class>
+using void_templt = void;
+
+template<typename T, typename = void>
+struct _has_tp: false_type {};
+
+template<typename T>
+struct _has_tp<T, void_templt<T::template MemCls>>: true_type {};
+
+ALA_HAS_MEM(print_add)
 
 int main() {
     using namespace ala;
-    int a=1;
-    tuple<int&> tp(a);
+    std::function<void(int)> fqw = PrintNum();
+    std::cout << sizeof(fqw);
+    using constFoo = const Foo;
+
+    // FK<decltype(fqw)> fk;
+
+    static_assert(_has_tp<Cls>::value);
+    static_assert(_has_print_add<Foo>::value);
+
+    function<void(int)> tf = Cls{};
+    // tf();
+    int a = 1;
+    tuple<int &> tp(a);
     // _tuple_base<0, int&> a;
 
     auto bid = bind(print_num, ala::placeholders::_1);

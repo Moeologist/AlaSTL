@@ -856,7 +856,7 @@ enum class endian {
 
 // C++20
 
-template<typename T> struct type_identity { typedef T type; };
+template<typename T> struct type_identity { using type = T; };
 
 template<typename T> struct unwrap_reference { using type = T; };
 template<typename T> struct unwrap_reference<reference_wrapper<T>> { using type = T&; };

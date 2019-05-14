@@ -87,7 +87,7 @@ int main() {
     TEST_NOVOID(is_trivially_move_assignable)
     TEST_NOVOID(is_nothrow_move_assignable)
 
-#if _ALA_CPP_STD >= 17
+#if _ALA_LANG >= 201703L
     TEST_2(is_swappable_with)
     TEST(is_swappable)
     TEST_2(is_nothrow_swappable_with)
@@ -144,7 +144,7 @@ int main() {
                   "oh");
     static_assert(ala::is_constructible<C0 &, Cd &&>::value == false, "oh");
 
-#if !defined(_ALA_MSVC) || _ALA_CPP_STD >= 17
+#if !defined(_ALA_MSVC) || _ALA_LANG >= 201703L
 
     static_assert(ala::is_same<ala::invoke_result_t<pmf, CC, int>, int>::value,
                   "oh");

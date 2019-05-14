@@ -30,11 +30,11 @@ struct X {
     }
 };
 int main() {
-     ala::tuple<int,X> tmp{1,X{}};
-    const ala::tuple<double,X> qp=tmp;
-    const ala::tuple<double,int> qp1;
+    ala::tuple<int, X> tmp{1, X{}};
+    const ala::tuple<double, X> qp = tmp;
+    const ala::tuple<double, int> qp1;
     auto cpy = tmp;
-    // static_assert(ala::get<double>(ala::tuple{1, 2, 1.0}) == 1);
+    static_assert(ala::get<double>(ala::tuple{1, 2, 1.0}) == 1);
     ala::tuple lv{1., 2};
     lv = ala::tuple{100, 2};
     static_assert(!(ala::tuple{1, 2} == ala::tuple{1, 2, 1}));
@@ -73,7 +73,7 @@ int main() {
     ala::tie(ala::ignore, x) = ala::tuple(1, 3);
     assert(x == 3);
 
-    // auto &&[bd1, bd2] = ala::tuple<float, char>{1.2, 'c'};
+    auto &&[bd1, bd2] = ala::tuple<float, char>{1.2, 'c'};
 
     struct A {
         A() = delete;
