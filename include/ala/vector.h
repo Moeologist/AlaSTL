@@ -31,29 +31,40 @@ private:
     size_type _size;
     allocator_type _alloc;
 
-    void realloc(size_type n) {
-        dealloc();
-        _data = _alloc.allocate(n);
-        _capacity = n;
-    }
-
     void dealloc() {
         if (_data != nullptr && _capacity > 0)
             _alloc.deallocate(_data, _capacity);
     }
 
-    void resize_alloc(size_type n) {
-        pointer new_data = _alloc.allocate(n);
-        ala::move(begin(), end(), new_data);
-        dealloc();
-        _data = new_data;
-        _capacity = n;
+    template<class Dummy = value_type>
+    enable_if_t<is_nothrow_move_constructible<Dummy>::value ||
+                !is_copy_constructible<Dummy>::value>
+    move_to(pointer start, pointer end, pointer out) {
+        // assert(start <= end);
+        if (start < end)
+            ala::move(start, end, out);
     }
 
-    void expand() {
-        if (_size + 1 > _capacity)
-            resize_alloc(_capacity << 1);
-        ++_size;
+    template<class Dummy = value_type>
+    enable_if_t<!is_nothrow_move_constructible<Dummy>::value &&
+                is_copy_constructible<Dummy>::value>
+    move_to(pointer start, pointer end, pointer out) {
+        // assert(start <= end);
+        if (start < end)
+            ala::copy(start, end, out);
+        dealloc();
+    }
+
+    void resize_alloc(size_type n) {
+        pointer new_data = _alloc.allocate(n);
+        this->move_to(_data, _data + _size, new_data);
+        _capacity = n;
+        _data = new_data;
+    }
+
+    pointer expand() {
+        _capacity = _capacity > 0 ? _capacity << 1 : 1;
+        return _alloc.allocate(_capacity);
     }
 
 public:
@@ -129,9 +140,7 @@ public:
 
     vector &operator=(const vector &other) {
         clear();
-        if (_capacity < other.size) {
-            _alloc.deallocate(_data, _capacity);
-        }
+        dealloc();
         ALA_CONST_IF(_alloc_traits::propagate_on_container_copy_assignment::value) {
             _alloc = other._alloc;
         }
@@ -249,12 +258,19 @@ public:
     void resize(size_type sz, const value_type &v) {
         if (sz < _size) {
             for (size_type i = sz; i < _size; ++i)
-                _alloc.destroy(_data + i);
+                _alloc_traits::destroy(_data + i);
         } else if (_size < sz) {
-            if (_capacity < sz)
-                move_realloc(sz);
-            for (size_type i = _size; i < sz; ++i)
-                _alloc.construct(_data + i);
+            if (_capacity < sz) {
+                pointer new_data = _alloc.allocate(sz);
+                _capacity = sz;
+                for (size_type i = _size; i < sz; ++i)
+                    _alloc_traits::construct(new_data + i);
+                move_to(_data, _data + _size, new_data);
+                _data = new_data;
+            } else {
+                for (size_type i = _size; i < sz; ++i)
+                    _alloc_traits::construct(data + i);
+            }
         }
         _size = sz;
     }
@@ -326,8 +342,17 @@ public:
     // modifiers:
     template<class... Args>
     reference emplace_back(Args &&... args) {
-        expand();
-        _alloc.construct(end() - 1, ala::forward<Args>(args)...);
+        if (_size + 1 > _capacity) {
+            pointer new_data = expand();
+            _alloc_traits::construct(_alloc, new_data + _size,
+                                     ala::forward<Args>(args)...);
+            move_to(_data, _data + _size, new_data);
+            _data = new_data;
+        } else {
+            _alloc_traits::construct(_alloc, _data + _size,
+                                     ala::forward<Args>(args)...);
+        }
+        ++_size;
         return *end();
     }
 
@@ -346,13 +371,24 @@ public:
 
     template<class... Args>
     iterator emplace(const_iterator position, Args &&... args) {
-        difference_type offset = position - cbegin();
-        expand();
-        position = cbegin() + offset;
-        ala::move(position, end(), position + 1);
-        _alloc.construct(position, ala::forward<Args>(args)...);
+        size_type offset = position - cbegin();
+        if (_size + 1 > _capacity) {
+            pointer new_data = expand();
+            _alloc_traits::construct(_alloc, new_data + offset,
+                                     ala::forward<Args>(args)...);
+            move_to(_data, _data + offset, new_data);
+            move_to(_data + offset + 1, _data + _size, new_data + offset + 1);
+            _data = new_data;
+        } else {
+            T tmp(ala::forward<Args>(args)...);
+            _alloc_traits::construct(_alloc, _data + _size,
+                                     ala::move(*(_data + _size - 1)));
+            ala::move_backward(_data + offset + 1, _data + _size,
+                               _data + _size + 1);
+            _alloc_traits::construct(_alloc, _data + offset, ala::move(tmp));
+        }
         ++_size;
-        return position;
+        return _data + offset;
     }
 
     iterator insert(const_iterator position, const value_type &v) {
@@ -365,13 +401,25 @@ public:
 
     iterator insert(const_iterator position, size_type n, const value_type &v) {
         difference_type offset = position - cbegin();
-        if (_capacity < _size + n)
-            resize_alloc(_size + n);
-        iterator pos = begin() + offset;
-        ala::move(pos, end(), pos + n);
-        for (size_type i = 0; i < n; ++i, ++_size)
-            _alloc.construct(pos + i, v);
-        return pos;
+        if (_size + n > _capacity) {
+            pointer new_data = _alloc.allocate(_size + n);
+            _capacity = _size + n;
+            for (size_type i = 0; i < n; ++i)
+                _alloc_traits::construct(_alloc, new_data + offset + i, v);
+            move_to(_data, _data + offset, new_data);
+            move_to(_data + offset + 1, _data + _size, new_data + offset + n);
+            _data = new_data;
+        } else {
+            for (size_type i = 0; i < n; ++i)
+                _alloc_traits::construct(_alloc, _data + _size + i,
+                                         ala::move(*(_data + _size + i - n)));
+            ala::move_backward(_data + offset + 1, _data + _size,
+                               _data + _size + n);
+            for (size_type i = 0; i < n; ++i)
+                _alloc_traits::construct(_alloc, _data + offset + i, v);
+        }
+        _size += n;
+        return _data + offset;
     }
 
     template<class ForwardIter>
@@ -385,13 +433,26 @@ public:
         difference_type offset = position - cbegin();
         typedef typename iterator_traits<ForwardIter>::difference_type diff_t;
         diff_t n = distance(first, last);
-        if (_capacity < _size + n)
-            resize_alloc(_size + n);
-        iterator pos = begin() + offset;
-        ala::move(pos, end(), pos + n);
-        for (size_type i = 0; first != last; ++first, ++i, ++_size)
-            _alloc.construct(pos + i, *first);
-        return pos;
+        if (_size + n > _capacity) {
+            pointer new_data = _alloc.allocate(_size + n);
+            _capacity = _size + n;
+            for (size_type i = 0; i < n; ++i)
+                _alloc_traits::construct(_alloc, new_data + offset + i,
+                                         *(first++));
+            move_to(_data, _data + offset, new_data);
+            move_to(_data + offset + 1, _data + _size, new_data + offset + n);
+            _data = new_data;
+        } else {
+            for (size_type i = 0; i < n; ++i)
+                _alloc_traits::construct(_alloc, _data + _size + i,
+                                         ala::move(*(_data + _size + i - n)));
+            ala::move_backward(_data + offset + 1, _data + _size,
+                               _data + _size + n);
+            for (size_type i = 0; i < n; ++i)
+                _alloc_traits::construct(_alloc, _data + offset + i, *(first++));
+        }
+        _size += n;
+        return _data + offset;
     }
 
     template<class InputIter>

@@ -228,36 +228,12 @@ constexpr ForwardIter search_n(ForwardIter first, ForwardIter last, Size count,
 
 // Modifying sequence operations
 
-template<class InputIter, class Size, class OutputIter>
-constexpr OutputIter copy_n(InputIter first, Size count, OutputIter out) {
-    if (count > 0)
-        for (Size i = 0; i < count; ++i)
-            *out++ = *first++;
-    return out;
-}
-
 template<class InputIter, class OutputIter, class UnaryPred>
 constexpr OutputIter copy_if(InputIter first, InputIter last, OutputIter out,
                              UnaryPred pred) {
     while (first != last)
         if (pred(*first))
             *out++ = *first++;
-    return out;
-}
-
-template<class BidirIter1, class BidirIter2>
-constexpr BidirIter2 copy_backward(BidirIter1 first, BidirIter1 last,
-                                   BidirIter2 out) {
-    while (first != last)
-        *--out = *--last;
-    return out;
-}
-
-template<class BidirIter1, class BidirIter2>
-constexpr BidirIter2 move_backward(BidirIter1 first, BidirIter1 last,
-                                   BidirIter2 out) {
-    while (first != last)
-        *--out = ala::move(*--last);
     return out;
 }
 

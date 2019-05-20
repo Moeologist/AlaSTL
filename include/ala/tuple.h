@@ -67,7 +67,7 @@ struct _tuple_base<I, T, true>: private T {
 
 template<typename... Ts>
 struct tuple_size<tuple<Ts...>>: integral_constant<size_t, sizeof...(Ts)> {};
-
+// TODO: static_cast
 template<size_t I, typename Head, typename... Tail>
 struct tuple_element<I, tuple<Head, Tail...>>
     : tuple_element<I - 1, tuple<Tail...>> {
@@ -479,7 +479,7 @@ using _tuple_cat_t =
 
 template<typename CatTuple, typename TmpTuple, typename TmpSeq, typename T1Is>
 struct _tuple_cat_impl;
-
+// TODO: rewrite
 template<typename CatTuple, typename... TmpTs, size_t... TmpIs, size_t... T1Is>
 struct _tuple_cat_impl<CatTuple, tuple<TmpTs...>, index_sequence<TmpIs...>,
                        index_sequence<T1Is...>> {

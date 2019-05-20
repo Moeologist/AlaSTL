@@ -237,7 +237,7 @@ struct _bind_t {
     }
 };
 
-enum Operation { Copy, Move, Destroy, TypeID };
+enum Operation { Copy, Move, Destroy, Equal, TypeID };
 
 template<class Function, class Functor>
 struct _function_handle;
@@ -247,20 +247,21 @@ struct _function_handle<R(Args...), Functor> {
     static R invoke(const void *Fmem, Args &&... args) {
         return ala::invoke(*(Functor *)Fmem, ala::forward<Args>(args)...);
     }
-    static void *operate(void *dest, void *src, Operation op) {
-        Functor &destRef = *(Functor *)dest;
+    static void *operate(void *dst, void *src, Operation op) {
+        Functor &dstRef = *(Functor *)dst;
         Functor &srcRef = *(Functor *)src;
         switch (op) {
             case Copy:
-                ::new (dest) Functor(srcRef);
+                ::new (dst) Functor(srcRef);
                 break;
             case Move:
-                ::new (dest) Functor(ala::move(srcRef));
+                ::new (dst) Functor(ala::move(srcRef));
                 break;
-            case Destroy: {
-                destRef.~Functor();
+            case Destroy:
+                dstRef.~Functor();
                 break;
-            }
+            case Equal:
+                return (dstRef == srcRef) ? (void*)true : (void*)false;
             case TypeID:
                 return (void *)&typeid(Functor);
         }
@@ -339,11 +340,11 @@ struct function<R(Args...)> {
             _operator((void *)&_data, nullptr, Destroy);
     }
     void swap(function &other) noexcept {
-        aligned_storage_t<size_of(_data), alignof(_data)> _tmp;
+        aligned_storage_t<sizeof(_data), alignof(decltype(_data))> _tmp;
         if (_valid)
             _operator((void *)&_tmp, (void *)&_data, Move);
         if (other._valid)
-            _operator((void *)&_data, (void *)&other._data, Move);
+            other._operator((void *)&_data, (void *)&other._data, Move);
         if (_valid)
             _operator((void *)&other._data, (void *)&_tmp, Move);
         ala::swap(_valid, other._valid);

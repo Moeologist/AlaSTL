@@ -332,6 +332,7 @@ public:
 
     ~rb_tree() {
         destruct_tree(_root);
+        _nalloc.deallocate(_left_nil, 2);
         // destruct_node(_left_nil);
         // destruct_node(_right_nil);
     }
@@ -549,10 +550,12 @@ public:
 
 protected:
     node_pointer _root;
-    aligned_storage_t<sizeof(node_type), alignof(node_type)> _left_nil_mem;
-    aligned_storage_t<sizeof(node_type), alignof(node_type)> _right_nil_mem;
-    const node_pointer _left_nil = (node_pointer)&_left_nil_mem;
-    const node_pointer _right_nil = (node_pointer)&_right_nil_mem;
+    // aligned_storage_t<sizeof(node_type), alignof(node_type)> _left_nil_mem;
+    // aligned_storage_t<sizeof(node_type), alignof(node_type)> _right_nil_mem;
+    // const node_pointer _left_nil = (node_pointer)&_left_nil_mem;
+    // const node_pointer _right_nil = (node_pointer)&_right_nil_mem;
+    node_pointer _left_nil;
+    node_pointer _right_nil;
 
     size_t _size;
     allocator_type _alloc;
@@ -683,8 +686,8 @@ protected:
     }
 
     void initializer_nil() {
-        // _left_nil = allocate_node();
-        // _right_nil = allocate_node();
+        _left_nil = _nalloc.allocate(2);
+        _right_nil = _left_nil + sizeof(node_type);
         // _left_nil =  reinterpret_cast<node_pointer>(_nil_mem);
         // _right_nil =  reinterpret_cast<node_pointer>(_nil_mem + sizeof(rb_node<Data>));
 

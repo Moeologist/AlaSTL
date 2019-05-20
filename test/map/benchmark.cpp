@@ -81,6 +81,7 @@ static_assert(_has_p<t>::value);
 static_assert(!_has_p<ala::pair<int, int>>::value);
 
 int main() {
+    std::cout << sizeof(ala::map<int, char>);
     std::cout << ala::timer(test);
     std::cout << ala::timer(test1);
     std::set<int> st;

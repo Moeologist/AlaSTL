@@ -58,7 +58,7 @@ int osp(int x, int y) {
 }
 
 enum E {};
-//@cflags=-stdlib=libc++
+// cflags=-stdlib=libc++
 
 struct Cls {
     template<class T>
@@ -97,6 +97,7 @@ int main() {
 
     function<void(int)> tf = Cls{};
     // tf();
+    X xoo;
     int a = 1;
     tuple<int &> tp(a);
     // _tuple_base<0, int&> a;

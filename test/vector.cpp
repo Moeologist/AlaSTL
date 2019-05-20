@@ -17,17 +17,18 @@ struct A {
 struct B {
     B() {}
     B(const A &) {}
-    operator A() {
-    }
+    operator A() {}
 };
-
+//@cflags=-stdlib=libc++
 int main() {
     using namespace ala;
 
-    B bb;
-    auto aa = A(bb);
-    X x;
+    std::vector<int> sv{1, 2, 3, 4};
+    sv.reserve(8);
+    sv.emplace(sv.begin(), 1);
+
     vector<int> v = {1, 2, 3, 4};
+    v.insert(v.begin(), {1, 2, 3, 4});
     auto k = v.erase(v.begin());
     for (const auto &i : v)
         std::cout << i << ",";
