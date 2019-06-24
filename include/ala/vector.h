@@ -560,4 +560,4 @@ vector(InputIter, InputIter, Alloc = Alloc())
 
 } // namespace ala
 
-#endif
+#endif // HEAD

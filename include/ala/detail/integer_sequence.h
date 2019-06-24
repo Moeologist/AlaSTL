@@ -68,8 +68,17 @@ struct _make_int_seq<Int, 0> {
     using type = integer_sequence<Int>;
 };
 
+#if _ALA_ENABLE_MAKE_INTEGER_SEQ
+
+template <typename Int, Int N>
+using make_integer_sequence = __make_integer_seq<integer_sequence, Int, N>;
+
+#else
+
 template<typename Int, Int N>
 using make_integer_sequence = typename _make_int_seq<Int, N>::type;
+
+#endif
 
 template<size_t N>
 using make_index_sequence = make_integer_sequence<size_t, N>;

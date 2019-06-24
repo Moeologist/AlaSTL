@@ -1,4 +1,4 @@
-#include "ala/detail/xorshift.h"
+#include "ala/random.h"
 #include "ala/timer.h"
 #include <iostream>
 #include <iomanip>

@@ -747,14 +747,18 @@ protected:
     }
 
     /*---------------------------------------------------------------------------------
-    |     G(B)     P.c=U.c=B    G(B)                  G(B)                  P(B)      |
-    |     / \       G.c=R       / \       RotL(P)     / \       RotR(G)     / \       |
-    |  P(R) U(R)    ====>?   P(R) U(B)    ====>    P(R) U(B)    ====>    X(R) G(R)    |
-    |  / \          X=G      / \          P<->X    / \          P.c=B         / \     |
-    |    X(R)                  X(R)              X(R)           G.c=R           U(B)  |
+    |      Gb       P.c=b        Gb                    Gb                    Pb       |
+    |     / \       U.c=b       / \       RotL(P)     / \       RotR(G)     / \       |
+    |   Pr   Ur     ====>*    Pr   Ub     ====>     Pr   Ub     ====>     Xr   Gr     |
+    |  / \          G.c=r    / \          P<->X    / \          P.c=b         / \     |
+    |     Xr        X<-G        Xr                Xr            G.c=r            Ub   |
     ---------------------------------------------------------------------------------*/
     // remove continuous red
-
+    // X: current, P: parent, U:uncle, G:grandp
+    // b/r: black/red
+    // c: color, L: left, R: right
+    // <-: assign, <->: swap
+    // =>: jump to next case, *: jump to a possiable case
     void rebalance_for_attach(node_pointer current) noexcept {
         node_pointer parent, grandp, uncle;
         while (is_red(parent = current->_parent)) {
@@ -831,13 +835,14 @@ protected:
     }
 
     /*----------------------------------------------------------------------------------------------------
-    |     P(B)      P.c=R       P(?)                  P(?)      Y.l.c=B     P(?)      Y.c=P.c     Y(?)   |
-    |     / \       Y.c=B       / \       Y.c=R       / \       Y.c=R       / \       P.c=B       / \    |
-    |  X(B) Y(R)    ====>^   X(B) Y(B)    ====>?   X(B) Y(B)    ====>    X(B) Y(B)    ====>    P(B) (B)  |
-    |       / \     RotL(P)       / \     loop(X)       / \     RotR(Y)       / \     Y.r.c=B  /         |
-    |      $Y       Y=P.r       (B) (B)               (R) (B)   Y=P.r          ~Y(R)  RotL(Y) X          |
+    |      Pb       P.c=r        P?                    P?       Y.L.c=b      P?       Y.c=P.c      Y?    |
+    |     / \       Y.c=b       / \       Y.c=R       / \       Y.c=r       / \       P.c=b       / \    |
+    |   Xb   Yr     ====>*    Xb   Yb     ====>*    Xb   Yb     ====>     Xb   Yb     ====>     Pb   b   |
+    |       / \     RotL(P)       / \     X<-P          / \     RotR(Y)       / \     Y.R.c=b  / \       |
+    |     P.R       Y=P.R        b   b                 r   b    Y=P.R            r    RotL(Y) X          |
     ----------------------------------------------------------------------------------------------------*/
     // make current black-height + 1
+    // Y: brother
 
     void rebalance_for_detach(node_pointer current, node_pointer parent) noexcept {
         node_pointer brother;

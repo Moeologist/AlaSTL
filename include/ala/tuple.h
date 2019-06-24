@@ -5,6 +5,7 @@
 #include <ala/detail/pair.h>
 #include <ala/detail/tuple_operator.h>
 #include <ala/type_traits.h>
+#include <ala/detail/type_pack.h>
 
 namespace ala {
 
@@ -68,16 +69,19 @@ struct _tuple_base<I, T, true>: private T {
 template<typename... Ts>
 struct tuple_size<tuple<Ts...>>: integral_constant<size_t, sizeof...(Ts)> {};
 // TODO: static_cast
-template<size_t I, typename Head, typename... Tail>
-struct tuple_element<I, tuple<Head, Tail...>>
-    : tuple_element<I - 1, tuple<Tail...>> {
-    static_assert(I <= sizeof...(Tail), "out of range");
-};
+// template<size_t I, typename Head, typename... Tail>
+// struct tuple_element<I, tuple<Head, Tail...>>
+//     : tuple_element<I - 1, tuple<Tail...>> {
+//     static_assert(I <= sizeof...(Tail), "out of range");
+// };
 
-template<typename Head, typename... Tail>
-struct tuple_element<0, tuple<Head, Tail...>> {
-    typedef Head type;
-};
+// template<typename Head, typename... Tail>
+// struct tuple_element<0, tuple<Head, Tail...>> {
+//     typedef Head type;
+// };
+
+template<size_t I, typename... Ts>
+struct tuple_element<I, tuple<Ts...>>: type_pack_element<I, Ts...> {};
 
 template<size_t I, typename... Ts>
 constexpr tuple_element_t<I, tuple<Ts...>> &get(tuple<Ts...> &tp) noexcept {
@@ -139,16 +143,15 @@ struct _tuple_impl<index_sequence<Ids...>, Ts...>: _tuple_base<Ids, Ts>... {
         : _tuple_base<Ids, Ts>(ala::get<Ids>(ala::forward<Tuple>(tp)))... {}
 
     template<typename... Dummy>
-    constexpr void _packer(Dummy...) {}
+    constexpr void _packer(Dummy &&...) {}
 
     template<typename Tuple,
              typename = enable_if_t<_is_tuple<remove_cvref_t<Tuple>>::value>>
     constexpr _tuple_impl &operator=(Tuple &&tp) noexcept(
         _and_<is_nothrow_assignable<
-            Ts &,
-            conditional_t<is_lvalue_reference<Tuple>::value,
-                          tuple_element_t<Ids, remove_reference_t<Tuple>> &,
-                          tuple_element_t<Ids, remove_reference_t<Tuple>> &&>>...>::value) {
+            Ts &, conditional_t<is_lvalue_reference<Tuple>::value,
+                                tuple_element_t<Ids, remove_reference_t<Tuple>> &,
+                                tuple_element_t<Ids, remove_reference_t<Tuple>> &&>>...>::value) {
         _packer(_tuple_base<Ids, Ts>::operator=(
             ala::get<Ids>(ala::forward<Tuple>(tp)))...);
         return *this;

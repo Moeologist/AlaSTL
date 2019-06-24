@@ -1,6 +1,7 @@
 #include <iostream>
 #include <ala/functional.h>
 #include <functional>
+#include <ala/random.h>
 
 struct X {
     X() {
@@ -86,6 +87,10 @@ ALA_HAS_MEM(print_add)
 
 int main() {
     using namespace ala;
+
+    ala::xoshiro256ss xss;
+    xss();
+    
     std::function<void(int)> fqw = PrintNum();
     std::cout << sizeof(fqw);
     using constFoo = const Foo;

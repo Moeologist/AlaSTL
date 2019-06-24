@@ -131,15 +131,15 @@ inline constexpr _placeholder_t<7> _7;
 inline constexpr _placeholder_t<8> _8;
 inline constexpr _placeholder_t<9> _9;
 #else
-static constexpr _placeholder_t<1> _1;
-static constexpr _placeholder_t<2> _2;
-static constexpr _placeholder_t<3> _3;
-static constexpr _placeholder_t<4> _4;
-static constexpr _placeholder_t<5> _5;
-static constexpr _placeholder_t<6> _6;
-static constexpr _placeholder_t<7> _7;
-static constexpr _placeholder_t<8> _8;
-static constexpr _placeholder_t<9> _9;
+const _placeholder_t<1> _1;
+const _placeholder_t<2> _2;
+const _placeholder_t<3> _3;
+const _placeholder_t<4> _4;
+const _placeholder_t<5> _5;
+const _placeholder_t<6> _6;
+const _placeholder_t<7> _7;
+const _placeholder_t<8> _8;
+const _placeholder_t<9> _9;
 #endif
 } // namespace placeholders
 
@@ -239,11 +239,11 @@ struct _bind_t {
 
 enum Operation { Copy, Move, Destroy, Equal, TypeID };
 
-template<class Function, class Functor>
+template<class Void, class Function, class Functor>
 struct _function_handle;
 
 template<class R, class... Args, class Functor>
-struct _function_handle<R(Args...), Functor> {
+struct _function_handle<void, R(Args...), Functor> {
     static R invoke(const void *Fmem, Args &&... args) {
         return ala::invoke(*(Functor *)Fmem, ala::forward<Args>(args)...);
     }
@@ -261,7 +261,34 @@ struct _function_handle<R(Args...), Functor> {
                 dstRef.~Functor();
                 break;
             case Equal:
-                return (dstRef == srcRef) ? (void*)true : (void*)false;
+                return -1;
+            case TypeID:
+                return (void *)&typeid(Functor);
+        }
+        return nullptr;
+    }
+};
+
+template<class R, class... Args, class Functor>
+struct _function_handle<void_t<decltype(declval<Functor &>() == declval<Functor &>())>, R(Args...), Functor> {
+    static R invoke(const void *Fmem, Args &&... args) {
+        return ala::invoke(*(Functor *)Fmem, ala::forward<Args>(args)...);
+    }
+    static void *operate(void *dst, void *src, Operation op) {
+        Functor &dstRef = *(Functor *)dst;
+        Functor &srcRef = *(Functor *)src;
+        switch (op) {
+            case Copy:
+                ::new (dst) Functor(srcRef);
+                break;
+            case Move:
+                ::new (dst) Functor(ala::move(srcRef));
+                break;
+            case Destroy:
+                dstRef.~Functor();
+                break;
+            case Equal:
+                return -1;
             case TypeID:
                 return (void *)&typeid(Functor);
         }
@@ -351,6 +378,7 @@ struct function<R(Args...)> {
         ala::swap(_invoker, other._invoker);
         ala::swap(_operator, other._operator);
     }
+    bool _eq(const function &other) const
     explicit operator bool() const noexcept {
         return _valid;
     }
@@ -376,7 +404,7 @@ struct function<R(Args...)> {
         return typeid(void);
     }
 #endif
-private:
+// private:
     aligned_union_t<ALA_FUNCTION_MEMORY_SIZE, void (*)(), void (function::*)()> _data;
     bool _valid = false;
     typedef R (*invoker_t)(const void *, Args &&...);
@@ -384,6 +412,11 @@ private:
     invoker_t _invoker = nullptr;
     operator_t _operator = nullptr;
 };
+
+template<class R, class... Args>
+bool operator==(const function<R(Args...)>& lhs, const function<R(Args...)>& rhs) {
+    return lhs._eq(rhs);
+}
 
 // clang-format off
 template<class> struct _function_traits {};

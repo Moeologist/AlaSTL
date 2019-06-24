@@ -829,9 +829,11 @@ template<typename Result, typename Ret, typename = void>
 struct _is_nt_invocable_r_impl : false_type {};
 
 template<typename Result, typename Ret>
-struct _is_nt_invocable_r_impl<Result, Ret, void_t<typename Result::type>> : _or_<is_void<Ret>,
-                                                                                  _and_<is_convertible<typename Result::type, Ret>,
-                                                                                        is_nothrow_constructible<Ret, typename Result::type>>> {};
+struct _is_nt_invocable_r_impl<Result, Ret, void_t<typename Result::type>>
+    : _or_<is_void<Ret>,
+           _and_<is_convertible<typename Result::type, Ret>,
+                 is_nothrow_constructible<Ret, typename Result::type>>> {};
+
 template<typename Fn, typename... Args>
 struct is_nothrow_invocable : _and_<is_invocable<Fn, Args...>, _is_nt_invocable<Fn, Args...>> {};
 
@@ -988,7 +990,8 @@ template<typename, typename T1, typename T2, typename... Ts>
 struct _common_reference_n_sfinae {};
 
 template<typename T1, typename T2, typename... Ts>
-struct _common_reference_n_sfinae<void_t<common_reference_t<T1, T2>>, T1, T2, Ts...> : common_reference<common_reference_t<T1, T2>, Ts...> {};
+struct _common_reference_n_sfinae<void_t<common_reference_t<T1, T2>>, T1, T2, Ts...> 
+    : common_reference<common_reference_t<T1, T2>, Ts...> {};
 
 template<typename T1, typename T2, typename... Ts>
 struct _common_reference_n : _common_reference_n_sfinae<void, T1, T2, Ts...> {};

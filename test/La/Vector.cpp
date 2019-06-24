@@ -1,12 +1,12 @@
 #include <cassert>
 #include <cmath>
 #include <cstdio>
-#include <ala/La/Vector.h>
+#include <ala/La/VectorPack.h>
 typedef ala::La::Vector<float, 3> Vec;
 typedef ala::La::Vector<float, 2> Vec2;
 
 int main() {
-    ala::La::Vector ax{1., 2, 3};
+    Vec ax{1., 2, 3};
     Vec a{1, 2, 3};
     const Vec b = Vec{3, 4, 5};
 
@@ -40,6 +40,6 @@ int main() {
     ala::La::Vector<double, 3> xd = c.to_type<double>();
     // auto xd = ala::La::vector<double ,3>{1,2,3};
     // Vec xf = xd;
-    auto kl = ala::La::make_vector<double>(1, 2, 3);
+    // auto kl = ala::La::make_vector<double>(1, 2, 3);
     return 0;
 }

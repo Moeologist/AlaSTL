@@ -20,6 +20,34 @@ using ala::enable_if_t;
 using ala::index_sequence;
 using ala::make_index_sequence;
 
+template<class T>
+constexpr T _static_sqrt(T x) {
+    T xhalf = T(0.5) * x;
+    x = xhalf;
+    for (int i = 0; i < 8; ++i)
+        x = x * (T(1.5) - xhalf * x * x);
+    return (T(1 / x);
+}
+
+template<class T>
+struct _Dummy {
+    T _v;
+    _Dummy(const T &t):_v(t) {}
+};
+
+template<class T>
+constexpr auto static_sqrt(T x) -> decltype(_static_sqrt(x)) {
+    return _static_sqrt(x);
+}
+
+template<class T>
+constexpr auto static_sqrt(_Dummy<T> x) -> decltype(::sqrt(x)) {
+    return ::sqrt(x._v);
+}
+
+template<class T, size_t Size>
+struct Vector;
+
 template<class T, class Index>
 struct VectorBase;
 
@@ -32,6 +60,11 @@ struct VectorBase<T, index_sequence<Is...>> {
     constexpr static size_t Size = sizeof...(Is);
 
     T _m[Size] = {};
+
+    using impl = Vector<T, sizeof...(Is)>;
+    constexpr operator impl() {
+        return *this;
+    }
 
     template<class U>
     constexpr VectorBase<U, index_type> to_type() noexcept {
@@ -281,8 +314,11 @@ constexpr auto cross(const VectorBase<T, Index> &lhs,
     return lhs.cross(rhs);
 }
 
+// template<class T, size_t Size>
+// using Vector = VectorBase<T, make_index_sequence<Size>>;
+
 template<class T, size_t Size>
-using Vector = VectorBase<T, make_index_sequence<Size>>;
+struct Vector: VectorBase<T, make_index_sequence<Size>> {};
 
 using Vector2d = Vector<double, 2>;
 using Vector3d = Vector<double, 3>;
