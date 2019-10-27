@@ -38,14 +38,17 @@ struct reference_wrapper {
     operator T &() const noexcept {
         return *_ptr;
     }
+
     T &get() const noexcept {
         return *_ptr;
     }
+
     template<class... Args>
     enable_if_t<is_invocable<T &, Args...>::value, invoke_result_t<T &, Args...>>
     operator()(Args &&... args) const {
         return ala::invoke(get(), ala::forward<Args>(args)...);
     }
+
     T *_ptr;
 };
 
@@ -94,16 +97,19 @@ struct _not_fn_t {
         !declval<invoke_result_t<_fn_t &, Args...>>()) {
         return !invoke(_fn, forward<Args>(args)...);
     }
+
     template<class... Args>
     auto operator()(Args &&... args) const & -> decltype(
         !declval<invoke_result_t<_fn_t const &, Args...>>()) {
         return !invoke(_fn, forward<Args>(args)...);
     }
+
     template<class... Args>
     auto operator()(Args &&... args) && -> decltype(
         !declval<invoke_result_t<_fn_t, Args...>>()) {
         return !invoke(ala::move(_fn), forward<Args>(args)...);
     }
+
     template<class... Args>
     auto operator()(Args &&... args) const && -> decltype(
         !declval<invoke_result_t<_fn_t const, Args...>>()) {
@@ -237,43 +243,17 @@ struct _bind_t {
     }
 };
 
-enum Operation { Copy, Move, Destroy, Equal, TypeID };
+enum Operation { Copy, Move, Destroy, TypeID };
 
-template<class Void, class Function, class Functor>
+template<class Function, class Functor>
 struct _function_handle;
 
 template<class R, class... Args, class Functor>
-struct _function_handle<void, R(Args...), Functor> {
+struct _function_handle<R(Args...), Functor> {
     static R invoke(const void *Fmem, Args &&... args) {
         return ala::invoke(*(Functor *)Fmem, ala::forward<Args>(args)...);
     }
-    static void *operate(void *dst, void *src, Operation op) {
-        Functor &dstRef = *(Functor *)dst;
-        Functor &srcRef = *(Functor *)src;
-        switch (op) {
-            case Copy:
-                ::new (dst) Functor(srcRef);
-                break;
-            case Move:
-                ::new (dst) Functor(ala::move(srcRef));
-                break;
-            case Destroy:
-                dstRef.~Functor();
-                break;
-            case Equal:
-                return -1;
-            case TypeID:
-                return (void *)&typeid(Functor);
-        }
-        return nullptr;
-    }
-};
 
-template<class R, class... Args, class Functor>
-struct _function_handle<void_t<decltype(declval<Functor &>() == declval<Functor &>())>, R(Args...), Functor> {
-    static R invoke(const void *Fmem, Args &&... args) {
-        return ala::invoke(*(Functor *)Fmem, ala::forward<Args>(args)...);
-    }
     static void *operate(void *dst, void *src, Operation op) {
         Functor &dstRef = *(Functor *)dst;
         Functor &srcRef = *(Functor *)src;
@@ -287,13 +267,12 @@ struct _function_handle<void_t<decltype(declval<Functor &>() == declval<Functor 
             case Destroy:
                 dstRef.~Functor();
                 break;
-            case Equal:
-                return -1;
             case TypeID:
                 return (void *)&typeid(Functor);
         }
         return nullptr;
     }
+    static constexpr void *handle[2] = {&invoke, &operate};
 };
 
 struct bad_function_call: exception {
@@ -308,7 +287,9 @@ struct function<R(Args...)> {
     using result_type = R;
     // construct/copy/destroy:
     function() noexcept {}
+
     function(nullptr_t) noexcept {}
+
     function(const function &other)
         : _invoker(other._invoker), _operator(other._operator) {
         if (other._valid) {
@@ -316,13 +297,15 @@ struct function<R(Args...)> {
             _valid = true;
         }
     }
+
     function(function &&other)
         : _invoker(other._invoker), _operator(other._operator) {
         if (other._valid) {
             _operator((void *)&_data, (void *)&(other._data), Move);
             _valid = true;
         }
-    };
+    }
+
     template<class Fn, class = enable_if_t<is_invocable_r<R, Fn &, Args...>::value>>
     function(Fn fn) {
         static_assert(sizeof(Fn) <= sizeof(_data),
@@ -338,21 +321,25 @@ struct function<R(Args...)> {
         _operator((void *)&_data, (void *)&fn, Move);
         _valid = true;
     }
+
     function &operator=(const function &other) {
         _valid = false;
         function(other).swap(*this);
         return *this;
     }
+
     function &operator=(function &&other) {
         _valid = false;
         function(ala::move(other)).swap(*this);
         return *this;
     }
+
     function &operator=(nullptr_t) noexcept {
         if (_valid)
             _operator((void *)&_data, nullptr, Destroy);
         _valid = false;
     }
+
     template<class Fn>
     enable_if_t<is_invocable_r<R, Fn, Args...>::value, function> &
     operator=(Fn &&fn) {
@@ -360,12 +347,14 @@ struct function<R(Args...)> {
         function(ala::forward<Fn>(fn)).swap(*this);
         return *this;
     }
+
     template<class Fn>
     function &operator=(reference_wrapper<Fn>) noexcept;
     ~function() {
         if (_valid)
             _operator((void *)&_data, nullptr, Destroy);
     }
+
     void swap(function &other) noexcept {
         aligned_storage_t<sizeof(_data), alignof(decltype(_data))> _tmp;
         if (_valid)
@@ -378,15 +367,17 @@ struct function<R(Args...)> {
         ala::swap(_invoker, other._invoker);
         ala::swap(_operator, other._operator);
     }
-    bool _eq(const function &other) const
+
     explicit operator bool() const noexcept {
         return _valid;
     }
+
     result_type operator()(Args... args) const {
         if (!_valid)
             throw bad_function_call();
         return _invoker((void *)&_data, ala::forward<Args>(args)...);
     }
+
 #if ALA_USE_RTTI
     template<class T>
     T *target() noexcept {
@@ -394,17 +385,20 @@ struct function<R(Args...)> {
             return (T *)&_data;
         return nullptr;
     }
+
     template<class T>
     const T *target() const noexcept {
         return const_cast<function *>(this)->target<T>();
     }
+
     const type_info &target_type() const noexcept {
         if (_valid)
             return *(type_info *)_operator(nullptr, nullptr, TypeID);
         return typeid(void);
     }
+
 #endif
-// private:
+    // private:
     aligned_union_t<ALA_FUNCTION_MEMORY_SIZE, void (*)(), void (function::*)()> _data;
     bool _valid = false;
     typedef R (*invoker_t)(const void *, Args &&...);
@@ -414,61 +408,62 @@ struct function<R(Args...)> {
 };
 
 template<class R, class... Args>
-bool operator==(const function<R(Args...)>& lhs, const function<R(Args...)>& rhs) {
+bool operator==(const function<R(Args...)> &lhs, const function<R(Args...)> &rhs) {
     return lhs._eq(rhs);
 }
 
 // clang-format off
 template<class> struct _function_traits {};
-template<class R, class... Args> struct _function_traits<R(Args...)>                        { typedef R type(Args...); static constexpr unsigned qualify =     0b0; };
-template<class R, class... Args> struct _function_traits<R(Args...) const>                  { typedef R type(Args...); static constexpr unsigned qualify =    0b01; };
-template<class R, class... Args> struct _function_traits<R(Args...) volatile>               { typedef R type(Args...); static constexpr unsigned qualify =    0b10; };
-template<class R, class... Args> struct _function_traits<R(Args...) const volatile>         { typedef R type(Args...); static constexpr unsigned qualify =    0b11; };
-template<class R, class... Args> struct _function_traits<R(Args...) &>                      { typedef R type(Args...); static constexpr unsigned qualify =   0b100; };
-template<class R, class... Args> struct _function_traits<R(Args...) const &>                { typedef R type(Args...); static constexpr unsigned qualify =   0b101; };
-template<class R, class... Args> struct _function_traits<R(Args...) volatile &>             { typedef R type(Args...); static constexpr unsigned qualify =   0b110; };
-template<class R, class... Args> struct _function_traits<R(Args...) const volatile &>       { typedef R type(Args...); static constexpr unsigned qualify =   0b111; };
-template<class R, class... Args> struct _function_traits<R(Args...) &&>                     { typedef R type(Args...); static constexpr unsigned qualify =  0b1000; };
-template<class R, class... Args> struct _function_traits<R(Args...) const &&>               { typedef R type(Args...); static constexpr unsigned qualify =  0b1001; };
-template<class R, class... Args> struct _function_traits<R(Args...) volatile &&>            { typedef R type(Args...); static constexpr unsigned qualify =  0b1010; };
-template<class R, class... Args> struct _function_traits<R(Args...) const volatile &&>      { typedef R type(Args...); static constexpr unsigned qualify =  0b1011; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...)>                   { typedef R type(Args..., ...); static constexpr unsigned qualify =     0b0; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) const>             { typedef R type(Args..., ...); static constexpr unsigned qualify =    0b01; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) volatile>          { typedef R type(Args..., ...); static constexpr unsigned qualify =    0b10; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) const volatile>    { typedef R type(Args..., ...); static constexpr unsigned qualify =    0b11; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) &>                 { typedef R type(Args..., ...); static constexpr unsigned qualify =   0b100; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) const &>           { typedef R type(Args..., ...); static constexpr unsigned qualify =   0b101; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) volatile &>        { typedef R type(Args..., ...); static constexpr unsigned qualify =   0b110; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) const volatile &>  { typedef R type(Args..., ...); static constexpr unsigned qualify =   0b111; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) &&>                { typedef R type(Args..., ...); static constexpr unsigned qualify =  0b1000; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) const &&>          { typedef R type(Args..., ...); static constexpr unsigned qualify =  0b1001; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) volatile &&>       { typedef R type(Args..., ...); static constexpr unsigned qualify =  0b1010; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) const volatile &&> { typedef R type(Args..., ...); static constexpr unsigned qualify =  0b1011; };
+//                                                                                                                          | noexcept | rref | lref | volatile | const |
+template<class R, class... Args> struct _function_traits<R(Args...)>                        { typedef R type(Args...);      static constexpr unsigned qualify =    0b0; };
+template<class R, class... Args> struct _function_traits<R(Args...) const>                  { typedef R type(Args...);      static constexpr unsigned qualify =   0b01; };
+template<class R, class... Args> struct _function_traits<R(Args...) volatile>               { typedef R type(Args...);      static constexpr unsigned qualify =   0b10; };
+template<class R, class... Args> struct _function_traits<R(Args...) const volatile>         { typedef R type(Args...);      static constexpr unsigned qualify =   0b11; };
+template<class R, class... Args> struct _function_traits<R(Args...) &>                      { typedef R type(Args...);      static constexpr unsigned qualify =  0b100; };
+template<class R, class... Args> struct _function_traits<R(Args...) const &>                { typedef R type(Args...);      static constexpr unsigned qualify =  0b101; };
+template<class R, class... Args> struct _function_traits<R(Args...) volatile &>             { typedef R type(Args...);      static constexpr unsigned qualify =  0b110; };
+template<class R, class... Args> struct _function_traits<R(Args...) const volatile &>       { typedef R type(Args...);      static constexpr unsigned qualify =  0b111; };
+template<class R, class... Args> struct _function_traits<R(Args...) &&>                     { typedef R type(Args...);      static constexpr unsigned qualify = 0b1000; };
+template<class R, class... Args> struct _function_traits<R(Args...) const &&>               { typedef R type(Args...);      static constexpr unsigned qualify = 0b1001; };
+template<class R, class... Args> struct _function_traits<R(Args...) volatile &&>            { typedef R type(Args...);      static constexpr unsigned qualify = 0b1010; };
+template<class R, class... Args> struct _function_traits<R(Args...) const volatile &&>      { typedef R type(Args...);      static constexpr unsigned qualify = 0b1011; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...)>                   { typedef R type(Args..., ...); static constexpr unsigned qualify =    0b0; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) const>             { typedef R type(Args..., ...); static constexpr unsigned qualify =   0b01; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) volatile>          { typedef R type(Args..., ...); static constexpr unsigned qualify =   0b10; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) const volatile>    { typedef R type(Args..., ...); static constexpr unsigned qualify =   0b11; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) &>                 { typedef R type(Args..., ...); static constexpr unsigned qualify =  0b100; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) const &>           { typedef R type(Args..., ...); static constexpr unsigned qualify =  0b101; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) volatile &>        { typedef R type(Args..., ...); static constexpr unsigned qualify =  0b110; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) const volatile &>  { typedef R type(Args..., ...); static constexpr unsigned qualify =  0b111; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) &&>                { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b1000; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) const &&>          { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b1001; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) volatile &&>       { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b1010; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) const volatile &&> { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b1011; };
 #if _ALA_ENABLE_NOEXCEPT_TYPE
-template<class R, class... Args> struct _function_traits<R(Args...) noexcept>                        { typedef R type(Args...) noexcept; static constexpr unsigned qualify =     0b0; };
-template<class R, class... Args> struct _function_traits<R(Args...) const noexcept>                  { typedef R type(Args...) noexcept; static constexpr unsigned qualify =    0b01; };
-template<class R, class... Args> struct _function_traits<R(Args...) volatile noexcept>               { typedef R type(Args...) noexcept; static constexpr unsigned qualify =    0b10; };
-template<class R, class... Args> struct _function_traits<R(Args...) const volatile noexcept>         { typedef R type(Args...) noexcept; static constexpr unsigned qualify =    0b11; };
-template<class R, class... Args> struct _function_traits<R(Args...) & noexcept>                      { typedef R type(Args...) noexcept; static constexpr unsigned qualify =   0b100; };
-template<class R, class... Args> struct _function_traits<R(Args...) const & noexcept>                { typedef R type(Args...) noexcept; static constexpr unsigned qualify =   0b101; };
-template<class R, class... Args> struct _function_traits<R(Args...) volatile & noexcept>             { typedef R type(Args...) noexcept; static constexpr unsigned qualify =   0b110; };
-template<class R, class... Args> struct _function_traits<R(Args...) const volatile & noexcept>       { typedef R type(Args...) noexcept; static constexpr unsigned qualify =   0b111; };
-template<class R, class... Args> struct _function_traits<R(Args...) && noexcept>                     { typedef R type(Args...) noexcept; static constexpr unsigned qualify =  0b1000; };
-template<class R, class... Args> struct _function_traits<R(Args...) const && noexcept>               { typedef R type(Args...) noexcept; static constexpr unsigned qualify =  0b1001; };
-template<class R, class... Args> struct _function_traits<R(Args...) volatile && noexcept>            { typedef R type(Args...) noexcept; static constexpr unsigned qualify =  0b1010; };
-template<class R, class... Args> struct _function_traits<R(Args...) const volatile && noexcept>      { typedef R type(Args...) noexcept; static constexpr unsigned qualify =  0b1011; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) noexcept>                   { typedef R type(Args..., ...) noexcept; static constexpr unsigned qualify =     0b0; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) const noexcept>             { typedef R type(Args..., ...) noexcept; static constexpr unsigned qualify =    0b01; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) volatile noexcept>          { typedef R type(Args..., ...) noexcept; static constexpr unsigned qualify =    0b10; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) const volatile noexcept>    { typedef R type(Args..., ...) noexcept; static constexpr unsigned qualify =    0b11; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) & noexcept>                 { typedef R type(Args..., ...) noexcept; static constexpr unsigned qualify =   0b100; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) const & noexcept>           { typedef R type(Args..., ...) noexcept; static constexpr unsigned qualify =   0b101; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) volatile & noexcept>        { typedef R type(Args..., ...) noexcept; static constexpr unsigned qualify =   0b110; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) const volatile & noexcept>  { typedef R type(Args..., ...) noexcept; static constexpr unsigned qualify =   0b111; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) && noexcept>                { typedef R type(Args..., ...) noexcept; static constexpr unsigned qualify =  0b1000; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) const && noexcept>          { typedef R type(Args..., ...) noexcept; static constexpr unsigned qualify =  0b1001; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) volatile && noexcept>       { typedef R type(Args..., ...) noexcept; static constexpr unsigned qualify =  0b1010; };
-template<class R, class... Args> struct _function_traits<R(Args..., ...) const volatile && noexcept> { typedef R type(Args..., ...) noexcept; static constexpr unsigned qualify =  0b1011; };
+template<class R, class... Args> struct _function_traits<R(Args...) noexcept>                        { typedef R type(Args...);      static constexpr unsigned qualify = 0b10000; };
+template<class R, class... Args> struct _function_traits<R(Args...) const noexcept>                  { typedef R type(Args...);      static constexpr unsigned qualify = 0b10001; };
+template<class R, class... Args> struct _function_traits<R(Args...) volatile noexcept>               { typedef R type(Args...);      static constexpr unsigned qualify = 0b10010; };
+template<class R, class... Args> struct _function_traits<R(Args...) const volatile noexcept>         { typedef R type(Args...);      static constexpr unsigned qualify = 0b10011; };
+template<class R, class... Args> struct _function_traits<R(Args...) & noexcept>                      { typedef R type(Args...);      static constexpr unsigned qualify = 0b10100; };
+template<class R, class... Args> struct _function_traits<R(Args...) const & noexcept>                { typedef R type(Args...);      static constexpr unsigned qualify = 0b10101; };
+template<class R, class... Args> struct _function_traits<R(Args...) volatile & noexcept>             { typedef R type(Args...);      static constexpr unsigned qualify = 0b10110; };
+template<class R, class... Args> struct _function_traits<R(Args...) const volatile & noexcept>       { typedef R type(Args...);      static constexpr unsigned qualify = 0b10111; };
+template<class R, class... Args> struct _function_traits<R(Args...) && noexcept>                     { typedef R type(Args...);      static constexpr unsigned qualify = 0b11000; };
+template<class R, class... Args> struct _function_traits<R(Args...) const && noexcept>               { typedef R type(Args...);      static constexpr unsigned qualify = 0b11001; };
+template<class R, class... Args> struct _function_traits<R(Args...) volatile && noexcept>            { typedef R type(Args...);      static constexpr unsigned qualify = 0b11010; };
+template<class R, class... Args> struct _function_traits<R(Args...) const volatile && noexcept>      { typedef R type(Args...);      static constexpr unsigned qualify = 0b11011; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) noexcept>                   { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b10000; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) const noexcept>             { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b10001; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) volatile noexcept>          { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b10010; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) const volatile noexcept>    { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b10011; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) & noexcept>                 { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b10100; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) const & noexcept>           { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b10101; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) volatile & noexcept>        { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b10110; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) const volatile & noexcept>  { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b10111; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) && noexcept>                { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b11000; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) const && noexcept>          { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b11001; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) volatile && noexcept>       { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b11010; };
+template<class R, class... Args> struct _function_traits<R(Args..., ...) const volatile && noexcept> { typedef R type(Args..., ...); static constexpr unsigned qualify = 0b11011; };
 #endif
 // clang-format on
 
@@ -488,14 +483,6 @@ struct _function_traits_helper<R(Args..., ...)> {
     typedef R result_type;
     static constexpr size_t args_count = sizeof...(Args);
 };
-
-template<class R, class... Args>
-struct _function_traits_helper<R(Args...) noexcept>
-    : _function_traits_helper<R(Args...)> {};
-
-template<class R, class... Args>
-struct _function_traits_helper<R(Args..., ...) noexcept>
-    : _function_traits_helper<R(Args..., ...)> {};
 
 template<class Fn, class = void>
 struct _function_helper: _function_traits_helper<Fn> {};

@@ -2,7 +2,8 @@
 #define _ALA_CONFIG_PLATFORM_H
 
 #if defined(_MSC_VER) // msvc or clang (msvc target)
-#if defined(__clang__) && defined(__clang_major__) && defined(__clang_patchlevel__)
+#if defined(__clang__) && defined(__clang_major__) && \
+    defined(__clang_patchlevel__)
 
 #define _ALA_CLANG
 #define _ALA_CLANG_MSVC
@@ -21,7 +22,8 @@
 #endif // __clang__
 
 #elif defined(__GNUC__) // gcc or clang (gnu target)
-#if defined(__clang__) && defined(__clang_major__) && defined(__clang_patchlevel__)
+#if defined(__clang__) && defined(__clang_major__) && \
+    defined(__clang_patchlevel__)
 
 #define _ALA_CLANG
 #define _ALA_CLANG_GNU
@@ -48,36 +50,28 @@
     defined(__amd64__)
 #define _ALA_X86
 #if defined(_M_AMD64) || defined(__amd64__)
-#define _ALA_X86_64
-#else
-#define _ALA_X86_32
+#define _ALA_AMD64
 #endif
 #elif defined(_M_ARM) || defined(__arm__) || defined(_M_ARM64) || \
     defined(__aarch64__)
 #define _ALA_ARM
 #if defined(_M_ARM64) || defined(__aarch64__)
 #define _ALA_ARM64
-#else
-#define _ALA_ARM32
 #endif
 #else
 // #error "unsupported arch; ala support arm and X86 (both 32bit and 64bit)."
 #endif // Architectures
 
 #ifdef _WIN32
-#define _ALA_WIN
+#define _ALA_WIN32
 #elif defined(__linux__)
 #define _ALA_LINUX
 #elif defined(__APPLE__)
-#define _ALA_MAC
+#define _ALA_APPLE
 #endif
 
-#if defined(_DEBUG) && !defined(NDEBUG)
-#define _ALA_DEBUG
-#endif
-
-#if !defined(_DEBUG) && defined(NDEBUG)
-#define _ALA_RELEASE
+#if defined(__unix__) || defined(__unix)
+#define _ALA_UNIX
 #endif
 
 #ifdef _MSVC_LANG

@@ -11,7 +11,7 @@
 #include <Windows.h>
 #elif defined _ALA_LINUX
 #include <time.h>
-#elif defined _ALA_MAC
+#elif defined _ALA_APPLE
 #include <mach/mach_time.h>
 #endif
 

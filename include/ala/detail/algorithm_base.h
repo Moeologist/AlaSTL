@@ -1,11 +1,15 @@
 #ifndef _ALA_DETAIL_ALGORITHM_BASE_H
 #define _ALA_DETAIL_ALGORITHM_BASE_H
 
+#include <cstring>
+
 #include <ala/detail/functional_base.h>
 #include <ala/detail/pair.h>
 #include <ala/iterator.h>
 
 namespace ala {
+
+using std::memmove;
 
 // Minimum/maximum operations
 #ifdef min
@@ -241,14 +245,14 @@ constexpr bool lexicographical_compare(Iter1 first1, Iter1 last1, Iter2 first2,
 }
 
 // Binary search operations (on sorted ranges)
-template<class ForwardIterer, class T, class Comp>
-constexpr ForwardIterer lower_bound(ForwardIterer first, ForwardIterer last,
-                                    const T &value, Comp comp) {
-    typename iterator_traits<ForwardIterer>::difference_type len, step;
+template<class ForwardIter, class T, class Comp>
+constexpr ForwardIter lower_bound(ForwardIter first, ForwardIter last,
+                                  const T &value, Comp comp) {
+    typename iterator_traits<ForwardIter>::difference_type len, step;
     len = ala::distance(first, last);
 
     while (len > 0) {
-        ForwardIterer i = first;
+        ForwardIter i = first;
         step = len / 2;
         ala::advance(i, step);
         if (comp(*i, value)) {
@@ -260,20 +264,20 @@ constexpr ForwardIterer lower_bound(ForwardIterer first, ForwardIterer last,
     return first;
 }
 
-template<class ForwardIterer, class T>
-constexpr ForwardIterer lower_bound(ForwardIterer first, ForwardIterer last,
-                                    const T &value) {
+template<class ForwardIter, class T>
+constexpr ForwardIter lower_bound(ForwardIter first, ForwardIter last,
+                                  const T &value) {
     return ala::lower_bound(first, last, value, less<>());
 }
 
-template<class ForwardIterer, class T, class Comp>
-constexpr ForwardIterer upper_bound(ForwardIterer first, ForwardIterer last,
-                                    const T &value, Comp comp) {
-    typename iterator_traits<ForwardIterer>::difference_type len, step;
+template<class ForwardIter, class T, class Comp>
+constexpr ForwardIter upper_bound(ForwardIter first, ForwardIter last,
+                                  const T &value, Comp comp) {
+    typename iterator_traits<ForwardIter>::difference_type len, step;
     len = ala::distance(first, last);
 
     while (len > 0) {
-        ForwardIterer i = first;
+        ForwardIter i = first;
         step = len / 2;
         ala::advance(i, step);
         if (!comp(value, *i)) {
@@ -285,35 +289,34 @@ constexpr ForwardIterer upper_bound(ForwardIterer first, ForwardIterer last,
     return first;
 }
 
-template<class ForwardIterer, class T>
-constexpr ForwardIterer upper_bound(ForwardIterer first, ForwardIterer last,
-                                    const T &value) {
+template<class ForwardIter, class T>
+constexpr ForwardIter upper_bound(ForwardIter first, ForwardIter last,
+                                  const T &value) {
     return ala::upper_bound(first, last, value, less<>());
 }
 
-template<class ForwardIterer, class T, class Comp>
-constexpr pair<ForwardIterer, ForwardIterer>
-equal_range(ForwardIterer first, ForwardIterer last, const T &value, Comp comp) {
+template<class ForwardIter, class T, class Comp>
+constexpr pair<ForwardIter, ForwardIter>
+equal_range(ForwardIter first, ForwardIter last, const T &value, Comp comp) {
     auto lower = ala::lower_bound(first, last, value, comp);
     return ala::make_pair(lower, ala::upper_bound(lower, last, value, comp));
 }
 
-template<class ForwardIterer, class T>
-constexpr pair<ForwardIterer, ForwardIterer>
-equal_range(ForwardIterer first, ForwardIterer last, const T &value) {
+template<class ForwardIter, class T>
+constexpr pair<ForwardIter, ForwardIter>
+equal_range(ForwardIter first, ForwardIter last, const T &value) {
     return ala::equal_range(first, last, value, less<>());
 }
 
-template<class ForwardIterer, class T, class Comp>
-constexpr bool binary_search(ForwardIterer first, ForwardIterer last,
+template<class ForwardIter, class T, class Comp>
+constexpr bool binary_search(ForwardIter first, ForwardIter last,
                              const T &value, Comp comp) {
     first = ala::lower_bound(first, last, value, comp);
     return (!(first == last) && !(comp(value, *first)));
 }
 
-template<class ForwardIterer, class T>
-constexpr bool binary_search(ForwardIterer first, ForwardIterer last,
-                             const T &value) {
+template<class ForwardIter, class T>
+constexpr bool binary_search(ForwardIter first, ForwardIter last, const T &value) {
     return binary_search(first, last, value, less<>());
 }
 

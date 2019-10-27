@@ -25,14 +25,14 @@
 #endif
 #endif
 
-#if ALA_ENABLE_HAS_BUILTIN && ALA_HAS_BUILTIN(__make_integer_seq) || \
+#if ALA_HAS_BUILTIN(__make_integer_seq) || \
     defined(_ALA_MSVC)
 #define _ALA_ENABLE_MAKE_INTEGER_SEQ 1
 #else
 #define _ALA_ENABLE_MAKE_INTEGER_SEQ 0
 #endif
 
-#if _ALA_ENABLE_CPP_ATTR_MACRO && ALA_HAS_CPP_ATTRIBUTE(nodiscard) || \
+#if ALA_HAS_CPP_ATTRIBUTE(nodiscard) || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_LANG >= 201703L)
 #define ALA_NODISCARD [[nodiscard]]
 #else

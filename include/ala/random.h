@@ -14,32 +14,32 @@ namespace ala {
     ((defined(__RDSEED__) && defined(__RDRND__)) || defined(_ALA_MSVC))
 
 template<class UInt>
-constexpr enable_if_t<sizeof(UInt) == 2, int> rdseed(UInt *p) {
+enable_if_t<sizeof(UInt) == 2, int> rdseed(UInt *p) {
     return _rdseed16_step(p);
 }
 
 template<class UInt>
-constexpr enable_if_t<sizeof(UInt) == 4, int> rdseed(UInt *p) {
+enable_if_t<sizeof(UInt) == 4, int> rdseed(UInt *p) {
     return _rdseed32_step(p);
 }
 
 template<class UInt>
-constexpr enable_if_t<sizeof(UInt) == 8, int> rdseed(UInt *p) {
+enable_if_t<sizeof(UInt) == 8, int> rdseed(UInt *p) {
     return _rdseed64_step(p);
 }
 
 template<class UInt>
-constexpr enable_if_t<sizeof(UInt) == 2, int> rdrand(UInt *p) {
+enable_if_t<sizeof(UInt) == 2, int> rdrand(UInt *p) {
     return _rdrand16_step(p);
 }
 
 template<class UInt>
-constexpr enable_if_t<sizeof(UInt) == 4, int> rdrand(UInt *p) {
+enable_if_t<sizeof(UInt) == 4, int> rdrand(UInt *p) {
     return _rdrand32_step(p);
 }
 
 template<class UInt>
-constexpr enable_if_t<sizeof(UInt) == 8, int> rdrand(UInt *p) {
+enable_if_t<sizeof(UInt) == 8, int> rdrand(UInt *p) {
     return _rdrand64_step(p);
 }
 
@@ -214,37 +214,22 @@ using xorshift64 = xorshift<uint_fast64_t, 13, 7, 17>;
 
 using minstd_rand = linear_congruential_engine<uint_fast32_t, 48271, 0, 2147483647>;
 
-template<typename T, size_t Sz = sizeof(T)>
-struct _generate_real_traits;
-
-template<typename T>
-struct _generate_real_traits<T, 4> {
-    typedef float value_type;
-    static_assert(numeric_limits<value_type>::is_iec559,
+template<class URBG>
+conditional_t<(sizeof(typename remove_cvref_t<URBG>::result_type) * 8 >= 52),
+              double, float>
+generate_real(URBG &&g) {
+    using UInt = typename remove_cvref_t<URBG>::result_type;
+    using Real =
+        conditional_t<(sizeof(typename remove_cvref_t<URBG>::result_type) * 8 >= 52),
+                      double, float>;
+    static_assert(numeric_limits<Real>::is_iec559,
                   "IEC 559 (IEEE 754) check failed");
-    static constexpr size_t sign = 1;
-    static constexpr size_t exponent = 8;
-    static constexpr size_t fraction = 23;
-};
-
-template<typename T>
-struct _generate_real_traits<T, 8> {
-    typedef double value_type;
-    static_assert(numeric_limits<value_type>::is_iec559,
-                  "IEC 559 (IEEE 754) check failed");
-    static constexpr size_t sign = 1;
-    static constexpr size_t exponent = 11;
-    static constexpr size_t fraction = 52;
-};
-
-template<class URBG, class UInt = typename remove_cvref_t<URBG>::result_type>
-constexpr typename _generate_real_traits<UInt>::value_type generate_real(URBG &&g) {
-    typedef _generate_real_traits<UInt> _traits;
-    typedef typename _traits::value_type Real;
-    constexpr UInt I = sizeof(UInt) * 8;
-    constexpr UInt Mask = ((UInt)1 << (_traits::exponent - 1)) - 1;
-    constexpr UInt M = _traits::fraction;
-    UInt s = (g() >> (I - M)) | (Mask << M);
+    static_assert(sizeof(UInt) >= sizeof(Real), "size of uint too small");
+    constexpr size_t exponent = is_same<double, Real>::value ? 11 : 8;
+    constexpr size_t fraction = is_same<double, Real>::value ? 52 : 23;
+    constexpr size_t bits = sizeof(UInt) * 8;
+    constexpr UInt e = ((UInt)1 << (exponent - 1)) - 1;
+    UInt s = (g() >> (bits - fraction)) | (e << fraction);
     return *(Real *)(&s) - (Real)1.0;
 }
 
