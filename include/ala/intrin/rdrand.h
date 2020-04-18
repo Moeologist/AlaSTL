@@ -1,5 +1,5 @@
-#ifndef _ALA_DETAIL_INTRIN_H
-#define _ALA_DETAIL_INTRIN_H
+#ifndef _ALA_INTRIN_RDRAND_H
+#define _ALA_INTRIN_RDRAND_H
 
 #ifdef _ALA_X86
 

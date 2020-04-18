@@ -4,7 +4,7 @@
 #include <ala/type_traits.h>
 #include <string>
 
-#ifdef _ALA_WIN
+#ifdef _ALA_WIN32
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -17,7 +17,7 @@
 
 namespace ala {
 
-#ifdef _ALA_WIN
+#ifdef _ALA_WIN32
 
 template<class Fn, class... Args>
 std::string timer(Fn &&fn, Args &&... args) {
@@ -56,12 +56,12 @@ std::string timer(Fn &&fn, Args &&... args) {
     return std::to_string(ns_time) + "" + units[unit_index];
 }
 
-#elif defined _ALA_MAC
+#elif defined _ALA_APPLE
 
 template<class Fn, class... Args>
 std::string timer(Fn &&fn, Args &&... args) {
     std::string units[] = {"ns", "us", "ms", "s"};
-    uint64_t before, after;
+    uint_fast64_t before, after;
     mach_timebase_info_data_t info;
     mach_timebase_info(&info);
     before = mach_absolute_time();

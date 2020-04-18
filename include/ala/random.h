@@ -5,7 +5,7 @@
 
 #if defined(_ALA_X86) && \
     ((defined(__RDSEED__) && defined(__RDRND__)) || defined(_ALA_MSVC))
-#include <ala/detail/intrin.h>
+#include <ala/intrin/rdrand.h>
 #endif
 
 namespace ala {
@@ -75,13 +75,13 @@ template<typename>
 struct _xoshiro_jump;
 
 template<>
-struct _xoshiro_jump<uint64_t> {
-    static constexpr uint64_t jmp[] = {0x180ec6d33cfd0aba, 0xd5a61266f0c9392c,
+struct _xoshiro_jump<uint_fast64_t> {
+    static constexpr uint_fast64_t jmp[] = {0x180ec6d33cfd0aba, 0xd5a61266f0c9392c,
                                        0xa9582618e03fc9aa, 0x39abdc4529b1661c};
     // equivalent to 2^128 calls to next()
 
     /*
-  static constexpr uint64_t jmp[] = {0x76e15d3efefdcbbf,
+  static constexpr uint_fast64_t jmp[] = {0x76e15d3efefdcbbf,
                                       0xc5004e441c522fb3,
                                       0x77710069854ee241,
                                       0x39109bb02acbe635};
@@ -90,8 +90,8 @@ struct _xoshiro_jump<uint64_t> {
 };
 
 template<>
-struct _xoshiro_jump<uint32_t> {
-    static constexpr uint32_t jmp[] = {0x8764000b, 0xf542d2d3, 0x6fa035c3,
+struct _xoshiro_jump<uint_fast32_t> {
+    static constexpr uint_fast32_t jmp[] = {0x8764000b, 0xf542d2d3, 0x6fa035c3,
                                        0x77f2db5b};
     // equivalent to 2^64 calls to next()
 };
@@ -143,7 +143,7 @@ struct xoshiro {
     }
 
     constexpr void jump() {
-        // jump need UInt is uint32_t or uint64_t
+        // jump need UInt is uint_fast32_t or uint_fast64_t
         constexpr const result_type(&jmp)[4] = _xoshiro_jump<result_type>::jmp;
         result_type s0 = 0, s1 = 0, s2 = 0, s3 = 0;
         for (int i = 0; i < sizeof(jmp) / sizeof(*jmp); ++i)

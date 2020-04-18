@@ -3,9 +3,6 @@
 #ifndef _ALA_DETAIL_SORT_H
 #define _ALA_DETAIL_SORT_H
 
-#include <ala/type_traits.h>
-#include <ala/iterator.h>
-#include <ala/detail/functional_base.h>
 #include <ala/detail/algorithm_base.h>
 
 namespace ala {
@@ -51,7 +48,7 @@ void insertion_sort(BidirIter first, BidirIter last) {
 }
 
 // void _shell_sequence() {
-//     uint64_t seq[64];
+//     uint_fast64_t seq[64];
 //     for (int i = 0; i < 32; ++i) {
 //         seq[i * 2] = 9 * pow(4, i) - 9 * pow(2, i) + 1;
 //         seq[i * 2 + 1] = pow(2, i + 2) * (pow(2, i + 2) - 3) + 1;
@@ -64,7 +61,7 @@ void insertion_sort(BidirIter first, BidirIter last) {
 template<class RandomIter, class Comp>
 void shell_sort(RandomIter first, RandomIter last, Comp comp) {
     typedef typename iterator_traits<RandomIter>::value_type T;
-    constexpr uint64_t seq[] = {0x1ull,
+    constexpr uint_fast64_t seq[] = {0x1ull,
                                 0x5ull,
                                 0x13ull,
                                 0x29ull,
@@ -327,19 +324,34 @@ void inplace_merge(BidirIt first, BidirIt middle, BidirIt last) {
 
 namespace detail {
 
-template<class RandomIter, class Comp>
-void merge_sort_impl(RandomIter first, RandomIter last, RandomIter tmp_first,
-                     Comp comp) {
-    ptrdiff_t len = last - first;
+template<class I>
+void mv(I a, I b, I c) {
+    ala::move(a, b, c);
+    for (auto i = a; i < b; ++i)
+        *i = 0;
+}
+
+template<class RandomIter, class Size, class Comp>
+bool merge_sort_impl(RandomIter first, RandomIter tmp, Size len, Comp comp) {
     if (len <= ALA_INSERTION_THRESHOLD) {
-        insertion_sort(first, last);
-        return;
+        insertion_sort(first, first + len);
+        return false;
     }
-    RandomIter mid = first + len / 2, tmp_mid = tmp_first + len / 2,
-               tmp_last = tmp_first + len;
-    merge_sort_impl(tmp_first, tmp_mid, first, comp);
-    merge_sort_impl(tmp_mid, tmp_last, mid, comp);
-    merge(tmp_first, tmp_mid, tmp_mid, tmp_last, first, comp);
+    Size llen = len / 2, rlen = len - len / 2;
+    bool l_tmp = merge_sort_impl(first, tmp, llen, comp);
+    bool r_tmp = merge_sort_impl(first + llen, tmp + llen, rlen, comp);
+    bool tmp_in = l_tmp || r_tmp; // merge tmp into first or merge fisrt into tmp
+    RandomIter in = tmp, out = first;
+    if (!tmp_in) {
+        in = first;
+        out = tmp;
+    } else if (!l_tmp) {
+        move(first, first + llen, tmp);
+    } else if (!r_tmp) {
+        move(first + llen, first + len, tmp + llen);
+    }
+    merge(in, in + llen, in + llen, in + len, out, comp);
+    return !tmp_in;
 }
 
 } // namespace detail
@@ -348,9 +360,11 @@ void merge_sort_impl(RandomIter first, RandomIter last, RandomIter tmp_first,
 template<class RandomIter, class Comp>
 void merge_sort(RandomIter first, RandomIter last, Comp comp) {
     typedef typename iterator_traits<RandomIter>::value_type T;
-    T *tmp = new T[last - first];
-    ala::copy(first, last, tmp);
-    detail::merge_sort_impl(first, last, tmp, comp);
+    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+    diff_t len = last - first;
+    T *tmp = new T[len];
+    if (ala::detail::merge_sort_impl(first, tmp, len, comp))
+        ala::move(tmp, tmp + len, first);
     delete[] tmp;
     return;
 }
@@ -617,7 +631,5 @@ constexpr RandomIter partial_sort_copy(Iter first1, Iter last1,
 }
 
 } // namespace ala
-
-#include <ala/detail/parallel/sort.h>
 
 #endif
