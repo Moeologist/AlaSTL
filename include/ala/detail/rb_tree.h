@@ -86,19 +86,18 @@ constexpr void prev_node(rb_node<Data> *&_ptr) {
     }
 }
 
-template<class Ptr>
-struct rb_const_iterator;
-
-template<class Ptr>
+template<class Ptr, bool IsConst = false>
 struct rb_iterator {
     typedef bidirectional_iterator_tag iterator_category;
     typedef decltype(declval<Ptr>()->_data) value_type;
     typedef typename pointer_traits<Ptr>::difference_type difference_type;
-    typedef value_type *pointer;
-    typedef value_type &reference;
+    typedef conditional_t<IsConst, const value_type, value_type> *pointer;
+    typedef conditional_t<IsConst, const value_type, value_type> &reference;
 
     constexpr rb_iterator() {}
     constexpr rb_iterator(const rb_iterator &other): _ptr(other._ptr) {}
+    constexpr rb_iterator(const rb_iterator<Ptr, !IsConst> &other)
+        : _ptr(other._ptr) {}
     constexpr rb_iterator(const Ptr &ptr): _ptr(ptr) {}
 
     constexpr reference operator*() const {
@@ -117,11 +116,11 @@ struct rb_iterator {
         return !(_ptr == rhs._ptr);
     }
 
-    constexpr bool operator==(const rb_const_iterator<Ptr> &rhs) const {
+    constexpr bool operator==(const rb_iterator<Ptr, !IsConst> &rhs) const {
         return (_ptr == rhs._ptr);
     }
 
-    constexpr bool operator!=(const rb_const_iterator<Ptr> &rhs) const {
+    constexpr bool operator!=(const rb_iterator<Ptr, !IsConst> &rhs) const {
         return !(_ptr == rhs._ptr);
     }
 
@@ -148,80 +147,7 @@ struct rb_iterator {
     }
 
 protected:
-    template<class, class, class, class>
-    friend class map;
-    template<class, class, class, class>
-    friend class multimap;
-    template<class, class, class>
-    friend class set;
-    template<class, class, class>
-    friend class multiset;
-    friend class rb_const_iterator<Ptr>;
-    Ptr _ptr = nullptr;
-};
-
-template<class Ptr>
-struct rb_const_iterator {
-    typedef bidirectional_iterator_tag iterator_category;
-    typedef decltype(declval<Ptr>()->_data) value_type;
-    typedef typename pointer_traits<Ptr>::difference_type difference_type;
-    typedef value_type *pointer;
-    typedef value_type &reference;
-
-    constexpr rb_const_iterator() {}
-    constexpr rb_const_iterator(const rb_const_iterator &other)
-        : _ptr(other._ptr) {}
-    constexpr rb_const_iterator(const Ptr &ptr): _ptr(ptr) {}
-    constexpr rb_const_iterator(const rb_iterator<Ptr> &other)
-        : _ptr(other._ptr) {}
-
-    constexpr reference operator*() const {
-        return _ptr->_data;
-    }
-
-    constexpr pointer operator->() const {
-        return ala::addressof(_ptr->_data);
-    }
-
-    constexpr bool operator==(const rb_const_iterator &rhs) const {
-        return (_ptr == rhs._ptr);
-    }
-
-    constexpr bool operator!=(const rb_const_iterator &rhs) const {
-        return !(_ptr == rhs._ptr);
-    }
-
-    constexpr bool operator==(const rb_iterator<Ptr> &rhs) const {
-        return (_ptr == rhs._ptr);
-    }
-
-    constexpr bool operator!=(const rb_iterator<Ptr> &rhs) const {
-        return !(_ptr == rhs._ptr);
-    }
-
-    constexpr rb_const_iterator &operator++() {
-        next_node(_ptr);
-        return *this;
-    }
-
-    constexpr rb_const_iterator operator++(int) {
-        rb_const_iterator tmp(*this);
-        ++*this;
-        return tmp;
-    }
-
-    constexpr rb_const_iterator &operator--() {
-        prev_node(_ptr);
-        return *this;
-    }
-
-    constexpr rb_const_iterator operator--(int) {
-        rb_const_iterator tmp(*this);
-        --*this;
-        return tmp;
-    }
-
-protected:
+    friend class rb_iterator<Ptr, !IsConst>;
     template<class, class, class, class>
     friend class map;
     template<class, class, class, class>
@@ -231,7 +157,6 @@ protected:
     template<class, class, class>
     friend class multiset;
     Ptr _ptr = nullptr;
-    friend class rb_iterator<Ptr>;
 };
 
 template<class Data, class Comp, class Alloc, bool Uniq>

@@ -103,9 +103,9 @@ public:
 #if IS_MAP
     typedef rb_iterator<typename tree_type::node_pointer> iterator;
 #else
-    typedef rb_const_iterator<typename tree_type::node_pointer> iterator;
+    typedef rb_iterator<typename tree_type::node_pointer, false> iterator;
 #endif
-    typedef rb_const_iterator<typename tree_type::node_pointer> const_iterator;
+    typedef rb_iterator<typename tree_type::node_pointer, false> const_iterator;
     typedef ala::reverse_iterator<iterator> reverse_iterator;
     typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
 #if IS_MAP
