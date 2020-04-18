@@ -63,7 +63,7 @@ struct _optional_copy<T, true, false>: _optional_destroy<T> {
     _optional_copy &operator=(_optional_copy &&) = default;
 };
 
-template<class T, bool = is_copy_constructible<T>::value,
+template<class T, bool = is_move_constructible<T>::value,
          bool = is_trivially_move_constructible<T>::value>
 struct _optional_move: _optional_copy<T> {};
 
