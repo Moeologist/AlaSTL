@@ -2,7 +2,6 @@
 #define _ALA_ALGORITHM_H
 
 #include <ala/utility.h>
-#include <ala/iterator.h>
 #include <ala/random.h>
 #include <ala/detail/algorithm_base.h>
 #include <ala/detail/sort.h>

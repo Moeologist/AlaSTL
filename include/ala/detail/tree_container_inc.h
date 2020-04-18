@@ -6,10 +6,7 @@
 #error "internal error, nerver use this head"
 #endif
 
-#include <ala/detail/allocator.h>
-#include <ala/detail/functional_base.h>
 #include <ala/detail/algorithm_base.h>
-#include <ala/detail/pair.h>
 #include <ala/detail/rb_tree.h>
 
 #if IS_MAP

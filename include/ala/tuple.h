@@ -1,10 +1,7 @@
 #ifndef _ALA_TUPLE_H
 #define _ALA_TUPLE_H
 
-#include <ala/detail/integer_sequence.h>
 #include <ala/detail/pair.h>
-#include <ala/detail/tuple_operator.h>
-#include <ala/type_traits.h>
 #include <ala/detail/type_pack.h>
 
 namespace ala {

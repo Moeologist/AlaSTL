@@ -1,7 +1,6 @@
 #ifndef _ALA_DETAIL_PAIR_H
 #define _ALA_DETAIL_PAIR_H
 
-#include <ala/type_traits.h>
 #include <ala/detail/integer_sequence.h>
 #include <ala/detail/tuple_operator.h>
 

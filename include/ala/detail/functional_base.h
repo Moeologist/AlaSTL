@@ -1,7 +1,6 @@
 #ifndef _ALA_DETAIL_FUNCTIONAL_BASE_H
 #define _ALA_DETAIL_FUNCTIONAL_BASE_H
 
-#include <ala/config.h>
 #include <ala/type_traits.h>
 
 #define ALA_MAKE_BASE_FUNCTION_UNARY(_name_, _op_) \

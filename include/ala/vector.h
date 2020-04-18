@@ -1,7 +1,6 @@
 #ifndef _ALA_VECTOR_H
 #define _ALA_VECTOR_H
 
-#include <ala/iterator.h>
 #include <ala/detail/algorithm_base.h>
 #include <ala/detail/allocator.h>
 
@@ -269,7 +268,7 @@ public:
                 _data = new_data;
             } else {
                 for (size_type i = _size; i < sz; ++i)
-                    _alloc_traits::construct(data + i);
+                    _alloc_traits::construct(_data + i);
             }
         }
         _size = sz;
@@ -366,7 +365,7 @@ public:
 
     void pop_back() {
         _alloc_traits::destroy(_alloc, end() - 1);
-        --size;
+        --_size;
     }
 
     template<class... Args>

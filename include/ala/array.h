@@ -1,8 +1,6 @@
 #ifndef _ALA_ARRAY_H
 #define _ALA_ARRAY_H
 
-#include <ala/type_traits.h>
-#include <ala/iterator.h>
 #include <ala/detail/algorithm_base.h>
 #include <ala/detail/tuple_operator.h>
 
