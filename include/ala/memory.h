@@ -1026,7 +1026,7 @@ shared_ptr<T> allocate_shared(const A &a, Args &&...args) {
     using ph_t = char[sizeof(blk_t) + sizeof(T)];
     using holder_t = pointer_holder<blk_t *, A>;
     A alloc(a);
-    holder_t holder(a, 1);
+    holder_t holder(alloc, 1);
     blk_t *blk = reinterpret_cast<blk_t *>(holder.get());
     T *ptr = reinterpret_cast<T *>(reinterpret_cast<char *>(blk) + sizeof(blk_t));
     traits_t::template construct_object<blk_t>(alloc, blk, ptr, D(), alloc);

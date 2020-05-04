@@ -333,7 +333,7 @@ constexpr auto rbegin(const C &c) -> decltype(c.rbegin()) {
 }
 
 template<class T, size_t N>
-constexpr T *rbegin(T (&array)[N]) noexcept {
+constexpr reverse_iterator<T *> rbegin(T (&array)[N]) noexcept {
     return make_reverse_iterator(ala::end(array));
 }
 
@@ -536,11 +536,13 @@ struct back_insert_iterator {
     constexpr back_insert_iterator<Container> &
     operator=(const typename Container::value_type &value) {
         container->push_back(value);
+        return *this;
     }
 
     constexpr back_insert_iterator<Container> &
     operator=(typename Container::value_type &&value) {
         container->push_back(ala::move(value));
+        return *this;
     }
 
     constexpr back_insert_iterator &operator*() {
@@ -657,6 +659,29 @@ constexpr insert_iterator<Container> inserter(Container &c,
                                               typename Container::iterator i) {
     return ala::insert_iterator<Container>(c, i);
 }
+
+template<class C>
+constexpr auto size(const C &c) -> decltype(c.size()) {
+    return c.size();
+}
+
+template<class C>
+constexpr auto ssize(const C &c)
+    -> common_type_t<ptrdiff_t, make_signed_t<decltype(c.size())>> {
+    using R = common_type_t<ptrdiff_t, make_signed_t<decltype(c.size())>>;
+    return static_cast<R>(c.size());
+}
+
+template<class T, size_t N>
+constexpr size_t size(const T (&array)[N]) noexcept {
+    return N;
+}
+
+template<class T, ptrdiff_t N>
+constexpr ptrdiff_t ssize(const T (&array)[N]) noexcept {
+    return N;
+}
+
 } // namespace ala
 
 #endif

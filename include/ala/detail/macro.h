@@ -19,18 +19,22 @@
     }; \
     typedef typename _get_##mem<cls>::type mem;
 
+namespace ala {
+
 template<class...>
-struct Fucker;
+struct TypeCheck;
 
 template<auto...>
-struct FuckerV;
+struct ValueCheck;
 
-#define CONCAT1(x, y) x##y
-#define CONCAT2(x, y) CONCAT1(x, y)
-#define MAKE_COUNTER(x) CONCAT2(x, __COUNTER__)
+} // namespace ala
 
-#define FUCK(...) Fucker<decltype(__VA_ARGS__)> MAKE_COUNTER(fuck)
-#define FUCKT(...) Fucker<__VA_ARGS__> MAKE_COUNTER(fuck)
-#define FUCKV(...) FuckerV<__VA_ARGS__> MAKE_COUNTER(fuck)
+#define ALA_CONCAT0(x, y) x##y
+#define ALA_CONCAT(x, y) ALA_CONCAT0(x, y)
+#define ALA_COUNTER_ID(x) ALA_CONCAT(x, __COUNTER__)
+
+#define ALA_TYPE(...) ala::TypeCheck<__VA_ARGS__> ALA_COUNTER_ID(id)
+#define ALA_VALUE(...) ala::ValueCheck<__VA_ARGS__> ALA_COUNTER_ID(id)
+#define ALA_TYPEOF(...) ALA_TYPE(decltype(__VA_ARGS__))
 
 #endif
