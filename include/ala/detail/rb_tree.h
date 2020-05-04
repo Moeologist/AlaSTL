@@ -167,13 +167,8 @@ public:
     typedef Alloc allocator_type;
     typedef rb_node<Data> node_type;
     typedef allocator_traits<allocator_type> _alloc_traits;
-    typedef typename _alloc_traits::template rebind_alloc<node_type> _node_alloc;
-    typedef typename _alloc_traits::template rebind_traits<node_type> _nalloc_traits;
-    typedef typename _nalloc_traits::pointer node_pointer;
+    typedef node_type *node_pointer;
     static constexpr bool is_uniq = Uniq;
-
-    static_assert(is_same<node_pointer, node_type *>::value,
-                  "ala node-based container use raw pointer");
 
     rb_tree(const value_compare &cmp, const allocator_type &a) noexcept(
         is_nothrow_default_constructible<allocator_type>::value
@@ -257,7 +252,7 @@ public:
 
     ~rb_tree() {
         destruct_tree(_root);
-        _nalloc.deallocate(_left_nil, 2);
+        _alloc_traits::template deallocate_object<node_type>(_left_nil, 2);
         // destruct_node(_left_nil);
         // destruct_node(_right_nil);
     }
@@ -484,7 +479,6 @@ protected:
 
     size_t _size;
     allocator_type _alloc;
-    _node_alloc _nalloc;
     value_compare _comp;
 
     ALA_HAS_MEM(first)
@@ -519,7 +513,7 @@ protected:
 
     template<class... Args>
     node_pointer construct_node(Args &&... args) {
-        node_pointer node = _nalloc.allocate(1);
+        auto node = _alloc_traits::template allocate_object<node_type>();
         _alloc_traits::construct(_alloc, ala::addressof(node->_data),
                                  ala::forward<Args>(args)...);
         node->_is_nil = false;
@@ -529,7 +523,7 @@ protected:
     void destruct_node(node_pointer &node) {
         if (!node->_is_nil)
             _alloc_traits::destroy(_alloc, ala::addressof(node->_data));
-        _nalloc.deallocate(node, 1);
+        _alloc_traits::template deallocate_object<node_type>(node, 1);
         node = nullptr;
     }
 
@@ -611,7 +605,8 @@ protected:
     }
 
     void initializer_nil() {
-        _left_nil = _nalloc.allocate(2);
+        auto node = _alloc_traits::template allocate_object<node_type>(2);
+        _left_nil = node;
         _right_nil = _left_nil + sizeof(node_type);
         // _left_nil =  reinterpret_cast<node_pointer>(_nil_mem);
         // _right_nil =  reinterpret_cast<node_pointer>(_nil_mem + sizeof(rb_node<Data>));

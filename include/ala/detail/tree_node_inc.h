@@ -27,7 +27,6 @@ struct NODE {
     typedef Alloc allocator_type;
     typedef typename pointer_traits<NodePtr>::element_type _ele_type;
     typedef allocator_traits<allocator_type> _alloc_traits;
-    typedef typename _alloc_traits::template rebind_alloc<_ele_type> _node_alloc;
 
     constexpr NODE() noexcept: _ptr(nullptr) {}
 
@@ -42,7 +41,7 @@ struct NODE {
     NODE &operator=(NODE &&nh) {
         if (_ptr != nullptr) {
             _a.destroy(ala::addressof(_ptr->_data));
-            _node_alloc().deallocate(_ptr, 1);
+            _alloc_traits::template deallocate_object<node_type>(_ptr, 1);
         }
         if (nh._ptr != nullptr) {
             _ptr = ala::move(nh._ptr);
@@ -57,7 +56,7 @@ struct NODE {
     ~NODE() {
         if (_ptr != nullptr) {
             _a.destroy(ala::addressof(_ptr->_data));
-            _node_alloc().deallocate(_ptr, 1);
+            _alloc_traits::template allocate_object<node_type>(_ptr, 1);
         }
     }
 
