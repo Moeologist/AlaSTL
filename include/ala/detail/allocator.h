@@ -116,7 +116,7 @@ struct allocator {
     constexpr allocator(const allocator<U> &) noexcept {}
     ~allocator() {}
 
-    ALA_NODISCARD T *allocate(ala::size_t n) {
+    ALA_NODISCARD T *allocate(size_t n) {
 #if _ALA_ENABLE_ALIGNED_NEW
         return static_cast<T *>(
             ::operator new(n * sizeof(T), (align_val_t)alignof(T)));
@@ -125,7 +125,7 @@ struct allocator {
 #endif
     }
 
-    void deallocate(T *p, ala::size_t n) {
+    void deallocate(T *p, size_t n) {
 #if _ALA_ENABLE_ALIGNED_NEW
         ::operator delete(static_cast<void *>(p), (align_val_t)alignof(T));
 #else
@@ -142,6 +142,36 @@ struct allocator {
     void destroy(U *p) {
         p->~U();
     }
+
+    ALA_NODISCARD void *allocate_bytes(size_t nbytes,
+                                       size_t alignment = alignof(max_align_t)) {
+        if (numeric_limits<size_t>::max() < nbytes)
+            throw bad_array_new_length();
+#if _ALA_ENABLE_ALIGNED_NEW
+        ::operator new(nbytes, (align_val_t)alignment));
+#else
+        ::operator new(nbytes);
+#endif
+    }
+
+    void deallocate_bytes(void *p, size_t nbytes,
+                          size_t alignment = alignof(max_align_t)) {
+#if _ALA_ENABLE_ALIGNED_NEW
+        ::operator delete(static_cast<void *>(p), (align_val_t)alignment);
+#else
+        ::operator delete(static_cast<void *>(p));
+#endif
+    }
+
+    template<class U>
+    ALA_NODISCARD U *allocate_object(size_t n = 1) {
+        this.allocate_bytes(n * sizeof(U), alignof(U));
+    }
+
+    template<class U>
+    void deallocate_object(U *p, size_t n = 1) {
+        this.deallocate_bytes(p, n * sizeof(U), alignof(U));
+    }
 };
 
 template<class T, class U>
@@ -157,7 +187,7 @@ bool operator!=(const allocator<T> &, const allocator<U> &) noexcept {
 template<class Alloc>
 struct allocator_traits {
     // clang-format off
-    typedef Alloc                      allocator_type;
+    typedef Alloc                       allocator_type;
     typedef typename allocator_type::value_type value_type;
     ALA_HAS_MEM_TYPEDEF(allocator_type, pointer,            value_type*)
     ALA_HAS_MEM_TYPEDEF(allocator_type, const_pointer,      typename pointer_traits<pointer>::template rebind<const value_type>)
@@ -197,8 +227,6 @@ struct allocator_traits {
 
     template<typename T>
     using rebind_traits = ala::allocator_traits<rebind_alloc<T>>;
-
-    ALA_HAS_MEM(select_on_container_copy_construction)
 
     template<typename Void, typename A>
     struct _has_select: false_type {};
@@ -257,6 +285,68 @@ struct allocator_traits {
     static enable_if_t<!_has_destroy<void, allocator_type &, T *>::value>
     destroy(allocator_type &a, T *p) {
         p->~T();
+    }
+
+    template<typename Void, typename Alloc, typename U>
+    struct _choose_alloc_obj_helper: integral_constant<int, 0> {};
+
+    template<typename Alloc, typename U>
+    struct _choose_alloc_obj_helper<
+        void_t<decltype(declval<Alloc &>().allocate_bytes(declval<size_type>(),
+                                                          declval<size_type>()))>,
+        U, Alloc>: integral_constant<int, 1> {};
+
+    template<typename Void, typename Alloc, typename U>
+    struct _choose_alloc_obj: _choose_alloc_obj_helper<void, Alloc, U> {};
+
+    template<typename Alloc, typename U>
+    struct _choose_alloc_obj<
+        void_t<decltype(declval<Alloc &>().template allocate_object<U>(
+            declval<size_type>()))>,
+        U, Alloc>: integral_constant<int, 2> {};
+
+    template<class U>
+    ALA_NODISCARD static enable_if_t<
+        _choose_alloc_obj<void, allocator_type, U>::value == 1, U *>
+    allocate_object(allocator_type &a, size_t n = 1) {
+        a.allocate_bytes(n * sizeof(U), alignof(U));
+    }
+
+    template<class U>
+    ALA_NODISCARD static enable_if_t<
+        _choose_alloc_obj<void, allocator_type, U>::value == 2, U *>
+    allocate_object(allocator_type &a, size_t n = 1) {
+        a.template allocate_object<U>(n * sizeof(U));
+    }
+
+    template<typename Void, typename Alloc, typename U>
+    struct _choose_dealloc_obj_helper: integral_constant<int, 0> {};
+
+    template<typename Alloc, typename U>
+    struct _choose_dealloc_obj_helper<
+        void_t<decltype(declval<Alloc &>().deallocate_bytes(
+            declval<U *>(), declval<size_type>(), declval<size_type>()))>,
+        U, Alloc>: integral_constant<int, 1> {};
+
+    template<typename Void, typename Alloc, typename U>
+    struct _choose_dealloc_obj: _choose_alloc_obj_helper<void, Alloc, U> {};
+
+    template<typename Alloc, typename U>
+    struct _choose_dealloc_obj<
+        void_t<decltype(declval<Alloc &>().template deallocate_object<U>(
+            declval<U *>(), declval<size_type>()))>,
+        U, Alloc>: integral_constant<int, 2> {};
+
+    template<class U>
+    static enable_if_t<_choose_dealloc_obj<void, allocator_type, U>::value == 1>
+    deallocate_object(allocator_type &a, U *p, size_t n = 1) {
+        a.deallocate_bytes(p, n * sizeof(U), alignof(U));
+    }
+
+    template<class U>
+    static enable_if_t<_choose_dealloc_obj<void, allocator_type, U>::value == 2>
+    deallocate_object(allocator_type &a, U *p, size_t n = 1) {
+        a.template deallocate_object<U>(p, n * sizeof(U));
     }
 };
 
