@@ -37,3 +37,4 @@
 .vs
 out
 /compile_flags.txt
+/test
