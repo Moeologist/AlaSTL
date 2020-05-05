@@ -16,6 +16,8 @@ namespace ala {
 using std::align_val_t;
 #endif
 
+using std::bad_array_new_length;
+
 template<class T>
 const T *addressof(const T &&) = delete;
 
@@ -148,9 +150,9 @@ struct allocator {
         if (numeric_limits<size_t>::max() < nbytes)
             throw bad_array_new_length();
 #if _ALA_ENABLE_ALIGNED_NEW
-        ::operator new(nbytes, (align_val_t)alignment));
+        return static_cast<void *>(::operator new(nbytes, (align_val_t)alignment));
 #else
-        ::operator new(nbytes);
+        return static_cast<void *>(::operator new(nbytes));
 #endif
     }
 
@@ -165,12 +167,12 @@ struct allocator {
 
     template<class U>
     ALA_NODISCARD U *allocate_object(size_t n = 1) {
-        this.allocate_bytes(n * sizeof(U), alignof(U));
+        return static_cast<U *>(this->allocate_bytes(n * sizeof(U), alignof(U)));
     }
 
     template<class U>
     void deallocate_object(U *p, size_t n = 1) {
-        this.deallocate_bytes(p, n * sizeof(U), alignof(U));
+        this->deallocate_bytes(p, n * sizeof(U), alignof(U));
     }
 };
 
@@ -287,71 +289,70 @@ struct allocator_traits {
         p->~T();
     }
 
-    template<typename Void, typename Alloc, typename U>
+    template<typename Void, typename A, typename U>
     struct _choose_alloc_obj_helper: integral_constant<int, 0> {};
 
-    template<typename Alloc, typename U>
-    struct _choose_alloc_obj_helper<
-        void_t<decltype(declval<Alloc &>().allocate_bytes(declval<size_type>(),
-                                                          declval<size_type>()))>,
-        U, Alloc>: integral_constant<int, 1> {};
+    template<typename A, typename U>
+    struct _choose_alloc_obj_helper<void_t<decltype(declval<A &>().allocate_bytes(
+                                        declval<size_t>(), declval<size_t>()))>,
+                                    A, U>: integral_constant<int, 1> {};
 
-    template<typename Void, typename Alloc, typename U>
-    struct _choose_alloc_obj: _choose_alloc_obj_helper<void, Alloc, U> {};
+    template<typename Void, typename A, typename U>
+    struct _choose_alloc_obj: _choose_alloc_obj_helper<void, A, U> {};
 
-    template<typename Alloc, typename U>
+    template<typename A, typename U>
     struct _choose_alloc_obj<
-        void_t<decltype(declval<Alloc &>().template allocate_object<U>(
-            declval<size_type>()))>,
-        U, Alloc>: integral_constant<int, 2> {};
+        void_t<decltype(declval<A &>().template allocate_object<U>(declval<size_t>()))>,
+        A, U>: integral_constant<int, 2> {};
 
     template<class U>
     ALA_NODISCARD static enable_if_t<
         _choose_alloc_obj<void, allocator_type, U>::value == 0, U *>
     allocate_object(allocator_type &a, size_t n = 1) {
         static_assert(
-            false, "Your allocator has no allocate_object(or allocate_bytes),"
-                   "it is necessary for node-based container");
+            _choose_alloc_obj<void, allocator_type, U>::value != 0,
+            "Your allocator has no allocate_object(or allocate_bytes), "
+            "it is necessary for node-based container");
     }
 
     template<class U>
     ALA_NODISCARD static enable_if_t<
         _choose_alloc_obj<void, allocator_type, U>::value == 1, U *>
     allocate_object(allocator_type &a, size_t n = 1) {
-        a.allocate_bytes(n * sizeof(U), alignof(U));
+        return a.allocate_bytes(n * sizeof(U), alignof(U));
     }
 
     template<class U>
     ALA_NODISCARD static enable_if_t<
         _choose_alloc_obj<void, allocator_type, U>::value == 2, U *>
     allocate_object(allocator_type &a, size_t n = 1) {
-        a.template allocate_object<U>(n * sizeof(U));
+        return a.template allocate_object<U>(n);
     }
 
-    template<typename Void, typename Alloc, typename U>
+    template<typename Void, typename A, typename U>
     struct _choose_dealloc_obj_helper: integral_constant<int, 0> {};
 
-    template<typename Alloc, typename U>
+    template<typename A, typename U>
     struct _choose_dealloc_obj_helper<
-        void_t<decltype(declval<Alloc &>().deallocate_bytes(
-            declval<U *>(), declval<size_type>(), declval<size_type>()))>,
-        U, Alloc>: integral_constant<int, 1> {};
+        void_t<decltype(declval<A &>().deallocate_bytes(
+            declval<U *>(), declval<size_t>(), declval<size_t>()))>,
+        A, U>: integral_constant<int, 1> {};
 
-    template<typename Void, typename Alloc, typename U>
-    struct _choose_dealloc_obj: _choose_alloc_obj_helper<void, Alloc, U> {};
+    template<typename Void, typename A, typename U>
+    struct _choose_dealloc_obj: _choose_alloc_obj_helper<void, A, U> {};
 
-    template<typename Alloc, typename U>
+    template<typename A, typename U>
     struct _choose_dealloc_obj<
-        void_t<decltype(declval<Alloc &>().template deallocate_object<U>(
-            declval<U *>(), declval<size_type>()))>,
-        U, Alloc>: integral_constant<int, 2> {};
+        void_t<decltype(declval<A &>().template deallocate_object<U>(
+            declval<U *>(), declval<size_t>()))>,
+        A, U>: integral_constant<int, 2> {};
 
     template<class U>
     static enable_if_t<_choose_dealloc_obj<void, allocator_type, U>::value == 0>
     deallocate_object(allocator_type &a, U *p, size_t n = 1) {
         static_assert(
-            false,
-            "Your allocator has no deallocate_object(or deallocate_bytes),"
+            _choose_dealloc_obj<void, allocator_type, U>::value != 0,
+            "Your allocator has no deallocate_object(or deallocate_bytes), "
             "it is necessary for node-based container");
     }
 
@@ -364,7 +365,7 @@ struct allocator_traits {
     template<class U>
     static enable_if_t<_choose_dealloc_obj<void, allocator_type, U>::value == 2>
     deallocate_object(allocator_type &a, U *p, size_t n = 1) {
-        a.template deallocate_object<U>(p, n * sizeof(U));
+        a.template deallocate_object<U>(p, n);
     }
 };
 

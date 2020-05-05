@@ -16,7 +16,7 @@
 
 namespace ala {
 
-template<class NodePtr, class Alloc>
+template<class Node, class NodePtr, class Alloc>
 struct NODE {
 #if IS_MAP
     typedef remove_const_t<decltype(declval<NodePtr>()->_data.first)> key_type;
@@ -33,21 +33,21 @@ struct NODE {
     NODE(NODE &&nh) {
         if (nh._ptr != nullptr) {
             _ptr = ala::move(nh._ptr);
-            _a = ala::move(nh._a);
+            _alloc = ala::move(nh._alloc);
         }
         nh._ptr = nullptr;
     }
 
     NODE &operator=(NODE &&nh) {
         if (_ptr != nullptr) {
-            _a.destroy(ala::addressof(_ptr->_data));
-            _alloc_traits::template deallocate_object<node_type>(_ptr, 1);
+            _alloc_traits::destroy(_alloc, ala::addressof(_ptr->_data));
+            _alloc_traits::template deallocate_object<remove_pointer_t<NodePtr>>(_alloc, _ptr, 1);
         }
         if (nh._ptr != nullptr) {
             _ptr = ala::move(nh._ptr);
             ALA_CONST_IF(
                 _alloc_traits::propagate_on_container_move_assignment::value) {
-                _a = ala::move(nh._ptr);
+                _alloc = ala::move(nh._ptr);
             }
         }
         nh._ptr = nullptr;
@@ -55,8 +55,8 @@ struct NODE {
 
     ~NODE() {
         if (_ptr != nullptr) {
-            _a.destroy(ala::addressof(_ptr->_data));
-            _alloc_traits::template allocate_object<node_type>(_ptr, 1);
+            _alloc_traits::destroy(_alloc, ala::addressof(_ptr->_data));
+            _alloc_traits::template allocate_object<remove_pointer_t<NodePtr>>(_alloc, _ptr, 1);
         }
     }
 
@@ -69,7 +69,7 @@ struct NODE {
     }
 
     allocator_type get_allocator() const {
-        return _a;
+        return _alloc;
     }
 
 #if IS_MAP
@@ -90,7 +90,7 @@ struct NODE {
                                  _alloc_traits::is_always_equal::value) {
         ala::swap(_ptr, nh._ptr);
         ALA_CONST_IF(_alloc_traits::propagate_on_container_swap::value) {
-            ala::swap(_a, nh._a);
+            ala::swap(_alloc, nh._alloc);
         }
     }
 
@@ -108,16 +108,16 @@ private:
 #endif
     typedef NodePtr node_pointer;
     node_pointer _ptr;
-    allocator_type _a;
-    NODE(node_pointer p): _ptr(p), _a() {
+    allocator_type _alloc;
+    NODE(node_pointer p): _ptr(p), _alloc() {
         if (p->_is_nil)
             p = nullptr;
     }
 };
 
-template<class NodePtr, class Alloc>
-void swap(NODE<NodePtr, Alloc> &lhs,
-          NODE<NodePtr, Alloc> &rhs) noexcept(noexcept(lhs.swap(rhs))) {
+template<class Node, class NodePtr, class Alloc>
+void swap(NODE<Node, NodePtr, Alloc> &lhs,
+          NODE<Node, NodePtr, Alloc> &rhs) noexcept(noexcept(lhs.swap(rhs))) {
     lhs.swap(rhs);
 }
 

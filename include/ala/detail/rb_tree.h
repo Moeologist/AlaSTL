@@ -173,15 +173,13 @@ public:
     rb_tree(const value_compare &cmp, const allocator_type &a) noexcept(
         is_nothrow_default_constructible<allocator_type>::value
             &&is_nothrow_default_constructible<value_compare>::value)
-        : _comp(cmp), _alloc(a), _nalloc(a), _size(0), _root(nullptr) {
+        : _comp(cmp), _alloc(a), _size(0), _root(nullptr) {
         initializer_nil();
     }
 
     rb_tree(const rb_tree &other)
         : _comp(other._comp),
           _alloc(_alloc_traits::select_on_container_copy_construction(
-              other._alloc)),
-          _nalloc(_nalloc_traits::select_on_container_copy_construction(
               other._alloc)),
           _size(other._size) {
         initializer_nil();
@@ -191,8 +189,7 @@ public:
 
     rb_tree(rb_tree &&other)
         : _comp(ala::move(other._comp)), _alloc(ala::move(other._alloc)),
-          _nalloc(ala::move(other._nalloc)), _root(other._root),
-          _size(other._size) {
+          _root(other._root), _size(other._size) {
         initializer_nil();
         fix_nil();
         other._root = nullptr;
@@ -201,15 +198,14 @@ public:
     }
 
     rb_tree(const rb_tree &other, const allocator_type &a)
-        : _comp(other._comp), _alloc(a), _nalloc(a), _size(other._size) {
+        : _comp(other._comp), _alloc(a), _size(other._size) {
         initializer_nil();
         _root = copy_tree(other._root);
         fix_nil();
     }
 
     rb_tree(rb_tree &&other, const allocator_type &a)
-        : _comp(other._comp), _alloc(a), _nalloc(a), _root(other._root),
-          _size(other._size) {
+        : _comp(other._comp), _alloc(a), _root(other._root), _size(other._size) {
         initializer_nil();
         fix_nil();
         other._root = nullptr;
@@ -221,10 +217,6 @@ public:
         ALA_CONST_IF(_alloc_traits::propagate_on_container_copy_assignment::value) {
             _alloc = other._alloc;
         }
-        ALA_CONST_IF(
-            _nalloc_traits::propagate_on_container_copy_assignment::value) {
-            _nalloc = other._nalloc;
-        }
         destruct_tree(_root);
         _root = copy_tree(other._root);
         fix_nil();
@@ -235,10 +227,6 @@ public:
     rb_tree &operator=(rb_tree &&other) {
         ALA_CONST_IF(_alloc_traits::propagate_on_container_move_assignment::value) {
             _alloc = ala::move(other._alloc);
-        }
-        ALA_CONST_IF(
-            _nalloc_traits::propagate_on_container_move_assignment::value) {
-            _nalloc = ala::move(other._nalloc);
         }
         destruct_tree(_root);
         _root = other._root;
@@ -252,7 +240,8 @@ public:
 
     ~rb_tree() {
         destruct_tree(_root);
-        _alloc_traits::template deallocate_object<node_type>(_left_nil, 2);
+        _alloc_traits::template deallocate_object<node_type>(_alloc, _left_nil,
+                                                             2);
         // destruct_node(_left_nil);
         // destruct_node(_right_nil);
     }
@@ -307,9 +296,6 @@ public:
         ala::swap(_size, other._size);
         ALA_CONST_IF(_alloc_traits::propagate_on_container_swap::value) {
             ala::swap(_alloc, other._alloc);
-        }
-        ALA_CONST_IF(_nalloc_traits::propagate_on_container_swap::value) {
-            ala::swap(_nalloc, other._nalloc);
         }
     }
 
@@ -371,9 +357,6 @@ public:
                 return true;
         return false;
     }
-
-    template<typename...>
-    struct Fuck;
 
     template<class K>
     bool erase(const K &key) {
@@ -513,7 +496,8 @@ protected:
 
     template<class... Args>
     node_pointer construct_node(Args &&... args) {
-        auto node = _alloc_traits::template allocate_object<node_type>();
+        node_pointer node =
+            _alloc_traits::template allocate_object<node_type>(_alloc, 1);
         _alloc_traits::construct(_alloc, ala::addressof(node->_data),
                                  ala::forward<Args>(args)...);
         node->_is_nil = false;
@@ -523,7 +507,7 @@ protected:
     void destruct_node(node_pointer &node) {
         if (!node->_is_nil)
             _alloc_traits::destroy(_alloc, ala::addressof(node->_data));
-        _alloc_traits::template deallocate_object<node_type>(node, 1);
+        _alloc_traits::template deallocate_object<node_type>(_alloc, node, 1);
         node = nullptr;
     }
 
@@ -605,9 +589,10 @@ protected:
     }
 
     void initializer_nil() {
-        auto node = _alloc_traits::template allocate_object<node_type>(2);
+        node_pointer node =
+            _alloc_traits::template allocate_object<node_type>(_alloc, 2);
         _left_nil = node;
-        _right_nil = _left_nil + sizeof(node_type);
+        _right_nil = _left_nil + 1;
         // _left_nil =  reinterpret_cast<node_pointer>(_nil_mem);
         // _right_nil =  reinterpret_cast<node_pointer>(_nil_mem + sizeof(rb_node<Data>));
 

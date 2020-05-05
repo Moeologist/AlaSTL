@@ -105,13 +105,17 @@ public:
 #else
     typedef rb_iterator<typename tree_type::node_pointer, false> iterator;
 #endif
-    typedef rb_iterator<typename tree_type::node_pointer, false> const_iterator;
+    typedef rb_iterator<typename tree_type::node_pointer, true> const_iterator;
     typedef ala::reverse_iterator<iterator> reverse_iterator;
     typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
 #if IS_MAP
-    typedef _map_node_adaptor<typename tree_type::node_pointer, allocator_type> node_type;
+    typedef _map_node_adaptor<typename tree_type::node_type,
+                              typename tree_type::node_pointer, allocator_type>
+        node_type;
 #else
-    typedef _set_node_adaptor<typename tree_type::node_pointer, allocator_type> node_type;
+    typedef _set_node_adaptor<typename tree_type::node_type,
+                              typename tree_type::node_pointer, allocator_type>
+        node_type;
 #endif
 
 #if IS_UNIQ
