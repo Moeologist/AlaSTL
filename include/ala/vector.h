@@ -505,7 +505,7 @@ public:
         ALA_CONST_IF(!is_trivially_destructible<value_type>::value) {
             size_type sz = size();
             for (size_type i = 0; i < sz; ++i, --_size)
-                _alloc.destroy(_data + i);
+                _alloc_traits::destroy(_data + i);
         }
         _size = 0;
     }
