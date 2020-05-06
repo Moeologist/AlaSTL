@@ -2,15 +2,15 @@
 #define _ALA_CONFIG_FEATURES_H
 
 #ifndef ALA_INSERTION_THRESHOLD
-#define ALA_INSERTION_THRESHOLD 28
+    #define ALA_INSERTION_THRESHOLD 28
 #endif
 
 #ifndef ALA_FUNCTION_MEMORY_SIZE
-#define ALA_FUNCTION_MEMORY_SIZE 0
+    #define ALA_FUNCTION_MEMORY_SIZE 0
 #endif
 
 #ifndef ALA_USE_RTTI
-#define ALA_USE_RTTI 1
+    #define ALA_USE_RTTI 1
 #endif
 
 #endif // HEAD

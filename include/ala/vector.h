@@ -554,7 +554,7 @@ void swap(vector<T, Alloc> &lhs,
 template<class InputIter,
          class Alloc = allocator<typename iterator_traits<InputIter>::value_type>>
 vector(InputIter, InputIter, Alloc = Alloc())
-    ->vector<typename iterator_traits<InputIter>::value_type, Alloc>;
+    -> vector<typename iterator_traits<InputIter>::value_type, Alloc>;
 #endif
 
 } // namespace ala
