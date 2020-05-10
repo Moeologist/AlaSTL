@@ -213,37 +213,63 @@ public:
         other.fix_nil();
     }
 
-    rb_tree &operator=(const rb_tree &other) {
-        ALA_CONST_IF(_alloc_traits::propagate_on_container_copy_assignment::value) {
-            _alloc = other._alloc;
-        }
-        destruct_tree(_root);
+    rb_tree &_copy_helper(const rb_tree &other) {
         _root = copy_tree(other._root);
         fix_nil();
         _size = other._size;
         return *this;
     }
 
-    rb_tree &operator=(rb_tree &&other) {
-        ALA_CONST_IF(_alloc_traits::propagate_on_container_move_assignment::value) {
-            _alloc = ala::move(other._alloc);
+    enable_if_t<_alloc_traits::propagate_on_container_copy_assignment::value, rb_tree &>
+    operator=(const rb_tree &other) {
+        if (_alloc == other._alloc) {
+            destruct_tree(_root);
+            _alloc = other._alloc;
+        } else {
+            _alloc = other._alloc;
+            destruct_tree(_root);
         }
+        return _copy_helper(other);
+    }
+
+    enable_if_t<!_alloc_traits::propagate_on_container_copy_assignment::value, rb_tree &>
+    operator=(const rb_tree &other) {
         destruct_tree(_root);
+        return _copy_helper(other);
+    }
+
+    rb_tree &_move_helper(rb_tree &&other) {
         _root = other._root;
-        fix_nil();
         _size = other._size;
+        fix_nil();
         other._root = nullptr;
         other._size = 0;
         other.fix_nil();
         return *this;
     }
 
+    enable_if_t<_alloc_traits::propagate_on_container_move_assignment::value, rb_tree &>
+    operator=(rb_tree &&other) {
+        alloc = ala::move(other._alloc);
+        destruct_tree(_root);
+        return _move_helper(ala::move(other));
+    }
+
+    enable_if_t<!_alloc_traits::propagate_on_container_move_assignment::value, rb_tree &>
+    operator=(rb_tree &&other) {
+        if (_alloc == other._alloc) {
+            destruct_tree(_root);
+            return _move_helper(ala::move(other));
+        } else {
+            destruct_tree(_root);
+            return _copy_helper(other);
+        }
+    }
+
     ~rb_tree() {
         destruct_tree(_root);
         _alloc_traits::template deallocate_object<node_type>(_alloc, _left_nil,
                                                              2);
-        // destruct_node(_left_nil);
-        // destruct_node(_right_nil);
     }
 
     node_pointer begin() const noexcept {

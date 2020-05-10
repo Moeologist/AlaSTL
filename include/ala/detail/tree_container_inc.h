@@ -1,9 +1,9 @@
 #ifndef _ALA_DETAIL_TREE_CONTAINER_INC
-#define _ALA_DETAIL_TREE_CONTAINER_INC
+    #define _ALA_DETAIL_TREE_CONTAINER_INC
 #endif
 
 #if !defined(IS_MAP) || !defined(IS_UNIQ)
-#error "internal error, nerver use this head"
+    #error "internal error, nerver use this head"
 #endif
 
 #include <ala/detail/algorithm_base.h>
@@ -11,24 +11,24 @@
 
 #if IS_MAP
 
-#if IS_UNIQ
-#include <ala/tuple.h>
-#define CONTAINER map
-#define O_CONTAINER multimap
-#else
-#define CONTAINER multimap
-#define O_CONTAINER map
-#endif
+    #if IS_UNIQ
+        #include <ala/tuple.h>
+        #define CONTAINER map
+        #define O_CONTAINER multimap
+    #else
+        #define CONTAINER multimap
+        #define O_CONTAINER map
+    #endif
 
 #else
 
-#if IS_UNIQ
-#define CONTAINER set
-#define O_CONTAINER multiset
-#else
-#define CONTAINER multiset
-#define O_CONTAINER set
-#endif
+    #if IS_UNIQ
+        #define CONTAINER set
+        #define O_CONTAINER multiset
+    #else
+        #define CONTAINER multiset
+        #define O_CONTAINER set
+    #endif
 
 #endif
 
@@ -101,20 +101,20 @@ protected:
 
 public:
 #if IS_MAP
-    typedef rb_iterator<typename tree_type::node_pointer> iterator;
+    typedef rb_iterator<typename tree_type::_hdle_t> iterator;
 #else
-    typedef rb_iterator<typename tree_type::node_pointer, false> iterator;
+    typedef rb_iterator<typename tree_type::_hdle_t, false> iterator;
 #endif
-    typedef rb_iterator<typename tree_type::node_pointer, true> const_iterator;
+    typedef rb_iterator<typename tree_type::_hdle_t, true> const_iterator;
     typedef ala::reverse_iterator<iterator> reverse_iterator;
     typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
 #if IS_MAP
-    typedef _map_node_adaptor<typename tree_type::node_type,
-                              typename tree_type::node_pointer, allocator_type>
+    typedef _map_node_adaptor<typename tree_type::_node_t,
+                              typename tree_type::_hdle_t, allocator_type>
         node_type;
 #else
-    typedef _set_node_adaptor<typename tree_type::node_type,
-                              typename tree_type::node_pointer, allocator_type>
+    typedef _set_node_adaptor<typename tree_type::_node_t,
+                              typename tree_type::_hdle_t, allocator_type>
         node_type;
 #endif
 
@@ -178,9 +178,8 @@ public:
     }
 
     CONTAINER &operator=(CONTAINER &&m) noexcept(
-        allocator_type::propagate_on_container_move_assignment::value
-            &&is_nothrow_move_assignable<allocator_type>::value
-                &&is_nothrow_move_assignable<key_compare>::value) {
+        _alloc_traits::is_alwaya_equal::value
+            &&is_nothrow_move_assignable<key_compare>::value) {
         tree = ala::move(m.tree);
         return *this;
     }
@@ -773,51 +772,51 @@ void swap(CONTAINER<Key, Comp, Alloc> &lhs,
 
 #if _ALA_ENABLE_DEDUCTION_GUIDES
 
-#if IS_MAP
+    #if IS_MAP
 template<class InputIter,
          class Comp = less<typename iterator_traits<InputIter>::value_type::first_type>,
          class Alloc = allocator<
              pair<add_const_t<typename iterator_traits<InputIter>::value_type::first_type>,
                   typename iterator_traits<InputIter>::value_type::second_type>>>
 CONTAINER(InputIter, InputIter, Comp = Comp(), Alloc = Alloc())
-    ->CONTAINER<typename iterator_traits<InputIter>::value_type::first_type,
-                typename iterator_traits<InputIter>::value_type::second_type,
-                Comp, Alloc>;
+    -> CONTAINER<typename iterator_traits<InputIter>::value_type::first_type,
+                 typename iterator_traits<InputIter>::value_type::second_type,
+                 Comp, Alloc>;
 
 template<class Key, class T, class Comp = less<Key>,
          class Alloc = allocator<pair<const Key, T>>>
 CONTAINER(initializer_list<pair<const Key, T>>, Comp = Comp(), Alloc = Alloc())
-    ->CONTAINER<Key, T, Comp, Alloc>;
+    -> CONTAINER<Key, T, Comp, Alloc>;
 
 template<class InputIter, class Alloc>
 CONTAINER(InputIter, InputIter, Alloc)
-    ->CONTAINER<typename iterator_traits<InputIter>::value_type::first_type,
-                typename iterator_traits<InputIter>::value_type::second_type,
-                less<typename iterator_traits<InputIter>::value_type::first_type>,
-                Alloc>;
+    -> CONTAINER<typename iterator_traits<InputIter>::value_type::first_type,
+                 typename iterator_traits<InputIter>::value_type::second_type,
+                 less<typename iterator_traits<InputIter>::value_type::first_type>,
+                 Alloc>;
 
 template<class Key, class T, class Allocator>
 CONTAINER(initializer_list<pair<const Key, T>>, Allocator)
-    ->CONTAINER<Key, T, less<Key>, Allocator>;
-#else // IS_MAP
+    -> CONTAINER<Key, T, less<Key>, Allocator>;
+    #else // IS_MAP
 template<class InputIter,
          class Comp = less<typename iterator_traits<InputIter>::value_type>,
          class Alloc = allocator<typename iterator_traits<InputIter>::value_type>>
 CONTAINER(InputIter, InputIter, Comp = Comp(), Alloc = Alloc())
-    ->CONTAINER<typename iterator_traits<InputIter>::value_type, Comp, Alloc>;
+    -> CONTAINER<typename iterator_traits<InputIter>::value_type, Comp, Alloc>;
 
 template<class Key, class Comp = less<Key>, class Alloc = allocator<Key>>
 CONTAINER(initializer_list<Key>, Comp = Comp(), Alloc = Alloc())
-    ->CONTAINER<Key, Comp, Alloc>;
+    -> CONTAINER<Key, Comp, Alloc>;
 
 template<class InputIter, class Alloc>
 CONTAINER(InputIter, InputIter, Alloc)
-    ->CONTAINER<typename iterator_traits<InputIter>::value_type,
-                less<typename iterator_traits<InputIter>::value_type>, Alloc>;
+    -> CONTAINER<typename iterator_traits<InputIter>::value_type,
+                 less<typename iterator_traits<InputIter>::value_type>, Alloc>;
 
 template<class Key, class Alloc>
-CONTAINER(initializer_list<Key>, Alloc)->CONTAINER<Key, less<Key>, Alloc>;
-#endif
+CONTAINER(initializer_list<Key>, Alloc) -> CONTAINER<Key, less<Key>, Alloc>;
+    #endif
 
 #endif // _ALA_ENABLE_DEDUCTION_GUIDES
 } // namespace ala

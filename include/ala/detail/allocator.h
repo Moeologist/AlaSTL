@@ -310,7 +310,7 @@ struct allocator_traits {
         _choose_alloc_obj<void, allocator_type, U>::value == 0, U *>
     allocate_object(allocator_type &a, size_t n = 1) {
         static_assert(
-            false,
+            _choose_alloc_obj<void, allocator_type, U>::value != 0,
             "Your allocator has no allocate_object(or allocate_bytes), "
             "it is necessary for node-based container");
     }
@@ -351,7 +351,7 @@ struct allocator_traits {
     static enable_if_t<_choose_dealloc_obj<void, allocator_type, U>::value == 0>
     deallocate_object(allocator_type &a, U *p, size_t n = 1) {
         static_assert(
-            false;
+            _choose_dealloc_obj<void, allocator_type, U>::value != 0,
             "Your allocator has no deallocate_object(or deallocate_bytes), "
             "it is necessary for node-based container");
     }
