@@ -1,22 +1,22 @@
 #ifndef _ALA_DETAIL_TREE_NODE_INC
-#define _ALA_DETAIL_TREE_NODE_INC
+    #define _ALA_DETAIL_TREE_NODE_INC
 #endif
 
 #if !defined(IS_MAP)
-#error "internal error, nerver use this head"
+    #error "internal error, nerver use this head"
 #endif
 
 #include <ala/detail/allocator.h>
 
 #if IS_MAP
-#define NODE _map_node_adaptor
+    #define NODE _map_node_adaptor
 #else
-#define NODE _set_node_adaptor
+    #define NODE _set_node_adaptor
 #endif
 
 namespace ala {
 
-template<class Node, class NodePtr, class Alloc>
+template<class NodePtr, class Alloc>
 struct NODE {
 #if IS_MAP
     typedef remove_const_t<decltype(declval<NodePtr>()->_data.first)> key_type;
@@ -41,7 +41,8 @@ struct NODE {
     NODE &operator=(NODE &&nh) {
         if (_ptr != nullptr) {
             _alloc_traits::destroy(_alloc, ala::addressof(_ptr->_data));
-            _alloc_traits::template deallocate_object<remove_pointer_t<NodePtr>>(_alloc, _ptr, 1);
+            _alloc_traits::template deallocate_object<remove_pointer_t<NodePtr>>(
+                _alloc, _ptr, 1);
         }
         if (nh._ptr != nullptr) {
             _ptr = ala::move(nh._ptr);
@@ -56,7 +57,8 @@ struct NODE {
     ~NODE() {
         if (_ptr != nullptr) {
             _alloc_traits::destroy(_alloc, ala::addressof(_ptr->_data));
-            _alloc_traits::template allocate_object<remove_pointer_t<NodePtr>>(_alloc, _ptr, 1);
+            _alloc_traits::template deallocate_object<remove_pointer_t<NodePtr>>(
+                _alloc, _ptr, 1);
         }
     }
 
@@ -115,9 +117,9 @@ private:
     }
 };
 
-template<class Node, class NodePtr, class Alloc>
-void swap(NODE<Node, NodePtr, Alloc> &lhs,
-          NODE<Node, NodePtr, Alloc> &rhs) noexcept(noexcept(lhs.swap(rhs))) {
+template<class NodePtr, class Alloc>
+void swap(NODE<NodePtr, Alloc> &lhs,
+          NODE<NodePtr, Alloc> &rhs) noexcept(noexcept(lhs.swap(rhs))) {
     lhs.swap(rhs);
 }
 

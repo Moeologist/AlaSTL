@@ -109,13 +109,9 @@ public:
     typedef ala::reverse_iterator<iterator> reverse_iterator;
     typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
 #if IS_MAP
-    typedef _map_node_adaptor<typename tree_type::_node_t,
-                              typename tree_type::_hdle_t, allocator_type>
-        node_type;
+    typedef _map_node_adaptor<typename tree_type::_hdle_t, allocator_type> node_type;
 #else
-    typedef _set_node_adaptor<typename tree_type::_node_t,
-                              typename tree_type::_hdle_t, allocator_type>
-        node_type;
+    typedef _set_node_adaptor<typename tree_type::_hdle_t, allocator_type> node_type;
 #endif
 
 #if IS_UNIQ
@@ -178,7 +174,7 @@ public:
     }
 
     CONTAINER &operator=(CONTAINER &&m) noexcept(
-        _alloc_traits::is_alwaya_equal::value
+        _alloc_traits::is_always_equal::value
             &&is_nothrow_move_assignable<key_compare>::value) {
         tree = ala::move(m.tree);
         return *this;
@@ -296,11 +292,11 @@ public:
 
 #if IS_UNIQ
     pair<iterator, bool> insert(const value_type &v) {
-        return tree.emplace(nullptr, v);
+        return tree.emplace_v(v, nullptr, v);
     }
 
     pair<iterator, bool> insert(value_type &&v) {
-        return tree.emplace(nullptr, ala::move(v));
+        return tree.emplace_v(v, nullptr, ala::move(v));
     }
 
     template<class P, typename = enable_if_t<is_constructible<value_type, P &&>::value>>
@@ -309,11 +305,11 @@ public:
     }
 #else
     iterator insert(const value_type &v) {
-        return tree.emplace(nullptr, v).first;
+        return tree.emplace_v(v, nullptr, v).first;
     }
 
     iterator insert(value_type &&v) {
-        return tree.emplace(nullptr, ala::move(v)).first;
+        return tree.emplace_v(v, nullptr, ala::move(v)).first;
     }
 
     template<class P, typename = enable_if_t<is_constructible<value_type, P &&>::value>>
@@ -323,11 +319,11 @@ public:
 #endif
 
     iterator insert(const_iterator position, const value_type &v) {
-        return tree.emplace(position._ptr, v).first;
+        return tree.emplace_v(v, position._ptr, v).first;
     }
 
     iterator insert(const_iterator position, value_type &&v) {
-        return tree.emplace(position._ptr, ala::move(v)).first;
+        return tree.emplace_v(v, position._ptr, ala::move(v)).first;
     }
 
     template<class P, typename = enable_if_t<is_constructible<value_type, P &&>::value>>
@@ -380,22 +376,22 @@ public:
 #if IS_MAP && IS_UNIQ
     template<class M>
     pair<iterator, bool> insert_or_assign(const key_type &k, M &&m) {
-        return tree.emplace(nullptr, k, ala::forward<M>(m));
+        return tree.emplace_k(k, nullptr, k, ala::forward<M>(m));
     }
 
     template<class M>
     pair<iterator, bool> insert_or_assign(key_type &&k, M &&m) {
-        return tree.emplace(nullptr, ala::move(k), ala::forward<M>(m));
+        return tree.emplace_k(k, nullptr, ala::move(k), ala::forward<M>(m));
     }
 
     template<class M>
     iterator insert_or_assign(const_iterator hint, const key_type &k, M &&m) {
-        return tree.emplace(nullptr, k, ala::forward<M>(m)).first;
+        return tree.emplace_k(k, nullptr, k, ala::forward<M>(m)).first;
     }
 
     template<class M>
     iterator insert_or_assign(const_iterator hint, key_type &&k, M &&m) {
-        return tree.emplace(nullptr, ala::move(k), ala::forward<M>(m)).first;
+        return tree.emplace_k(k, nullptr, ala::move(k), ala::forward<M>(m)).first;
     }
 #endif
 
@@ -465,32 +461,33 @@ public:
 #if IS_MAP && IS_UNIQ
     template<class... Args>
     pair<iterator, bool> try_emplace(const key_type &k, Args &&... args) {
-        return tree.emplace(nullptr, ala::piecewise_construct_t(),
-                            ala::forward_as_tuple(k),
-                            ala::forward_as_tuple(ala::forward<Args>(args)...));
+        return tree.emplace_k(k, nullptr, ala::piecewise_construct_t(),
+                              ala::forward_as_tuple(k),
+                              ala::forward_as_tuple(ala::forward<Args>(args)...));
     }
 
     template<class... Args>
     pair<iterator, bool> try_emplace(key_type &&k, Args &&... args) {
-        return tree.emplace(nullptr, ala::piecewise_construct_t(),
-                            ala::forward_as_tuple(ala::move(k)),
-                            ala::forward_as_tuple(ala::forward<Args>(args)...));
+        return tree.emplace_k(k, nullptr, ala::piecewise_construct_t(),
+                              ala::forward_as_tuple(ala::move(k)),
+                              ala::forward_as_tuple(ala::forward<Args>(args)...));
     }
 
     template<class... Args>
     iterator try_emplace(const_iterator hint, const key_type &k, Args &&... args) {
         return tree
-            .emplace(hint, ala::piecewise_construct_t(), ala::forward_as_tuple(k),
-                     ala::forward_as_tuple(ala::forward<Args>(args)...))
+            .emplace_k(k, hint, ala::piecewise_construct_t(),
+                       ala::forward_as_tuple(k),
+                       ala::forward_as_tuple(ala::forward<Args>(args)...))
             .first;
     }
 
     template<class... Args>
     iterator try_emplace(const_iterator hint, key_type &&k, Args &&... args) {
         return tree
-            .emplace(hint, ala::piecewise_construct_t(),
-                     ala::forward_as_tuple(ala::move(k)),
-                     ala::forward_as_tuple(ala::forward<Args>(args)...))
+            .emplace_k(k, hint, ala::piecewise_construct_t(),
+                       ala::forward_as_tuple(ala::move(k)),
+                       ala::forward_as_tuple(ala::forward<Args>(args)...))
             .first;
     }
 #endif
