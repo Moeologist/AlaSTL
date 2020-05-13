@@ -21,7 +21,7 @@
 
 #if !defined(_ALA_MSVC)
     #if !defined(__has_cpp_attribute) || !defined(__cpp_lambdas)
-        #error unsupported compiler; ala need cpp feature test macro in non-MSVC.
+        #error Unsupported compiler; ala need cpp feature test macro in non-MSVC.
     #endif
 #endif
 

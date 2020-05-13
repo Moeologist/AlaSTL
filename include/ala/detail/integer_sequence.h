@@ -35,11 +35,9 @@ struct _cat_int_seq_helper<void, integer_sequence<Int, Is...>,
 };
 
 template<typename IntSeq, typename... IntSeqs>
-struct _cat_int_seq_helper<void_t<typename _cat_int_seq_helper<IntSeqs...>::type>,
+struct _cat_int_seq_helper<void_t<typename _cat_int_seq_helper<void, IntSeqs...>::type>,
                            IntSeq, IntSeqs...>
-    : _cat_int_seq_helper<IntSeq, typename _cat_int_seq_helper<IntSeqs...>::type> {
-    static_assert(sizeof...(IntSeqs) > 1, "internal error");
-};
+    : _cat_int_seq_helper<void, IntSeq, typename _cat_int_seq_helper<void, IntSeqs...>::type> {};
 
 template<typename... IntSeq>
 using cat_integer_sequence = typename _cat_int_seq_helper<void, IntSeq...>::type;
@@ -127,7 +125,7 @@ struct _make_int_range_impl<Int, Start, End, Step, false>
     : _foreach_int_seq<make_integer_sequence<Int, (End - Start + Step - 1) / Step>,
                        _int_seq_op<Int, Step>::template mul,
                        _int_seq_op<Int, Start>::template add> {
-    static_assert(Step > 0, "range step must greater than zero");
+    static_assert(Step > 0, "Step must greater than zero");
 };
 
 template<typename Int, Int Start, Int End, Int Step = 1>

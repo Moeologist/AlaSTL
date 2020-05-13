@@ -3,7 +3,7 @@
 #endif
 
 #if !defined(_ALA_IS_MAP)
-    #error "internal error, nerver use this head"
+    #error Internal error, nerver use this head
 #endif
 
 #include <ala/detail/allocator.h>

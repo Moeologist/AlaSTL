@@ -2,7 +2,7 @@
 #define _ALA_DETAIL_UTILITY_BASE_H
 
 #ifndef _ALA_DETAIL_TRAITS_DECLARE_H
-#error "never use this directly"
+#error Never use this directly
 #endif
 
 namespace ala {
@@ -27,7 +27,7 @@ template<typename T>
 constexpr T &&forward(remove_reference_t<T> &&t) noexcept {
     static_assert(
         !is_lvalue_reference<T>::value,
-        "template argument substituting T can not be lvalue reference type");
+        "T can not be lvalue reference type");
     return static_cast<T &&>(t);
 }
 

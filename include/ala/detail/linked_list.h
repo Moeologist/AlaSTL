@@ -1,7 +1,7 @@
 #ifndef _ALA_DETAIL_LINKED_LIST_H
 #define _ALA_DETAIL_LINKED_LIST_H
 
-#include "ala/detail/allocator.h"
+#include <ala/detail/allocator.h>
 #include <ala/iterator.h>
 
 namespace ala {

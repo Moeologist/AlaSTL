@@ -224,7 +224,7 @@ generate_real(URBG &&g) {
                       double, float>;
     static_assert(numeric_limits<Real>::is_iec559,
                   "IEC 559 (IEEE 754) check failed");
-    static_assert(sizeof(UInt) >= sizeof(Real), "size of uint too small");
+    static_assert(sizeof(UInt) >= sizeof(Real), "The size of uint too small");
     constexpr size_t exponent = is_same<double, Real>::value ? 11 : 8;
     constexpr size_t fraction = is_same<double, Real>::value ? 52 : 23;
     constexpr size_t bits = sizeof(UInt) * 8;

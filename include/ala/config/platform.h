@@ -10,14 +10,14 @@
 
         #if (__clang_major__ * 100 + __clang_minor * 10 + \
              __clang_patchlevel__) < 350
-            #error unsupported compiler; ala needs clang 3.5 at least.
+            #error Unsupported compiler; ala needs clang 3.5 at least
         #endif
 
     #else // __clang__
         #define _ALA_MSVC
 
         #if _MSC_VER < 1910
-            #error unsupported compiler; ala needs visual studio 2017 at least.
+            #error Unsupported compiler; ala needs visual studio 2017 at least
         #endif
 
     #endif // __clang__
@@ -31,7 +31,7 @@
 
         #if (__clang_major__ * 100 + __clang_minor * 10 + \
              __clang_patchlevel__) < 350
-            #error unsupported compiler; ala needs clang 3.5 at least.
+            #error Unsupported compiler; ala needs clang 3.5 at least
         #endif
 
     #else // __clang__
@@ -39,13 +39,13 @@
         #define _ALA_GCC
 
         #if (__GNUC__ * 1000 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__) < 5000
-            #error unsupported compiler; ala needs gcc 5 at least.
+            #error Unsupported compiler; ala needs gcc 5 at least
         #endif
 
     #endif // __clang__
 
 #else // other compiler
-    #error unsupported compiler.
+    #error Unsupported compiler.
 #endif // Compilers
 
 #if defined(_M_IX86) || defined(__i386__) || defined(_M_AMD64) || \
@@ -61,7 +61,7 @@
         #define _ALA_ARM64
     #endif
 #else
-// #error "unsupported arch; ala support arm and X86 (both 32bit and 64bit)."
+// #error Unsupported arch; ala support arm and X86 (both 32bit and 64bit)
 #endif // Architectures
 
 #ifdef _WIN32

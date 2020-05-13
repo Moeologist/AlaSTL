@@ -303,13 +303,13 @@ public:
 
     constexpr reference at(size_type n) {
         if (n >= _size)
-            throw out_of_range("vector index out of range");
+            throw out_of_range("ala::vector index out of range");
         return _data[n];
     }
 
     constexpr const_reference at(size_type n) const {
         if (n >= _size)
-            throw out_of_range("vector index out of range");
+            throw out_of_range("ala::vector index out of range");
         return _data[n];
     }
 

@@ -197,7 +197,7 @@ struct _bind_t {
     auto _select(Tuple &&tp, _placeholder_t<N>)
         -> decltype(ala::get<N - 1>(ala::forward<Tuple>(tp))) {
         static_assert(N > 0 && N <= tuple_size<remove_cvref_t<Tuple>>::value,
-                      "illegal index");
+                      "Illegal index");
         return ala::get<N - 1>(ala::forward<Tuple>(tp));
     }
 
@@ -309,7 +309,7 @@ struct function<R(Args...)> {
     template<class Fn, class = enable_if_t<is_invocable_r<R, Fn &, Args...>::value>>
     function(Fn fn) {
         static_assert(sizeof(Fn) <= sizeof(_data),
-                      "functor size is too large, "
+                      "Functor size is too large, "
                       "ala::function have no dynamic memory allocation, "
                       "set ALA_FUNCTION_MEMORY_SIZE to sizeof(largest-class).");
         static_assert(is_nothrow_move_constructible<Fn>::value,
@@ -511,7 +511,7 @@ struct _functor_helper<Class, void_t<decltype(&Class::operator())>> {
     typedef typename _memptr_traits<decltype(&Class::operator())>::_mem _fn;
     static constexpr unsigned _qualify = _function_traits<_fn>::qualify;
     static_assert((_qualify & 0b1000u) == 0,
-                  "function can not bind to &&-qualify functor");
+                  "ala::function can not bind to &&-qualify functor");
     typedef typename _function_traits<_fn>::type type;
     typedef typename _function_helper<type>::result_type result_type;
     static constexpr size_t args_count = _function_helper<type>::args_count;
@@ -594,7 +594,7 @@ auto bind(Fn &&fn, Args &&... args)
     -> _bind_t<typename callable_traits<Fn>::result_type, Fn, Args...> {
     using _call_traits = callable_traits<Fn>;
     static_assert(sizeof...(Args) == _call_traits::args_count,
-                  "bind size not compatible");
+                  "Argument count not compatible");
     using R = typename _call_traits::result_type;
     return _bind_t<R, Fn, Args...>(ala::forward<Fn>(fn),
                                    ala::forward<Args>(args)...);
@@ -604,7 +604,7 @@ template<class R, class Fn, class... Args>
 auto bind(Fn &&fn, Args &&... args) -> _bind_t<R, Fn, Args...> {
     using _call_traits = callable_traits<Fn>;
     static_assert(sizeof...(Args) == _call_traits::args_count,
-                  "bind size not compatible");
+                  "Argument count not compatible");
     return _bind_t<R, Fn, Args...>(ala::forward<Fn>(fn),
                                    ala::forward<Args>(args)...);
 }
@@ -647,7 +647,7 @@ struct _bind_front_t {
                                 ala::forward<Args1>(args1)...)) {
         static_assert(sizeof...(Args) + sizeof...(Args1) ==
                           callable_traits<_fn_t>::args_count,
-                      "arguments count not compatible");
+                      "Arguments count not compatible");
         return this->_call(index_sequence_for<Args...>(),
                            ala::forward<Args1>(args1)...);
     }
@@ -656,7 +656,7 @@ struct _bind_front_t {
 template<class Fn, class... Args>
 _bind_front_t<Fn, Args...> bind_front(Fn &&fn, Args &&... args) {
     static_assert(sizeof...(Args) <= callable_traits<Fn>::args_count,
-                  "arguments count too many");
+                  "Arguments count too many");
     return _bind_front_t<Fn, Args...>(ala::forward<Fn>(fn),
                                       ala::forward<Args>(args)...);
 }

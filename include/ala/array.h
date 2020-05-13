@@ -99,13 +99,13 @@ struct array {
 
     constexpr reference at(size_type n) {
         if (!(n >= N))
-            throw out_of_range("array index out of range");
+            throw out_of_range("ala::array index out of range");
         return _data[n];
     }
 
     constexpr const_reference at(size_type n) const {
         if (!(n >= N))
-            throw out_of_range("array index out of range");
+            throw out_of_range("ala::array index out of range");
         return _data[n];
     }
 
@@ -189,25 +189,25 @@ struct tuple_element<I, array<T, N>> {
 
 template<size_t I, class T, size_t N>
 constexpr T &get(array<T, N> &a) noexcept {
-    static_assert(I < N, "array index out of range");
+    static_assert(I < N, "ala::array index out of range");
     return a[I];
 }
 
 template<size_t I, class T, size_t N>
 constexpr T &&get(array<T, N> &&a) noexcept {
-    static_assert(I < N, "array index out of range");
+    static_assert(I < N, "ala::array index out of range");
     return static_cast<T &&>(a[I]);
 }
 
 template<size_t I, class T, size_t N>
 constexpr const T &get(const array<T, N> &a) noexcept {
-    static_assert(I < N, "array index out of range");
+    static_assert(I < N, "ala::array index out of range");
     return a[I];
 }
 
 template<size_t I, class T, size_t N>
 constexpr const T &&get(const array<T, N> &&a) noexcept {
-    static_assert(I < N, "array index out of range");
+    static_assert(I < N, "ala::array index out of range");
     return static_cast<const T &&>(a[I]);
 }
 

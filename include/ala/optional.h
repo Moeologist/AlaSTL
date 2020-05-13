@@ -355,25 +355,25 @@ public:
 
     constexpr const T &value() const & {
         if (!*this)
-            throw bad_optional_access("no value");
+            throw bad_optional_access("ala::optional has no value");
         return static_cast<const T &>(*(T *)&(this->_data));
     }
 
     constexpr T &value() & {
         if (!*this)
-            throw bad_optional_access("no value");
+            throw bad_optional_access("ala::optional has no value");
         return static_cast<T &>(*(T *)&(this->_data));
     }
 
     constexpr T &&value() && {
         if (!*this)
-            throw bad_optional_access("no value");
+            throw bad_optional_access("ala::optional has no value");
         return static_cast<T &&>(*(T *)&(this->_data));
     }
 
     constexpr const T &&value() const && {
         if (!*this)
-            throw bad_optional_access("no value");
+            throw bad_optional_access("ala::optional has no value");
         return static_cast<const T &&>(*(T *)&(this->_data));
     }
 

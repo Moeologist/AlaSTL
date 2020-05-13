@@ -215,7 +215,7 @@ struct tuple_element<I, pair<T1, T2>>: type_pack_element<I, T1, T2> {};
 
 template<size_t I, class T1, class T2>
 constexpr tuple_element_t<I, pair<T1, T2>> &get(pair<T1, T2> &p) noexcept {
-    static_assert(I == 0 || I == 1, "out of range");
+    static_assert(I == 0 || I == 1, "ala::pair index out of range");
     typedef tuple_element_t<I, pair<T1, T2>> type;
     return const_cast<type &>(I == 0 ? p.first : p.second);
 }
@@ -223,14 +223,14 @@ constexpr tuple_element_t<I, pair<T1, T2>> &get(pair<T1, T2> &p) noexcept {
 template<size_t I, class T1, class T2>
 constexpr const tuple_element_t<I, pair<T1, T2>> &
 get(const pair<T1, T2> &p) noexcept {
-    static_assert(I == 0 || I == 1, "out of range");
+    static_assert(I == 0 || I == 1, "ala::pair index out of range");
     typedef tuple_element_t<I, pair<T1, T2>> type;
     return const_cast<const type &>(I == 0 ? p.first : p.second);
 }
 
 template<size_t I, class T1, class T2>
 constexpr tuple_element_t<I, pair<T1, T2>> &&get(pair<T1, T2> &&p) noexcept {
-    static_assert(I == 0 || I == 1, "out of range");
+    static_assert(I == 0 || I == 1, "ala::pair index out of range");
     typedef tuple_element_t<I, pair<T1, T2>> type;
     return const_cast<type &&>(I == 0 ? p.first : p.second);
 }
@@ -238,56 +238,56 @@ constexpr tuple_element_t<I, pair<T1, T2>> &&get(pair<T1, T2> &&p) noexcept {
 template<size_t I, class T1, class T2>
 constexpr const tuple_element_t<I, pair<T1, T2>> &&
 get(const pair<T1, T2> &&p) noexcept {
-    static_assert(I == 0 || I == 1, "out of range");
+    static_assert(I == 0 || I == 1, "ala::pair index out of range");
     typedef tuple_element_t<I, pair<T1, T2>> type;
     return const_cast<const type &&>(I == 0 ? p.first : p.second);
 }
 
 template<class T, class U>
 constexpr T &get(pair<type_identity_t<T>, U> &p) noexcept {
-    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
     return static_cast<T &>(p.first);
 }
 
 template<class T, class U>
 constexpr const T &get(const pair<type_identity_t<T>, U> &p) noexcept {
-    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
     return static_cast<const T &>(p.first);
 }
 
 template<class T, class U>
 constexpr T &&get(pair<type_identity_t<T>, U> &&p) noexcept {
-    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
     return static_cast<T &&>(p.first);
 }
 
 template<class T, class U>
 constexpr const T &&get(const pair<type_identity_t<T>, U> &&p) noexcept {
-    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
     return static_cast<const T &&>(p.first);
 }
 
 template<class T, class U>
 constexpr T &get(pair<U, type_identity_t<T>> &p) noexcept {
-    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
     return static_cast<T &>(p.second);
 }
 
 template<class T, class U>
 constexpr const T &get(const pair<U, type_identity_t<T>> &p) noexcept {
-    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
     return static_cast<const T &>(p.second);
 }
 
 template<class T, class U>
 constexpr T &&get(pair<U, type_identity_t<T>> &&p) noexcept {
-    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
     return static_cast<T &&>(p.second);
 }
 
 template<class T, class U>
 constexpr const T &&get(const pair<U, type_identity_t<T>> &&p) noexcept {
-    static_assert(!is_same<T, U>::value, "no type or more than one type");
+    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
     return static_cast<const T &&>(p.second);
 }
 

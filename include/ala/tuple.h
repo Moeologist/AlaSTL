@@ -65,17 +65,6 @@ struct _tuple_base<I, T, true>: private T {
 
 template<typename... Ts>
 struct tuple_size<tuple<Ts...>>: integral_constant<size_t, sizeof...(Ts)> {};
-// TODO: static_cast
-// template<size_t I, typename Head, typename... Tail>
-// struct tuple_element<I, tuple<Head, Tail...>>
-//     : tuple_element<I - 1, tuple<Tail...>> {
-//     static_assert(I <= sizeof...(Tail), "out of range");
-// };
-
-// template<typename Head, typename... Tail>
-// struct tuple_element<0, tuple<Head, Tail...>> {
-//     typedef Head type;
-// };
 
 template<size_t I, typename... Ts>
 struct tuple_element<I, tuple<Ts...>>: type_pack_element<I, Ts...> {};
@@ -601,28 +590,28 @@ using _type_pick_same_t = typename _type_pick_impl<
 template<typename T, typename... Ts>
 constexpr T &get(tuple<Ts...> &t) noexcept {
     typedef _type_pick_same_t<T, Ts...> Index;
-    static_assert(Index::size() == 1, "no type or more than one type");
+    static_assert(Index::size() == 1, "No specified type or more than one type");
     return get<Index::get(0)>(t);
 }
 
 template<typename T, typename... Ts>
 constexpr T &&get(tuple<Ts...> &&t) noexcept {
     typedef _type_pick_same_t<T, Ts...> Index;
-    static_assert(Index::size() == 1, "no type or more than one type");
+    static_assert(Index::size() == 1, "No specified type or more than one type");
     return get<Index::get(0)>(ala::move(t));
 }
 
 template<typename T, typename... Ts>
 constexpr const T &get(const tuple<Ts...> &t) noexcept {
     typedef _type_pick_same_t<T, Ts...> Index;
-    static_assert(Index::size() == 1, "no type or more than one type");
+    static_assert(Index::size() == 1, "No specified type or more than one type");
     return get<Index::get(0)>(t);
 }
 
 template<typename T, typename... Ts>
 constexpr const T &&get(const tuple<Ts...> &&t) noexcept {
     typedef _type_pick_same_t<T, Ts...> Index;
-    static_assert(Index::size() == 1, "no type or more than one type");
+    static_assert(Index::size() == 1, "No specified type or more than one type");
     return get<Index::get(0)>(ala::move(t));
 }
 

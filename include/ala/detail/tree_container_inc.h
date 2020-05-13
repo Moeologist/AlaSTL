@@ -3,7 +3,7 @@
 #endif
 
 #if !defined(_ALA_IS_MAP) || !defined(_ALA_IS_UNIQ)
-    #error "internal error, nerver use this head"
+    #error Internal error, nerver use this head
 #endif
 
 #include <ala/detail/algorithm_base.h>
@@ -263,14 +263,14 @@ public:
     mapped_type &at(const key_type &k) {
         iterator i = iterator(tree.find(k));
         if (!i.first)
-            throw out_of_range("map element not found");
+            throw out_of_range("ala::map key not found");
         return i->second;
     }
 
     const mapped_type &at(const key_type &k) const {
         const_iterator i = const_iterator(iterator(tree.find(k)));
         if (!i.first)
-            throw out_of_range("map element not found");
+            throw out_of_range("ala::map key not found");
         return i->second;
     }
 #endif
