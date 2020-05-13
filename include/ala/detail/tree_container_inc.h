@@ -2,32 +2,32 @@
     #define _ALA_DETAIL_TREE_CONTAINER_INC
 #endif
 
-#if !defined(IS_MAP) || !defined(IS_UNIQ)
+#if !defined(_ALA_IS_MAP) || !defined(_ALA_IS_UNIQ)
     #error "internal error, nerver use this head"
 #endif
 
 #include <ala/detail/algorithm_base.h>
 #include <ala/detail/rb_tree.h>
 
-#if IS_MAP
+#if _ALA_IS_MAP
 
-    #if IS_UNIQ
+    #if _ALA_IS_UNIQ
         #include <ala/tuple.h>
         #define CONTAINER map
-        #define O_CONTAINER multimap
+        #define CONTAINER1 multimap
     #else
         #define CONTAINER multimap
-        #define O_CONTAINER map
+        #define CONTAINER1 map
     #endif
 
 #else
 
-    #if IS_UNIQ
+    #if _ALA_IS_UNIQ
         #define CONTAINER set
-        #define O_CONTAINER multiset
+        #define CONTAINER1 multiset
     #else
         #define CONTAINER multiset
-        #define O_CONTAINER set
+        #define CONTAINER1 set
     #endif
 
 #endif
@@ -46,7 +46,7 @@ class set;
 template<class, class, class>
 class multiset;
 
-#if IS_MAP
+#if _ALA_IS_MAP
 template<class Key, class T, class Comp = less<Key>,
          class Alloc = allocator<pair<const Key, T>>>
 #else
@@ -55,7 +55,7 @@ template<class Key, class Comp = less<Key>, class Alloc = allocator<Key>>
 class CONTAINER {
 public:
     typedef Key key_type;
-#if IS_MAP
+#if _ALA_IS_MAP
     typedef T mapped_type;
     typedef pair<const Key, T> value_type;
 #else
@@ -71,7 +71,7 @@ public:
     typedef typename _alloc_traits::pointer pointer;
     typedef typename _alloc_traits::const_pointer const_pointer;
 
-#if IS_MAP
+#if _ALA_IS_MAP
     struct value_compare {
         bool operator()(const value_type &lhs, const value_type &rhs) const {
             return comp(lhs.first, rhs.first);
@@ -79,7 +79,8 @@ public:
 
     private:
         friend class CONTAINER<key_type, mapped_type, key_compare, allocator_type>;
-        friend class rb_tree<value_type, value_compare, allocator_type, (bool)IS_UNIQ>;
+        friend class rb_tree<value_type, value_compare, allocator_type,
+                             (bool)_ALA_IS_UNIQ>;
         key_compare comp;
         value_compare(key_compare c): comp(c) {}
     };
@@ -87,10 +88,10 @@ public:
     typedef key_compare value_compare;
 #endif
 protected:
-    typedef rb_tree<value_type, value_compare, allocator_type, (bool)IS_UNIQ> tree_type;
+    typedef rb_tree<value_type, value_compare, allocator_type, (bool)_ALA_IS_UNIQ> tree_type;
     tree_type tree;
 
-#if IS_UNIQ
+#if _ALA_IS_UNIQ
     template<class Iter, class NodeType>
     struct _insert_return_adaptor {
         Iter position;
@@ -100,7 +101,7 @@ protected:
 #endif
 
 public:
-#if IS_MAP
+#if _ALA_IS_MAP
     typedef rb_iterator<typename tree_type::_hdle_t> iterator;
 #else
     typedef rb_iterator<typename tree_type::_hdle_t, false> iterator;
@@ -108,13 +109,13 @@ public:
     typedef rb_iterator<typename tree_type::_hdle_t, true> const_iterator;
     typedef ala::reverse_iterator<iterator> reverse_iterator;
     typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
-#if IS_MAP
+#if _ALA_IS_MAP
     typedef _map_node_adaptor<typename tree_type::_hdle_t, allocator_type> node_type;
 #else
     typedef _set_node_adaptor<typename tree_type::_hdle_t, allocator_type> node_type;
 #endif
 
-#if IS_UNIQ
+#if _ALA_IS_UNIQ
     typedef _insert_return_adaptor<iterator, node_type> insert_return_type;
 #endif
 
@@ -249,7 +250,7 @@ public:
     }
 
     // element access:
-#if IS_MAP && IS_UNIQ
+#if _ALA_IS_MAP && _ALA_IS_UNIQ
     mapped_type &operator[](const key_type &k) {
         return this->try_emplace(k).first->second;
     }
@@ -275,7 +276,7 @@ public:
 
     // modifiers:
     template<class... Args>
-#if IS_UNIQ
+#if _ALA_IS_UNIQ
     pair<iterator, bool> emplace(Args &&... args) {
         return tree.emplace(nullptr, ala::forward<Args>(args)...);
     }
@@ -290,7 +291,7 @@ public:
         return tree.emplace(position._ptr, ala::forward<Args>(args)...).first;
     }
 
-#if IS_UNIQ
+#if _ALA_IS_UNIQ
     pair<iterator, bool> insert(const value_type &v) {
         return tree.emplace_v(v, nullptr, v);
     }
@@ -342,7 +343,7 @@ public:
             this->insert(*i);
     }
 
-#if IS_UNIQ
+#if _ALA_IS_UNIQ
     insert_return_type insert(node_type &&nh) {
         auto pr = tree.insert(nullptr, nh._ptr);
         if (!pr.second)
@@ -373,7 +374,7 @@ public:
     }
 #endif
 
-#if IS_MAP && IS_UNIQ
+#if _ALA_IS_MAP && _ALA_IS_UNIQ
     template<class M>
     pair<iterator, bool> insert_or_assign(const key_type &k, M &&m) {
         return tree.emplace_k(k, nullptr, k, ala::forward<M>(m));
@@ -404,7 +405,7 @@ public:
         return extract(this->find(k));
     }
 
-#if IS_MAP
+#if _ALA_IS_MAP
     template<class Comp1>
     void merge(CONTAINER<key_type, mapped_type, Comp1, allocator_type> &source) {
         for (auto i = source.begin(); i != source.end();) {
@@ -419,7 +420,7 @@ public:
     }
 
     template<class Comp1>
-    void merge(O_CONTAINER<key_type, mapped_type, Comp1, allocator_type> &source) {
+    void merge(CONTAINER1<key_type, mapped_type, Comp1, allocator_type> &source) {
         for (auto i = source.begin(); i != source.end();) {
             auto tmp = i++;
             tree.transfer(source.tree, tmp._ptr);
@@ -427,7 +428,7 @@ public:
     }
 
     template<class Comp1>
-    void merge(O_CONTAINER<key_type, mapped_type, Comp1, allocator_type> &&source) {
+    void merge(CONTAINER1<key_type, mapped_type, Comp1, allocator_type> &&source) {
         this->merge(source);
     }
 #else
@@ -445,7 +446,7 @@ public:
     }
 
     template<class Comp1>
-    void merge(O_CONTAINER<value_type, Comp1, allocator_type> &source) {
+    void merge(CONTAINER1<value_type, Comp1, allocator_type> &source) {
         for (auto i = source.begin(); i != source.end();) {
             auto tmp = i++;
             tree.transfer(source.tree, tmp._ptr);
@@ -453,12 +454,12 @@ public:
     }
 
     template<class Comp1>
-    void merge(O_CONTAINER<value_type, Comp1, allocator_type> &&source) {
+    void merge(CONTAINER1<value_type, Comp1, allocator_type> &&source) {
         this->merge(source);
     }
 #endif
 
-#if IS_MAP && IS_UNIQ
+#if _ALA_IS_MAP && _ALA_IS_UNIQ
     template<class... Args>
     pair<iterator, bool> try_emplace(const key_type &k, Args &&... args) {
         return tree.emplace_k(k, nullptr, ala::piecewise_construct_t(),
@@ -498,7 +499,7 @@ public:
         return position;
     }
 
-#if IS_MAP
+#if _ALA_IS_MAP
     iterator erase(const_iterator position) {
         const_iterator tmp = position++;
         tree.remove(tmp._ptr);
@@ -532,7 +533,7 @@ public:
     }
 
     key_compare key_comp() const {
-#if IS_MAP
+#if _ALA_IS_MAP
         return this->value_comp().comp;
 #else
         return this->value_comp();
@@ -563,7 +564,7 @@ public:
     }
 
     size_type count(const key_type &k) const {
-#if IS_UNIQ
+#if _ALA_IS_UNIQ
         return static_cast<size_type>(this->contains(k));
 #else
         return tree.template count<key_type>(k);
@@ -572,7 +573,7 @@ public:
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     size_type count(const K &k) const {
-#if IS_UNIQ
+#if _ALA_IS_UNIQ
         return static_cast<size_type>(this->contains(k));
 #else
         return tree.count(k);
@@ -589,7 +590,7 @@ public:
     }
 
     iterator lower_bound(const key_type &k) {
-#if IS_MAP
+#if _ALA_IS_MAP
         constexpr static auto _bin = [](const value_type &v, const key_type &k) {
             return key_compare()(v.first, k);
         };
@@ -605,7 +606,7 @@ public:
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     iterator lower_bound(const K &k) {
-#if IS_MAP
+#if _ALA_IS_MAP
         constexpr static auto _bin = [](const value_type &v, const key_type &k) {
             return key_compare()(v.first, k);
         };
@@ -621,7 +622,7 @@ public:
     }
 
     iterator upper_bound(const key_type &k) {
-#if IS_MAP
+#if _ALA_IS_MAP
         constexpr static auto _bin = [](const key_type &k, const value_type &v) {
             return key_compare()(k, v.first);
         };
@@ -637,7 +638,7 @@ public:
 
     template<class K, typename Dummy = key_compare, typename = typename Dummy::is_transparent>
     iterator upper_bound(const K &k) {
-#if IS_MAP
+#if _ALA_IS_MAP
         constexpr static auto _bin = [](const key_type &k, const value_type &v) {
             return key_compare()(k, v.first);
         };
@@ -673,7 +674,7 @@ public:
     }
 };
 
-#if IS_MAP
+#if _ALA_IS_MAP
 template<class Key, class T, class Comp, class Alloc>
 bool operator==(const CONTAINER<Key, T, Comp, Alloc> &lhs,
                 const CONTAINER<Key, T, Comp, Alloc> &rhs) {
@@ -719,7 +720,7 @@ void swap(CONTAINER<Key, T, Comp, Alloc> &lhs,
     lhs.swap(rhs);
 }
 
-#else // IS_MAP
+#else // _ALA_IS_MAP
 
 template<class Key, class Comp, class Alloc>
 bool operator==(const CONTAINER<Key, Comp, Alloc> &lhs,
@@ -769,7 +770,7 @@ void swap(CONTAINER<Key, Comp, Alloc> &lhs,
 
 #if _ALA_ENABLE_DEDUCTION_GUIDES
 
-    #if IS_MAP
+    #if _ALA_IS_MAP
 template<class InputIter,
          class Comp = less<typename iterator_traits<InputIter>::value_type::first_type>,
          class Alloc = allocator<
@@ -795,7 +796,7 @@ CONTAINER(InputIter, InputIter, Alloc)
 template<class Key, class T, class Allocator>
 CONTAINER(initializer_list<pair<const Key, T>>, Allocator)
     -> CONTAINER<Key, T, less<Key>, Allocator>;
-    #else // IS_MAP
+    #else // _ALA_IS_MAP
 template<class InputIter,
          class Comp = less<typename iterator_traits<InputIter>::value_type>,
          class Alloc = allocator<typename iterator_traits<InputIter>::value_type>>
@@ -819,4 +820,4 @@ CONTAINER(initializer_list<Key>, Alloc) -> CONTAINER<Key, less<Key>, Alloc>;
 } // namespace ala
 
 #undef CONTAINER
-#undef O_CONTAINER
+#undef CONTAINER1

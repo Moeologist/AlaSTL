@@ -173,13 +173,60 @@ public:
     typedef _node_t *_hdle_t;
     static constexpr bool is_uniq = Uniq;
 
+protected:
+    _hdle_t _root;
+    _hdle_t _guard;
+
+    size_t _size;
+    allocator_type _alloc;
+    value_compare _comp;
+
+    _hdle_t _left_nil() const noexcept {
+        return _guard;
+    }
+
+    _hdle_t _rght_nil() const noexcept {
+        return _guard + 1;
+    }
+
+    ALA_HAS_MEM(first)
+    ALA_HAS_MEM(comp)
+
+    static_assert(_has_first<value_type>::value == _has_comp<value_compare>::value,
+                  "Key compare check failed");
+
+    template<typename Dummy = value_type,
+             typename = enable_if_t<_has_first<Dummy>::value>>
+    auto _key(const value_type &v) const noexcept -> decltype(v.first) {
+        return v.first;
+    }
+
+    template<typename Dummy = value_type,
+             typename = enable_if_t<!_has_first<Dummy>::value>>
+    const value_type &_key(const value_type &v) const noexcept {
+        return v;
+    }
+
+    template<typename Dummy = value_compare,
+             typename = enable_if_t<_has_comp<Dummy>::value>>
+    auto _key_comp() const noexcept -> decltype(_comp.comp) {
+        return _comp.comp;
+    }
+
+    template<typename Dummy = value_compare,
+             typename = enable_if_t<!_has_comp<Dummy>::value>>
+    const value_compare &_key_comp() const noexcept {
+        return _comp;
+    }
+
+public:
     rb_tree(const value_compare &cmp, const allocator_type &a) noexcept(
         is_nothrow_default_constructible<allocator_type>::value
             &&is_nothrow_default_constructible<value_compare>::value)
         : _comp(cmp), _alloc(a), _size(0), _root(nullptr) {
         initialize();
     }
-
+    // TODO: clean
     rb_tree(const rb_tree &other)
         : _comp(other._comp),
           _alloc(_alloc_traits::select_on_container_copy_construction(
@@ -216,6 +263,13 @@ public:
         other.fix_nil();
     }
 
+    ~rb_tree() {
+        destruct_tree(_root);
+        _alloc_traits::template deallocate_object<_node_t>(_alloc, _left_nil(),
+                                                           2);
+    }
+
+protected:
     template<bool Dummy = _alloc_traits::propagate_on_container_copy_assignment::value>
     enable_if_t<Dummy> _copy_helper(const rb_tree &other) {
         if (_alloc == other._alloc) {
@@ -230,14 +284,6 @@ public:
     template<bool Dummy = _alloc_traits::propagate_on_container_copy_assignment::value>
     enable_if_t<!Dummy> _copy_helper(const rb_tree &other) {
         destruct_tree(_root);
-    }
-
-    rb_tree &operator=(const rb_tree &other) {
-        _copy_helper(other);
-        _root = copy_tree(other._root);
-        fix_nil();
-        _size = other._size;
-        return *this;
     }
 
     void _transfer_root(rb_tree &other) {
@@ -268,15 +314,18 @@ public:
         }
     }
 
-    rb_tree &operator=(rb_tree &&other) {
-        _move_helper(ala::move(other));
+public:
+    rb_tree &operator=(const rb_tree &other) {
+        _copy_helper(other);
+        _root = copy_tree(other._root);
+        fix_nil();
+        _size = other._size;
         return *this;
     }
 
-    ~rb_tree() {
-        destruct_tree(_root);
-        _alloc_traits::template deallocate_object<_node_t>(_alloc, _left_nil(),
-                                                           2);
+    rb_tree &operator=(rb_tree &&other) {
+        _move_helper(ala::move(other));
+        return *this;
     }
 
     _hdle_t begin() const noexcept {
@@ -298,17 +347,14 @@ public:
     }
 
     void remove(_hdle_t position) {
-        if (!is_nil(position)) {
-            detach(position);
-            destruct_node(position);
-        }
+        assert(!is_nil(position));
+        destruct_node(detach(position));
     }
 
     void extract(_hdle_t position) noexcept {
-        if (!is_nil(position)) {
-            detach(position);
-            position->_left = position->_rght = position->_parent = nullptr;
-        }
+        assert(!is_nil(position));
+        detach(position);
+        position->_left = position->_rght = position->_parent = nullptr;
     }
 
     allocator_type get_allocator() const noexcept {
@@ -335,8 +381,7 @@ public:
         ala::swap(_comp, other._comp);
         ala::swap(_root, other._root);
         ala::swap(_size, other._size);
-        ala::swap(_left_nil(), other._left_nil());
-        ala::swap(_rght_nil(), other._rght_nil());
+        ala::swap(_guard, other._guard);
         _swap_helper(other);
     }
 
@@ -344,10 +389,8 @@ public:
     void transfer(RBTree &other, _hdle_t p) {
         assert(get_allocator == other.get_allocator());
         pair<_hdle_t, bool> pr = _locate(nullptr, p);
-        if (!pr.second) {
-            other.detach(p);
-            attach_to(pr.first, p);
-        }
+        if (!pr.second)
+            attach_to(pr.first, other.detach(p));
     }
 
     template<class K, class F>
@@ -469,51 +512,6 @@ public:
     }
 
 protected:
-    _hdle_t _root;
-    _hdle_t _guard;
-
-    size_t _size;
-    allocator_type _alloc;
-    value_compare _comp;
-
-    _hdle_t _left_nil() const noexcept {
-        return _guard;
-    }
-
-    _hdle_t _rght_nil() const noexcept {
-        return _guard + 1;
-    }
-
-    ALA_HAS_MEM(first)
-    ALA_HAS_MEM(comp)
-
-    static_assert(_has_first<value_type>::value == _has_comp<value_compare>::value,
-                  "Key compare check failed");
-
-    template<typename Dummy = value_type,
-             typename = enable_if_t<_has_first<Dummy>::value>>
-    auto _key(const value_type &v) const noexcept -> decltype(v.first) {
-        return v.first;
-    }
-
-    template<typename Dummy = value_type,
-             typename = enable_if_t<!_has_first<Dummy>::value>>
-    const value_type &_key(const value_type &v) const noexcept {
-        return v;
-    }
-
-    template<typename Dummy = value_compare,
-             typename = enable_if_t<_has_comp<Dummy>::value>>
-    auto _key_comp() const noexcept -> decltype(_comp.comp) {
-        return _comp.comp;
-    }
-
-    template<typename Dummy = value_compare,
-             typename = enable_if_t<!_has_comp<Dummy>::value>>
-    const value_compare &_key_comp() const noexcept {
-        return _comp;
-    }
-
     template<class... Args>
     _hdle_t construct_node(Args &&... args) {
         _hdle_t node = _alloc_traits::template allocate_object<_node_t>(_alloc,
@@ -548,6 +546,22 @@ protected:
         node->_left = copy_tree(other->_left, node);
         node->_rght = copy_tree(other->_rght, node);
         return node;
+    }
+
+    void initialize() {
+        _guard = _alloc_traits::template allocate_object<_node_t>(_alloc, 2);
+        _left_nil()->_is_nil = true;
+        _left_nil()->_parent = _rght_nil();
+        _left_nil()->_color = ALA_BLACK;
+        _left_nil()->_nflag = ALA_LEFT;
+        _left_nil()->_left = nullptr;
+        _left_nil()->_rght = nullptr;
+        _rght_nil()->_is_nil = true;
+        _rght_nil()->_parent = _left_nil();
+        _rght_nil()->_color = ALA_BLACK;
+        _rght_nil()->_nflag = ALA_RGHT;
+        _rght_nil()->_left = nullptr;
+        _rght_nil()->_rght = nullptr;
     }
 
     // rotate
@@ -606,23 +620,6 @@ protected:
             uparent->_rght = v;
         if (v != nullptr)
             v->_parent = uparent;
-    }
-
-    void initialize() {
-        _guard = _alloc_traits::template allocate_object<_node_t>(_alloc, 2);
-        _left_nil()->_is_nil = true;
-        _left_nil()->_parent = _rght_nil();
-        _left_nil()->_color = ALA_BLACK;
-        _left_nil()->_nflag = ALA_LEFT;
-        _left_nil()->_left = nullptr;
-        _left_nil()->_rght = nullptr;
-
-        _rght_nil()->_is_nil = true;
-        _rght_nil()->_parent = _left_nil();
-        _rght_nil()->_color = ALA_BLACK;
-        _rght_nil()->_nflag = ALA_RGHT;
-        _rght_nil()->_left = nullptr;
-        _rght_nil()->_rght = nullptr;
     }
 
     void fix_nil() noexcept {
@@ -751,6 +748,7 @@ protected:
             rebalance_for_detach(child, parent);
         if (fix)
             fix_nil_detach(current, fix);
+        return current;
     }
 
     /*----------------------------------------------------------------------------------------------------

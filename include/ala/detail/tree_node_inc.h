@@ -2,13 +2,13 @@
     #define _ALA_DETAIL_TREE_NODE_INC
 #endif
 
-#if !defined(IS_MAP)
+#if !defined(_ALA_IS_MAP)
     #error "internal error, nerver use this head"
 #endif
 
 #include <ala/detail/allocator.h>
 
-#if IS_MAP
+#if _ALA_IS_MAP
     #define NODE _map_node_adaptor
 #else
     #define NODE _set_node_adaptor
@@ -18,7 +18,7 @@ namespace ala {
 
 template<class NodePtr, class Alloc>
 struct NODE {
-#if IS_MAP
+#if _ALA_IS_MAP
     typedef remove_const_t<decltype(declval<NodePtr>()->_data.first)> key_type;
     typedef decltype(declval<NodePtr>()->_data.second) mapped_type;
 #else
@@ -74,7 +74,7 @@ struct NODE {
         return _alloc;
     }
 
-#if IS_MAP
+#if _ALA_IS_MAP
     key_type &key() const {
         return const_cast<key_type &>(_ptr->_data.first);
     }
@@ -97,7 +97,7 @@ struct NODE {
     }
 
 private:
-#if IS_MAP
+#if _ALA_IS_MAP
     template<class, class, class, class>
     friend class map;
     template<class, class, class, class>
