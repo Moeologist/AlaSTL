@@ -934,7 +934,7 @@ struct _sc_lref {};
 template<typename T1, typename T2, typename Y1, typename Y2>
 struct _sc_lref<T1, T2, Y1, Y2, 
                            void_t<_cond_ref_t<_copy_cv_t<Y1, Y2>&, _copy_cv_t<Y2, Y1>&>>>
-{ typedef _cond_ref_t<_copy_cv_t<Y1, Y2>&, copy_cv_t<Y2, Y1>&> type; };
+{ typedef _cond_ref_t<_copy_cv_t<Y1, Y2>&, _copy_cv_t<Y2, Y1>&> type; };
 
 template<typename T1, typename T2, typename C,
           bool = is_convertible<T1, C>::value &&

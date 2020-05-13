@@ -27,9 +27,9 @@ public:
 protected:
     typedef l_node<value_type> _node_t;
     typedef _node_t *_hdle_t; // node handle type
-    _hdle_t _guard;
-    size_type _size;
-    allocator_type _alloc;
+    _hdle_t _guard = nullptr;
+    size_type _size = 0;
+    allocator_type _alloc();
 
     _hdle_t head() {
         return _guard;
@@ -80,9 +80,6 @@ protected:
         head()->_pre = nullptr;
         link(head(), tail());
         tail()->_suc = nullptr;
-        //TODO:
-        head()->_data = 10086;
-        tail()->_data = 10087;
     };
 
     template<class... Args>
@@ -100,20 +97,38 @@ protected:
         node = nullptr;
     }
 
+    void clone(const list &other) {
+        this->insert(end(), other.begin(), other.end());
+    }
+
+    void possess(list &&other) {
+        if (other._size > 0) {
+            _hdle_t bgn = other.head()->_suc;
+            _hdle_t end = other.tail();
+            size_type n = other._size;
+            other.detach_range(bgn, end, other._size);
+            this->attach_range_to(tail(), bgn, end, other._size);
+        }
+    }
+
 public:
     // construct/copy/destroy:
-    explicit list(const Alloc &a = Alloc()): _alloc(a), _size(0) {
+    list() {
         initialize();
     }
 
-    explicit list(size_type n): _alloc(), _size(0) {
+    explicit list(const Alloc &a = Alloc()): _alloc(a) {
+        initialize();
+    }
+
+    explicit list(size_type n) {
         initialize();
         for (size_type i = 0; i < n; ++i)
             this->emplace_back();
     }
 
     list(size_type n, const value_type &value, const Alloc &a = Alloc())
-        : _alloc(a), _size(0) {
+        : _alloc(a) {
         initialize();
         this->insert(end(), n, value);
     }
@@ -122,40 +137,31 @@ public:
              class = enable_if_t<is_base_of<
                  input_iterator_tag,
                  typename iterator_traits<InputIter>::iterator_category>::value>>
-    list(InputIter first, InputIter last, const Alloc &a = Alloc())
-        : _alloc(a), _size(0) {
+    list(InputIter first, InputIter last, const Alloc &a = Alloc()): _alloc(a) {
         initialize();
         this->insert(end(), first, last);
     }
 
     list(const list &other)
-        : list(other.begin(), other.end(),
-               _alloc_traits::select_on_container_copy_construction(other._alloc)) {
+        : _alloc(_alloc_traits::select_on_container_copy_construction(
+              other._alloc)) {
+        initialize();
+        this->clone(other);
     }
 
-    list(list &&other): _alloc(ala::move(other._alloc)), _size(other._size) {
+    list(list &&other): _alloc(ala::move(other._alloc)) {
         initialize();
-        head()->_suc = other.head()._suc;
-        tail()->_pre = other.tail()._pre;
-        if (head()->_suc)
-            head()->_suc->_pre = head();
-        if (tail()->_pre)
-            tail()->_pre->_suc = tail();
-        link(other.head()->_suc, other.head());
+        this->possess(other);
     }
 
-    list(const list &other, const Alloc &a)
-        : list(other.begin(), other.end(), a) {}
-
-    list(list &&other, const Alloc &a): _alloc(a), _size(other._size) {
+    list(const list &other, const Alloc &a): _alloc(a) {
         initialize();
-        head()->_suc = other.head()._suc;
-        tail()->_pre = other.tail()._pre;
-        if (head()->_suc)
-            head()->_suc->_pre = head();
-        if (tail()->_pre)
-            tail()->_pre->_suc = tail();
-        link(other.head()->_suc, other.head());
+        this->clone(other);
+    }
+
+    list(list &&other, const Alloc &a): _alloc(a) {
+        initialize();
+        this->possess(other);
     }
 
     list(initializer_list<value_type> il, const Alloc &a = Alloc())
@@ -168,56 +174,42 @@ public:
 protected:
     template<bool Dummy = _alloc_traits::propagate_on_container_copy_assignment::value>
     enable_if_t<Dummy> copy_helper(const list &other) {
-        if (_alloc == other._alloc) {
+        if (_alloc != other._alloc)
             clear();
-            _alloc = other._alloc;
-        } else {
-            _alloc = other._alloc;
-            clear();
-        }
+        _alloc = other._alloc;
+        this->assign(other.begin(), other.end());
     }
 
     template<bool Dummy = _alloc_traits::propagate_on_container_copy_assignment::value>
     enable_if_t<!Dummy> copy_helper(const list &other) {
-        clear();
-    }
-
-    void transfer(list &other) {
-        clear();
-        _hdle_t bgn = other.head()->_suc;
-        _hdle_t end = other.tail()->_pre;
-        link(head(), bgn);
-        link(end, tail());
-        _size = other._size;
-        link(other.head(), other.tail());
-        other._size = 0;
+        this->assign(other.begin(), other.end());
     }
 
     template<bool Dummy = _alloc_traits::propagate_on_container_move_assignment::value>
-    enable_if_t<Dummy> move_helper(list &&other) {
+    enable_if_t<Dummy> move_helper(list &&other) noexcept {
+        clear();
         _alloc = ala::move(other._alloc);
-        transfer(other);
+        this->possess(other);
     }
 
     template<bool Dummy = _alloc_traits::propagate_on_container_move_assignment::value>
-    enable_if_t<!Dummy> move_helper(list &&other) {
-        if (_alloc == other._alloc)
-            transfer(other);
-        else {
+    enable_if_t<!Dummy>
+    move_helper(list &&other) noexcept(_alloc_traits::is_always_equal::value) {
+        if (_alloc == other._alloc) {
             clear();
-            this->insert(end(), other.begin(), other.end());
-            return *this;
+            this->possess(ala::move(other));
+        } else {
+            this->assign(other.begin(), other.end());
         }
     }
 
 public:
     list &operator=(const list &other) {
         copy_helper(other);
-        this->insert(end(), other.begin(), other.end());
         return *this;
     }
 
-    list &operator=(list &&other) {
+    list &operator=(list &&other) noexcept(_alloc_traits::is_always_equal::value) {
         move_helper(ala::move(other));
         return *this;
     }
