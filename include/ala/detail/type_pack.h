@@ -5,6 +5,13 @@
 
 namespace ala {
 
+#if defined(_ALA_CLANG) && ALA_HAS_BUILTIN(__type_pack_element)
+
+template<size_t I, typename... Ts>
+using type_pack_element_t = __type_pack_element<I, Ts...>;
+
+#else
+
 template<size_t I, typename T>
 struct _type_pack_element_base {
     using type = T;
@@ -25,6 +32,8 @@ template<size_t I, typename... Ts>
 using type_pack_element_t = typename decltype(_type_pack_element_cast<I>(
     _type_pack_element_index<index_sequence_for<Ts...>, Ts...>{}))::type;
 
+#endif
+
 template<typename Void, size_t I, typename... Ts>
 struct _type_pack_element_helper {};
 
@@ -35,6 +44,7 @@ struct _type_pack_element_helper<void_t<type_pack_element_t<I, Ts...>>, I, Ts...
 
 template<size_t I, typename... Ts>
 struct type_pack_element : _type_pack_element_helper<void, I, Ts...> {};
+
 
 } // namespace ala
 

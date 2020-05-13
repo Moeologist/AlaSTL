@@ -1,7 +1,7 @@
 #ifndef _ALA_DETAIL_PAIR_H
 #define _ALA_DETAIL_PAIR_H
 
-#include <ala/detail/integer_sequence.h>
+#include <ala/detail/type_pack.h>
 #include <ala/detail/tuple_operator.h>
 
 namespace ala {
@@ -207,49 +207,40 @@ swap(pair<T1, T2> &lhs, pair<T1, T2> &rhs) noexcept(
     lhs.swap(rhs);
 }
 
-template<size_t I, typename T1, typename T2>
-struct tuple_element<I, pair<T1, T2>> {
-    static_assert(I < 2, "pair has only 2 elements!");
-};
+template<class T1, class T2>
+struct tuple_size<pair<T1, T2>>: integral_constant<size_t, 2> {};
 
-template<typename T1, typename T2>
-struct tuple_element<0, pair<T1, T2>> {
-    using type = T1;
-};
-
-template<typename T1, typename T2>
-struct tuple_element<1, pair<T1, T2>> {
-    using type = T2;
-};
+template<size_t I, class T1, class T2>
+struct tuple_element<I, pair<T1, T2>>: type_pack_element<I, T1, T2> {};
 
 template<size_t I, class T1, class T2>
 constexpr tuple_element_t<I, pair<T1, T2>> &get(pair<T1, T2> &p) noexcept {
     static_assert(I == 0 || I == 1, "out of range");
-    return static_cast<tuple_element_t<I, pair<T1, T2>> &>(I == 0 ? p.first :
-                                                                    p.second);
+    typedef tuple_element_t<I, pair<T1, T2>> type;
+    return const_cast<type &>(I == 0 ? p.first : p.second);
 }
 
 template<size_t I, class T1, class T2>
 constexpr const tuple_element_t<I, pair<T1, T2>> &
 get(const pair<T1, T2> &p) noexcept {
     static_assert(I == 0 || I == 1, "out of range");
-    return static_cast<const tuple_element_t<I, pair<T1, T2>> &>(
-        I == 0 ? p.first : p.second);
+    typedef tuple_element_t<I, pair<T1, T2>> type;
+    return const_cast<const type &>(I == 0 ? p.first : p.second);
 }
 
 template<size_t I, class T1, class T2>
 constexpr tuple_element_t<I, pair<T1, T2>> &&get(pair<T1, T2> &&p) noexcept {
     static_assert(I == 0 || I == 1, "out of range");
-    return static_cast<tuple_element_t<I, pair<T1, T2>> &&>(I == 0 ? p.first :
-                                                                     p.second);
+    typedef tuple_element_t<I, pair<T1, T2>> type;
+    return const_cast<type &&>(I == 0 ? p.first : p.second);
 }
 
 template<size_t I, class T1, class T2>
 constexpr const tuple_element_t<I, pair<T1, T2>> &&
 get(const pair<T1, T2> &&p) noexcept {
     static_assert(I == 0 || I == 1, "out of range");
-    return static_cast<const tuple_element_t<I, pair<T1, T2>> &&>(
-        I == 0 ? p.first : p.second);
+    typedef tuple_element_t<I, pair<T1, T2>> type;
+    return const_cast<const type &&>(I == 0 ? p.first : p.second);
 }
 
 template<class T, class U>
@@ -302,7 +293,7 @@ constexpr const T &&get(const pair<U, type_identity_t<T>> &&p) noexcept {
 
 #if _ALA_ENABLE_DEDUCTION_GUIDES
 template<typename T1, typename T2>
-pair(T1, T2)->pair<T1, T2>;
+pair(T1, T2) -> pair<T1, T2>;
 #endif
 
 } // namespace ala
