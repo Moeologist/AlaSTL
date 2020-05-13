@@ -13,13 +13,13 @@ struct l_node {
 };
 
 template<class Data>
-constexpr void next_node(l_node<Data> *&_ptr) {
-    _ptr = _ptr->_suc;
+constexpr void next_node(l_node<Data> *_ptr) {
+    return _ptr->_suc;
 }
 
 template<class Data>
-constexpr void prev_node(l_node<Data> *&_ptr) {
-    _ptr = _ptr->_pre;
+constexpr void prev_node(l_node<Data> *_ptr) {
+    return _ptr->_pre;
 }
 
 template<class Ptr, bool IsConst = false>
@@ -61,7 +61,7 @@ struct l_iterator {
     }
 
     constexpr l_iterator &operator++() {
-        next_node(_ptr);
+        _ptr = next_node(_ptr);
         return *this;
     }
 
@@ -72,7 +72,7 @@ struct l_iterator {
     }
 
     constexpr l_iterator &operator--() {
-        prev_node(_ptr);
+        _ptr = prev_node(_ptr);
         return *this;
     }
 

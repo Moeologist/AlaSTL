@@ -57,12 +57,12 @@ constexpr rb_node<Data> *rght_leaf(rb_node<Data> *node) {
 }
 
 template<class Data>
-constexpr void next_node(rb_node<Data> *&_ptr) {
-    if (_ptr == nullptr || (_ptr->_is_nil && _ptr->_nflag))
-        return;
+constexpr rb_node<Data> *next_node(rb_node<Data> *_ptr) {
+    if (_ptr->_is_nil)
+        return _ptr->_nflag ? _ptr : _ptr->_parent;
     else if (_ptr->_rght != nullptr)
-        _ptr = left_leaf(_ptr->_rght);
-    else
+        return left_leaf(_ptr->_rght);
+    else {
         while (true) {
             if (_ptr->_parent->_left == _ptr) {
                 _ptr = _ptr->_parent;
@@ -70,14 +70,16 @@ constexpr void next_node(rb_node<Data> *&_ptr) {
             }
             _ptr = _ptr->_parent;
         }
+        return _ptr;
+    }
 }
 
 template<class Data>
-constexpr void prev_node(rb_node<Data> *&_ptr) {
-    if (_ptr == nullptr || (_ptr->_is_nil && !_ptr->_nflag))
-        return;
+constexpr rb_node<Data> *prev_node(rb_node<Data> *_ptr) {
+    if (_ptr->_is_nil)
+        return !_ptr->_nflag ? _ptr : _ptr->_parent;
     else if (_ptr->_left != nullptr)
-        _ptr = rght_leaf(_ptr->_left);
+        return rght_leaf(_ptr->_left);
     else {
         while (true) {
             if (_ptr->_parent->_rght == _ptr) {
@@ -86,6 +88,7 @@ constexpr void prev_node(rb_node<Data> *&_ptr) {
             }
             _ptr = _ptr->_parent;
         }
+        return _ptr;
     }
 }
 
@@ -128,7 +131,7 @@ struct rb_iterator {
     }
 
     constexpr rb_iterator &operator++() {
-        next_node(_ptr);
+        _ptr = next_node(_ptr);
         return *this;
     }
 
@@ -139,7 +142,7 @@ struct rb_iterator {
     }
 
     constexpr rb_iterator &operator--() {
-        prev_node(_ptr);
+        _ptr = prev_node(_ptr);
         return *this;
     }
 
@@ -181,11 +184,11 @@ protected:
     allocator_type _alloc;
     value_compare _comp;
 
-    _hdle_t _left_nil() const noexcept {
+    _hdle_t left_nil() const noexcept {
         return _guard;
     }
 
-    _hdle_t _rght_nil() const noexcept {
+    _hdle_t rght_nil() const noexcept {
         return _guard + 1;
     }
 
@@ -209,14 +212,31 @@ protected:
 
     template<typename Dummy = value_compare,
              typename = enable_if_t<_has_comp<Dummy>::value>>
-    auto _key_comp() const noexcept -> decltype(_comp.comp) {
+    auto key_comp() const noexcept -> decltype(_comp.comp) {
         return _comp.comp;
     }
 
     template<typename Dummy = value_compare,
              typename = enable_if_t<!_has_comp<Dummy>::value>>
-    const value_compare &_key_comp() const noexcept {
+    const value_compare &key_comp() const noexcept {
         return _comp;
+    }
+
+    void copy_root(const rb_tree &other) {
+        assert(_root == nullptr);
+        _root = copy_tree(other._root);
+        _size = other._size;
+        fix_nil();
+    }
+
+    void transfer_root(rb_tree &&other) {
+        assert(_root == nullptr);
+        _root = other._root;
+        _size = other._size;
+        fix_nil();
+        other._root = nullptr;
+        other._size = 0;
+        other.fix_nil();
     }
 
 public:
@@ -226,52 +246,46 @@ public:
         : _comp(cmp), _alloc(a), _size(0), _root(nullptr) {
         initialize();
     }
-    // TODO: clean
+
     rb_tree(const rb_tree &other)
         : _comp(other._comp),
           _alloc(_alloc_traits::select_on_container_copy_construction(
               other._alloc)),
-          _size(other._size) {
+          _size(0), _root(nullptr) {
         initialize();
-        _root = copy_tree(other._root);
-        fix_nil();
+        copy_root(other);
     }
 
     rb_tree(rb_tree &&other)
         : _comp(ala::move(other._comp)), _alloc(ala::move(other._alloc)),
-          _root(other._root), _size(other._size) {
+          _size(0), _root(nullptr) {
         initialize();
-        fix_nil();
-        other._root = nullptr;
-        other._size = 0;
-        other.fix_nil();
+        transfer_root(ala::move(other));
     }
 
     rb_tree(const rb_tree &other, const allocator_type &a)
-        : _comp(other._comp), _alloc(a), _size(other._size) {
+        : _comp(other._comp), _alloc(a), _size(0), _root(nullptr) {
         initialize();
-        _root = copy_tree(other._root);
-        fix_nil();
+        copy_root(other);
     }
 
     rb_tree(rb_tree &&other, const allocator_type &a)
-        : _comp(other._comp), _alloc(a), _root(other._root), _size(other._size) {
+        : _comp(other._comp), _alloc(a), _size(0), _root(nullptr) {
         initialize();
-        fix_nil();
-        other._root = nullptr;
-        other._size = 0;
-        other.fix_nil();
+        if (_alloc == other._alloc)
+            transfer_root(ala::move(other));
+        else
+            copy_root(other);
     }
 
     ~rb_tree() {
         destruct_tree(_root);
-        _alloc_traits::template deallocate_object<_node_t>(_alloc, _left_nil(),
-                                                           2);
+        _alloc_traits::template deallocate_object<_node_t>(_alloc, left_nil(), 2);
     }
 
 protected:
     template<bool Dummy = _alloc_traits::propagate_on_container_copy_assignment::value>
-    enable_if_t<Dummy> _copy_helper(const rb_tree &other) {
+    enable_if_t<Dummy> copy_helper(const rb_tree &other) {
         if (_alloc == other._alloc) {
             destruct_tree(_root);
             _alloc = other._alloc;
@@ -279,61 +293,46 @@ protected:
             _alloc = other._alloc;
             destruct_tree(_root);
         }
+        copy_root(other);
     }
 
     template<bool Dummy = _alloc_traits::propagate_on_container_copy_assignment::value>
-    enable_if_t<!Dummy> _copy_helper(const rb_tree &other) {
+    enable_if_t<!Dummy> copy_helper(const rb_tree &other) {
         destruct_tree(_root);
-    }
-
-    void _transfer_root(rb_tree &other) {
-        destruct_tree(_root);
-        _root = other._root;
-        _size = other._size;
-        fix_nil();
-        other._root = nullptr;
-        other._size = 0;
-        other.fix_nil();
+        copy_root(other);
     }
 
     template<bool Dummy = _alloc_traits::propagate_on_container_move_assignment::value>
-    enable_if_t<Dummy> _move_helper(rb_tree &&other) {
+    enable_if_t<Dummy> move_helper(rb_tree &&other) {
         _alloc = ala::move(other._alloc);
-        _transfer_root(other);
+        transfer_root(ala::move(other));
     }
 
     template<bool Dummy = _alloc_traits::propagate_on_container_move_assignment::value>
-    enable_if_t<!Dummy> _move_helper(rb_tree &&other) {
+    enable_if_t<!Dummy> move_helper(rb_tree &&other) {
         if (_alloc == other._alloc)
-            _transfer_root(other);
-        else {
-            destruct_tree(_root);
-            _root = copy_tree(other._root);
-            fix_nil();
-            _size = other._size;
-        }
+            transfer_root(ala::move(other));
+        else
+            copy_root(other);
     }
 
 public:
     rb_tree &operator=(const rb_tree &other) {
-        _copy_helper(other);
-        _root = copy_tree(other._root);
-        fix_nil();
-        _size = other._size;
+        copy_helper(other);
         return *this;
     }
 
     rb_tree &operator=(rb_tree &&other) {
-        _move_helper(ala::move(other));
+        move_helper(ala::move(other));
         return *this;
     }
 
     _hdle_t begin() const noexcept {
-        return _left_nil()->_parent;
+        return left_nil()->_parent;
     }
 
     _hdle_t end() const noexcept {
-        return _rght_nil();
+        return rght_nil();
     }
 
     void clear() {
@@ -366,13 +365,13 @@ public:
     }
 
     template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
-    enable_if_t<Dummy> _swap_helper(rb_tree other) {
+    enable_if_t<Dummy> swap_helper(rb_tree other) {
         ala::swap(_alloc, other._alloc);
     }
 
     template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
-    enable_if_t<!Dummy> _swap_helper(rb_tree &other) {
-        assert(get_allocator() == other.get_allocator());
+    enable_if_t<!Dummy> swap_helper(rb_tree &other) {
+        assert(_alloc == other._alloc);
     }
 
     void
@@ -382,24 +381,24 @@ public:
         ala::swap(_root, other._root);
         ala::swap(_size, other._size);
         ala::swap(_guard, other._guard);
-        _swap_helper(other);
+        swap_helper(other);
     }
 
     template<class RBTree>
     void transfer(RBTree &other, _hdle_t p) {
-        assert(get_allocator == other.get_allocator());
-        pair<_hdle_t, bool> pr = _locate(nullptr, p);
+        assert(_alloc == other._alloc);
+        pair<_hdle_t, bool> pr = locate(nullptr, p);
         if (!pr.second)
             attach_to(pr.first, other.detach(p));
     }
 
     template<class K, class F>
     auto traverse(const K &key, _hdle_t current, F f) const {
-        const auto &comp = _key_comp();
+        const auto &comp = key_comp();
         while (!is_nil(current))
-            if (comp(key, _key(current->_data)))
+            if (comp(key, this->_key(current->_data)))
                 current = current->_left;
-            else if (comp(_key(current->_data), key))
+            else if (comp(this->_key(current->_data), key))
                 current = current->_rght;
             else
                 return f(true, current);
@@ -451,7 +450,7 @@ public:
     pair<_hdle_t, bool> insert(_hdle_t hint, _hdle_t p) {
         if (is_nil(p))
             return pair<_hdle_t, bool>(end(), false);
-        pair<_hdle_t, bool> pr = _locate(hint, _key(p->_data));
+        pair<_hdle_t, bool> pr = locate(hint, this->_key(p->_data));
         if (!pr.second)
             attach_to(pr.first, p);
         return pair<_hdle_t, bool>(p, !pr.second);
@@ -460,7 +459,7 @@ public:
     template<class... Args>
     pair<_hdle_t, bool> emplace(_hdle_t hint, Args &&... args) {
         _hdle_t node = construct_node(ala::forward<Args>(args)...);
-        pair<_hdle_t, bool> pr = _locate(hint, _key(node->_data));
+        pair<_hdle_t, bool> pr = locate(hint, this->_key(node->_data));
         if (is_uniq && pr.second) {
             destruct_node(node);
             return pair<_hdle_t, bool>(pr.first, false);
@@ -472,7 +471,7 @@ public:
 
     template<class K, class... Args>
     pair<_hdle_t, bool> emplace_k(const K &k, _hdle_t hint, Args &&... args) {
-        pair<_hdle_t, bool> pr = _locate(hint, k);
+        pair<_hdle_t, bool> pr = locate(hint, k);
         if (is_uniq && pr.second) {
             return pair<_hdle_t, bool>(pr.first, false);
         } else {
@@ -488,17 +487,17 @@ public:
     }
 
     template<class K>
-    pair<_hdle_t, bool> _locate(_hdle_t hint, const K &k) {
-        const auto &comp = _key_comp();
+    pair<_hdle_t, bool> locate(_hdle_t hint, const K &k) {
+        const auto &comp = key_comp();
         _hdle_t guard = _root, current = nullptr;
         bool found = false;
-        if (!is_nil(hint) && !comp(_key(hint->_data), k))
+        if (!is_nil(hint) && !comp(this->_key(hint->_data), k))
             guard = hint;
         while (!is_nil(guard)) {
             current = guard;
-            if (comp(k, _key(guard->_data)))
+            if (comp(k, this->_key(guard->_data)))
                 guard = guard->_left;
-            else if (comp(_key(guard->_data), k))
+            else if (comp(this->_key(guard->_data), k))
                 guard = guard->_rght;
             else {
                 if (is_uniq) {
@@ -522,14 +521,14 @@ protected:
         return node;
     }
 
-    void destruct_node(_hdle_t &node) {
+    void destruct_node(_hdle_t node) {
         if (!node->_is_nil)
             _alloc_traits::destroy(_alloc, ala::addressof(node->_data));
         _alloc_traits::template deallocate_object<_node_t>(_alloc, node, 1);
         node = nullptr;
     }
 
-    void destruct_tree(_hdle_t &node) {
+    void destruct_tree(_hdle_t node) {
         if (is_nil(node))
             return;
         destruct_tree(node->_left);
@@ -550,18 +549,18 @@ protected:
 
     void initialize() {
         _guard = _alloc_traits::template allocate_object<_node_t>(_alloc, 2);
-        _left_nil()->_is_nil = true;
-        _left_nil()->_parent = _rght_nil();
-        _left_nil()->_color = ALA_BLACK;
-        _left_nil()->_nflag = ALA_LEFT;
-        _left_nil()->_left = nullptr;
-        _left_nil()->_rght = nullptr;
-        _rght_nil()->_is_nil = true;
-        _rght_nil()->_parent = _left_nil();
-        _rght_nil()->_color = ALA_BLACK;
-        _rght_nil()->_nflag = ALA_RGHT;
-        _rght_nil()->_left = nullptr;
-        _rght_nil()->_rght = nullptr;
+        left_nil()->_is_nil = true;
+        left_nil()->_parent = rght_nil();
+        left_nil()->_color = ALA_BLACK;
+        left_nil()->_nflag = ALA_LEFT;
+        left_nil()->_left = nullptr;
+        left_nil()->_rght = nullptr;
+        rght_nil()->_is_nil = true;
+        rght_nil()->_parent = left_nil();
+        rght_nil()->_color = ALA_BLACK;
+        rght_nil()->_nflag = ALA_RGHT;
+        rght_nil()->_left = nullptr;
+        rght_nil()->_rght = nullptr;
     }
 
     // rotate
@@ -624,15 +623,15 @@ protected:
 
     void fix_nil() noexcept {
         if (_root == nullptr) {
-            _left_nil()->_parent = _rght_nil();
-            _rght_nil()->_parent = _left_nil();
+            left_nil()->_parent = rght_nil();
+            rght_nil()->_parent = left_nil();
         } else {
             _hdle_t lleaf = left_leaf(_root);
             _hdle_t rleaf = rght_leaf(_root);
-            lleaf->_left = _left_nil();
-            rleaf->_rght = _rght_nil();
-            _left_nil()->_parent = lleaf;
-            _rght_nil()->_parent = rleaf;
+            lleaf->_left = left_nil();
+            rleaf->_rght = rght_nil();
+            left_nil()->_parent = lleaf;
+            rght_nil()->_parent = rleaf;
         }
     }
 
@@ -642,19 +641,19 @@ protected:
         p->_parent = pos;
         if (pos == nullptr) { // empty tree
             _root = p;
-            _left_nil()->_parent = _rght_nil()->_parent = p;
-            p->_left = _left_nil();
-            p->_rght = _rght_nil();
+            left_nil()->_parent = rght_nil()->_parent = p;
+            p->_left = left_nil();
+            p->_rght = rght_nil();
         } else if (!_comp(pos->_data, p->_data)) {
-            if (pos->_left == _left_nil()) { // fix nil
-                p->_left = _left_nil();
-                _left_nil()->_parent = p;
+            if (pos->_left == left_nil()) { // fix nil
+                p->_left = left_nil();
+                left_nil()->_parent = p;
             }
             pos->_left = p;
         } else {
-            if (pos->_rght == _rght_nil()) { // fix nil
-                p->_rght = _rght_nil();
-                _rght_nil()->_parent = p;
+            if (pos->_rght == rght_nil()) { // fix nil
+                p->_rght = rght_nil();
+                rght_nil()->_parent = p;
             }
             pos->_rght = p;
         }
@@ -710,7 +709,7 @@ protected:
         _root->_color = ALA_BLACK;
     }
 
-    void detach(_hdle_t current) noexcept {
+    _hdle_t detach(_hdle_t current) noexcept {
         _hdle_t child, parent, subs, fix = nullptr;
         bool color;
         if (is_nil(current->_left)) {
@@ -828,18 +827,18 @@ protected:
     }
 
     void fix_nil_detach(_hdle_t current, _hdle_t subs) noexcept {
-        if (current->_left == _left_nil()) {
-            if (current->_rght == _rght_nil()) {
-                _left_nil()->_parent = _rght_nil();
-                _rght_nil()->_parent = _left_nil();
+        if (current->_left == left_nil()) {
+            if (current->_rght == rght_nil()) {
+                left_nil()->_parent = rght_nil();
+                rght_nil()->_parent = left_nil();
                 _root = nullptr;
             } else {
-                subs->_left = _left_nil();
-                _left_nil()->_parent = subs;
+                subs->_left = left_nil();
+                left_nil()->_parent = subs;
             }
-        } else if (current->_rght == _rght_nil()) {
-            subs->_rght = _rght_nil();
-            _rght_nil()->_parent = subs;
+        } else if (current->_rght == rght_nil()) {
+            subs->_rght = rght_nil();
+            rght_nil()->_parent = subs;
         }
     }
 }; // namespace ala

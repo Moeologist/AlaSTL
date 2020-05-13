@@ -88,7 +88,8 @@ public:
     typedef key_compare value_compare;
 #endif
 protected:
-    typedef rb_tree<value_type, value_compare, allocator_type, (bool)_ALA_IS_UNIQ> tree_type;
+    typedef rb_tree<value_type, value_compare, allocator_type, (bool)_ALA_IS_UNIQ>
+        tree_type;
     tree_type tree;
 
 #if _ALA_IS_UNIQ
@@ -410,7 +411,7 @@ public:
     void merge(CONTAINER<key_type, mapped_type, Comp1, allocator_type> &source) {
         for (auto i = source.begin(); i != source.end();) {
             auto tmp = i++;
-            tree.transfer(source.tree, tmp._ptr);
+            tree.transfer_node(source.tree, tmp._ptr);
         }
     }
 
@@ -423,7 +424,7 @@ public:
     void merge(CONTAINER1<key_type, mapped_type, Comp1, allocator_type> &source) {
         for (auto i = source.begin(); i != source.end();) {
             auto tmp = i++;
-            tree.transfer(source.tree, tmp._ptr);
+            tree.transfer_node(source.tree, tmp._ptr);
         }
     }
 
@@ -436,7 +437,7 @@ public:
     void merge(CONTAINER<value_type, Comp1, allocator_type> &source) {
         for (auto i = source.begin(); i != source.end();) {
             auto tmp = i++;
-            tree.transfer(source.tree, tmp._ptr);
+            tree.transfer_node(source.tree, tmp._ptr);
         }
     }
 
@@ -449,7 +450,7 @@ public:
     void merge(CONTAINER1<value_type, Comp1, allocator_type> &source) {
         for (auto i = source.begin(); i != source.end();) {
             auto tmp = i++;
-            tree.transfer(source.tree, tmp._ptr);
+            tree.transfer_node(source.tree, tmp._ptr);
         }
     }
 
