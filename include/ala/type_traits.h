@@ -3,9 +3,9 @@
 #define _ALA_TYPE_TRAITS_H
 
 #ifdef _ALA_MSVC
-#pragma warning(push)
-#pragma warning(disable: 4180)
-#pragma warning(disable: 4197)
+    #pragma warning(push)
+    #pragma warning(disable : 4180)
+    #pragma warning(disable : 4197)
 #endif
 
 #include <ala/detail/traits_declare.h>
@@ -709,10 +709,10 @@ template<bool B, typename T, typename F> struct conditional      { typedef T typ
 template<typename T, typename F> struct conditional<false, T, F> { typedef F type; };
 
 template<typename T1, typename T2>
-using _cm_tp_helper_t = decay_t<decltype(false ? declval<T1>(): declval<T2>())>;
+using _cond_tp_t = decay_t<decltype(false ? declval<T1>(): declval<T2>())>;
 
 template<typename T1, typename T2>
-using _cm_ref_helper_t = decltype(false ? declval<T1 (&)()>()(): declval<T2 (&)()>()());
+using _cond_ref_t = decltype(false ? declval<T1 (&)()>()(): declval<T2 (&)()>()());
 
 template<typename T>
 using _clref_t = add_lvalue_reference_t<const remove_reference_t<T>>;
@@ -721,26 +721,28 @@ template<typename T1, typename T2, typename = void>
 struct _common_type_2_impl {};
 
 template<typename T1, typename T2>
-struct _common_type_2_impl<T1, T2, void_t<_cm_ref_helper_t<_clref_t<T1>, _clref_t<T2>>>>
-{ typedef decay_t<_cm_ref_helper_t<_clref_t<T1>, _clref_t<T2>>> type; };
+struct _common_type_2_impl<T1, T2, void_t<_cond_ref_t<_clref_t<T1>, _clref_t<T2>>>>
+{ typedef decay_t<_cond_ref_t<_clref_t<T1>, _clref_t<T2>>> type; };
 
 template<typename T1, typename T2, typename = void>
 struct _common_type_2_sfinae: _common_type_2_impl<T1, T2> {};
 
 template<typename T1, typename T2>
-struct _common_type_2_sfinae<T1, T2, void_t<_cm_tp_helper_t<T1, T2>>>
-{ typedef _cm_tp_helper_t<T1, T2> type; };
+struct _common_type_2_sfinae<T1, T2, void_t<_cond_tp_t<T1, T2>>>
+{ typedef _cond_tp_t<T1, T2> type; };
 
 template<typename T1, typename T2>
-struct _common_type_2: conditional_t<is_same<T1, decay_t<T1>>::value && is_same<T2, decay_t<T2>>::value,
-                                      _common_type_2_sfinae<T1, T2>,
-                                      common_type<decay_t<T1>, decay_t<T2>>> {};
+struct _common_type_2: conditional_t<is_same<T1, decay_t<T1>>::value &&
+                                     is_same<T2, decay_t<T2>>::value,
+                                     _common_type_2_sfinae<T1, T2>,
+                                     common_type<decay_t<T1>, decay_t<T2>>> {};
 
 template<typename, typename T1, typename T2, typename... Ts>
 struct _common_type_n_sfinae {};
 
 template<typename T1, typename T2, typename... Ts>
-struct _common_type_n_sfinae<void_t<common_type_t<T1, T2>>, T1, T2, Ts...>: common_type<common_type_t<T1, T2>, Ts...> {};
+struct _common_type_n_sfinae<void_t<common_type_t<T1, T2>>, T1, T2, Ts...>
+    : common_type<common_type_t<T1, T2>, Ts...> {};
 
 template<typename T1, typename T2, typename... Ts>
 struct _common_type_n: _common_type_n_sfinae<void, T1, T2, Ts...> {};
@@ -759,11 +761,11 @@ template<typename T> struct underlying_type: _underlying_type_helper<T> {};
 
 template<bool Noexcept, typename Base, typename T, typename Derived, typename... Args>
 auto _invoke_result_test(T Base::*pmf, Derived &&ref, Args &&... args) -> enable_if_t<
-        is_function<T>::value &&
-        !is_reference_wrapper<decay_t<Derived>>::value &&
-        is_base_of<Base, decay_t<Derived>>::value,
-        conditional_t<Noexcept,bool_constant<noexcept((ala::forward<Derived>(ref).*pmf)(ala::forward<Args>(args)...))>,
-                                             decltype((ala::forward<Derived>(ref).*pmf)(ala::forward<Args>(args)...))>>;
+    is_function<T>::value &&
+    !is_reference_wrapper<decay_t<Derived>>::value &&
+    is_base_of<Base, decay_t<Derived>>::value,
+    conditional_t<Noexcept,bool_constant<noexcept((ala::forward<Derived>(ref).*pmf)(ala::forward<Args>(args)...))>,
+                                            decltype((ala::forward<Derived>(ref).*pmf)(ala::forward<Args>(args)...))>>;
 
 template<bool Noexcept, typename Base, typename T, typename Ptr, typename... Args>
 auto _invoke_result_test(T Base::*pmf, Ptr &&ptr, Args &&... args) -> enable_if_t<
@@ -832,7 +834,7 @@ struct _is_invocable_impl: false_type {};
 
 template<typename Result, typename Ret>
 struct _is_invocable_impl<Result, Ret, void_t<typename Result::type>>: _or_<is_void<Ret>,
-                                                                             is_convertible<typename Result::type, Ret>> {};
+                                                                            is_convertible<typename Result::type, Ret>> {};
 
 template<typename Fn, typename... Args>
 struct is_invocable: _is_invocable_impl<invoke_result<Fn, Args...>, void> {};
@@ -924,71 +926,89 @@ using _copy_cv_t = typename _get_cv<From>::template rebind<To>;
 template<typename T>
 using _rm_ref_t = remove_reference_t<T>;
 
-template<typename T1, typename T2, typename Y1 = _rm_ref_t<T1>, typename Y2 = _rm_ref_t<T2>, typename = void>
-struct _simple_common_lref {};
+template<typename T1, typename T2,
+         typename Y1 = _rm_ref_t<T1>, typename Y2 = _rm_ref_t<T2>,
+         typename = void>
+struct _sc_lref {};
 
 template<typename T1, typename T2, typename Y1, typename Y2>
-struct _simple_common_lref<T1, T2, Y1, Y2, void_t<_cm_ref_helper_t<_copy_cv_t<Y1, Y2>&, _copy_cv_t<Y2, Y1>&>>>
-{ typedef _cm_ref_helper_t<_copy_cv_t<Y1, Y2>&, _copy_cv_t<Y2, Y1>&> type; };
+struct _sc_lref<T1, T2, Y1, Y2, 
+                           void_t<_cond_ref_t<_copy_cv_t<Y1, Y2>&, _copy_cv_t<Y2, Y1>&>>>
+{ typedef _cond_ref_t<_copy_cv_t<Y1, Y2>&, copy_cv_t<Y2, Y1>&> type; };
 
-template<typename T1, typename T2, typename C, bool = is_convertible<T1, C>::value && is_convertible<T2, C>::value>
-struct _simple_common_rref_helper { typedef C type; };
+template<typename T1, typename T2, typename C,
+          bool = is_convertible<T1, C>::value &&
+                 is_convertible<T2, C>::value>
+struct _sc_rref_helper {};
 
 template<typename T1, typename T2, typename C>
-struct _simple_common_rref_helper<T1, T2, C, true> { typedef C type; };
+struct _sc_rref_helper<T1, T2, C, true> { typedef C type; };
 
-template<typename T1, typename T2, typename Y1 = _rm_ref_t<T1>, typename Y2 = _rm_ref_t<T2>, typename = void>
-struct _simple_common_rref {};
+template<typename T1, typename T2,
+         typename Y1 = _rm_ref_t<T1>, typename Y2 = _rm_ref_t<T2>,
+         typename = void>
+struct _sc_rref {};
 
 template<typename T1, typename T2, typename Y1, typename Y2>
-struct _simple_common_rref<T1, T2, Y1, Y2, void_t<typename _simple_common_lref<Y1&, Y2&>::type>>
-    : _simple_common_rref_helper<T1, T2, remove_reference_t<typename _simple_common_lref<Y1&, Y2&>::type>&&> {};
+struct _sc_rref<T1, T2, Y1, Y2, void_t<typename _sc_lref<Y1&, Y2&>::type>>
+    : _sc_rref_helper<T1, T2, _rm_ref_t<typename _sc_lref<Y1&, Y2&>::type>&&> {};
 
-template<typename T1, typename T2, typename C, bool = is_convertible<T1, C>::value && is_convertible<T2, C>::value>
-struct _simple_common_rlref_helper {};
+template<typename T1, typename T2, typename C,
+         bool = is_convertible<T1, C>::value &&
+                is_convertible<T2, C>::value>
+struct _sc_rlref_helper {};
 
 template<typename T1, typename T2, typename C>
-struct _simple_common_rlref_helper<T1, T2, C, true> { typedef C type; };
+struct _sc_rlref_helper<T1, T2, C, true> { typedef C type; };
 
-template<typename T1, typename T2, typename Y1 = _rm_ref_t<T1>, typename Y2 = _rm_ref_t<T2>, typename = void>
-struct _simple_common_rlref {};
+template<typename T1, typename T2,
+         typename Y1 = _rm_ref_t<T1>, typename Y2 = _rm_ref_t<T2>,
+         typename = void>
+struct _sc_rlref {};
 
 template<typename T1, typename T2, typename Y1, typename Y2>
-struct _simple_common_rlref<T1, T2, Y1, Y2, void_t<typename _simple_common_lref<const Y1&, Y2&>::type>>
-    : _simple_common_rlref_helper<T1, T2, typename _simple_common_lref<const Y1&, Y2&>::type> {};
+struct _sc_rlref<T1, T2, Y1, Y2,
+                            void_t<typename _sc_lref<const Y1&, Y2&>::type>>
+    : _sc_rlref_helper<T1, T2, typename _sc_lref<const Y1&, Y2&>::type> {};
 
-template<typename T1, typename T2, bool = is_rvalue_reference<T1>::value && is_lvalue_reference<T2>::value>
-struct _simple_common_ref_mix: _simple_common_ref_mix<T2, T1> {};
-
-template<typename T1, typename T2>
-struct _simple_common_ref_mix<T1, T2, true>: _simple_common_rlref<T1, T2> {};
-
-template<typename T1, typename T2, bool = is_reference<T1>::value && is_reference<T2>::value>
-struct _simple_common_reference {};
+template<typename T1, typename T2,
+         bool = is_rvalue_reference<T1>::value &&
+                is_lvalue_reference<T2>::value>
+struct _sc_ref_mix: _sc_ref_mix<T2, T1> {};
 
 template<typename T1, typename T2>
-struct _simple_common_reference<T1, T2, true>
+struct _sc_ref_mix<T1, T2, true>: _sc_rlref<T1, T2> {};
+
+template<typename T1, typename T2,
+         bool = is_reference<T1>::value &&
+                is_reference<T2>::value>
+struct _sc_reference {};
+
+template<typename T1, typename T2>
+struct _sc_reference<T1, T2, true>
     : conditional_t<
           is_lvalue_reference<T1>::value && is_lvalue_reference<T2>::value,
-          _simple_common_lref<T1, T2>,
+          _sc_lref<T1, T2>,
           conditional_t<
               is_rvalue_reference<T1>::value && is_rvalue_reference<T2>::value,
-              _simple_common_rref<T1, T2>,
-              _simple_common_ref_mix<T1, T2>>> {};
+              _sc_rref<T1, T2>,
+              _sc_ref_mix<T1, T2>>> {};
 
 template<typename T1, typename T2, typename = void>
 struct _common_reference_2_helper: common_type_t<T1, T2> {};
 
 template<typename T1, typename T2>
-struct _common_reference_2_helper<T1, T2, void_t<_cm_ref_helper_t<T1, T2>>>
-{ typedef _cm_ref_helper_t<T1, T2> type; };
+struct _common_reference_2_helper<T1, T2, void_t<_cond_ref_t<T1, T2>>>
+{ typedef _cond_ref_t<T1, T2> type; };
 
-template<typename, typename, template<typename> class, template<typename> class>
+template<typename, typename,
+         template<typename> class, template<typename> class>
 struct basic_common_reference {};
 
 template<typename T1, typename T2>
 using _basic_common_ref_t = typename basic_common_reference<
-    remove_cvref_t<T1>, remove_cvref_t<T2>, _get_cvref<T1>::template rebind, _get_cvref<T2>::template rebind>::type;
+    remove_cvref_t<T1>, remove_cvref_t<T2>,
+    _get_cvref<T1>::template rebind, _get_cvref<T2>::template rebind>::type;
 
 template<typename T1, typename T2, typename = void>
 struct _common_reference_2_sfinae: _common_reference_2_helper<T1, T2> {};
@@ -997,12 +1017,15 @@ template<typename T1, typename T2>
 struct _common_reference_2_sfinae<T1, T2, void_t<_basic_common_ref_t<T1, T2>>>
 { typedef _basic_common_ref_t<T1, T2> type; };
 
-template<typename T1, typename T2, bool = is_reference<T1>::value && is_reference<T2>::value, typename = void>
+template<typename T1, typename T2,
+         bool = is_reference<T1>::value &&
+                is_reference<T2>::value,
+         typename = void>
 struct _common_reference_2: _common_reference_2_sfinae<T1, T2> {};
 
 template<typename T1, typename T2>
-struct _common_reference_2<T1, T2, true, void_t<typename _simple_common_reference<T1, T2>::type>>
-{ typedef typename _simple_common_reference<T1, T2>::type type; };
+struct _common_reference_2<T1, T2, true, void_t<typename _sc_reference<T1, T2>::type>>
+{ typedef typename _sc_reference<T1, T2>::type type; };
 
 template<typename, typename T1, typename T2, typename... Ts>
 struct _common_reference_n_sfinae {};
@@ -1026,7 +1049,7 @@ struct common_reference<T1, T2, Ts...>: _common_reference_n<T1, T2, Ts...> {};
 // clang-format on
 
 #ifdef _ALA_MSVC
-#pragma warning(pop)
+    #pragma warning(pop)
 #endif
 
 #endif // HEAD
