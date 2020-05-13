@@ -130,8 +130,8 @@ public:
 
     list(const list &other)
         : list(other.begin(), other.end(),
-               _alloc_traits::select_on_container_copy_construction(
-                   other.get_allocator())) {}
+               _alloc_traits::select_on_container_copy_construction(other._alloc)) {
+    }
 
     list(list &&other): _alloc(ala::move(other._alloc)), _size(other._size) {
         initialize();
@@ -457,7 +457,7 @@ public:
 
     template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
     enable_if_t<!Dummy> _swap_helper(list &other) {
-        assert(get_allocator() == other.get_allocator());
+        assert(_alloc == other._alloc);
     }
 
     void swap(list &other) noexcept(_alloc_traits::is_always_equal::value) {
@@ -472,7 +472,7 @@ public:
 
     // list operations:
     void splice(const_iterator position, list &other) {
-        assert(get_allocator() == other.get_allocator());
+        assert(_alloc == other._alloc);
         size_type len = other.size();
         other.detach_range(other.begin(), other.end(), len);
         this->attach_range_to(position, other.begin(), other.end(), len);
@@ -483,7 +483,7 @@ public:
     }
 
     void splice(const_iterator position, list &other, const_iterator i) {
-        assert(get_allocator() == other.get_allocator());
+        assert(_alloc == other._alloc);
         destruct_node(other.detach(i._ptr));
         this->attach_to(position->_ptr, i._ptr);
     }
@@ -494,7 +494,7 @@ public:
 
     void splice(const_iterator position, list &other, const_iterator first,
                 const_iterator last) {
-        assert(get_allocator() == other.get_allocator());
+        assert(_alloc == other._alloc);
         size_type len = ala::distance(first, last);
         other.detach_range(first, last, len);
         this->attach_range_to(position, first, last, len);
@@ -582,7 +582,7 @@ protected:
 public:
     template<class Compare>
     void merge(list &other, Compare comp) {
-        assert(get_allocator() == other.get_allocator());
+        assert(_alloc == other._alloc);
         assert(ala::is_sorted(this->begin(), this->end()));
         assert(ala::is_sorted(other.begin(), other.end()));
         iterator i = this->begin();
