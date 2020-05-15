@@ -177,6 +177,9 @@ public:
     static constexpr bool is_uniq = Uniq;
 
 protected:
+    template<class, class, class, bool>
+    friend class rb_tree;
+
     _hdle_t _root = nullptr;
     _hdle_t _guard = nullptr;
 
@@ -393,11 +396,21 @@ public:
     }
 
     template<class RBTree>
-    void transfer_node(RBTree &other, _hdle_t p) {
-        assert(_alloc == other._alloc);
-        pair<_hdle_t, bool> pr = locate(nullptr, p);
+    void merge_helper(RBTree &src, _hdle_t root) {
+        if (is_nil(root))
+            return;
+        pair<_hdle_t, bool> pr = this->locate(nullptr, src._key(root->_data));
+        _hdle_t left = root->_left, rght = root->_rght;
         if (!pr.second)
-            attach_to(pr.first, other.detach(p));
+            this->attach_to(pr.first, src.detach(root));
+        merge_helper(src, left);
+        merge_helper(src, rght);
+    }
+
+    template<class RBTree>
+    void merge(RBTree &src) {
+        assert(_alloc == src._alloc);
+        return this->merge_helper(src, src._root);
     }
 
     template<class K, class F>
@@ -416,21 +429,21 @@ public:
 
     template<class K>
     _hdle_t find(const K &k) const {
-        return traverse(k, _root, [&](bool exist, _hdle_t cur) {
+        return this->traverse(k, _root, [&](bool exist, _hdle_t cur) {
             return exist ? cur : end();
         });
     }
 
     template<class K>
     bool contains(const K &k) const {
-        return traverse(k, _root, [](bool exist, _hdle_t cur) {
+        return this->traverse(k, _root, [](bool exist, _hdle_t cur) {
             return exist ? true : false;
         });
     }
 
     template<class K>
-    size_t _count_helper(const K &k, _hdle_t current) const {
-        return traverse(k, current, [&](bool exist, _hdle_t cur) {
+    size_t count_helper(const K &k, _hdle_t root) const {
+        return this->traverse(k, root, [&](bool exist, _hdle_t cur) {
             return exist ? 1 + _count_helper(k, cur->_left) +
                                _count_helper(k, cur->_rght) :
                            0;
@@ -439,12 +452,12 @@ public:
 
     template<class K>
     size_t count(const K &k) const {
-        return _count_helper(k, _root);
+        return this->count_helper(k, _root);
     }
 
     template<class K>
-    size_t _erase_helper(const K &k, _hdle_t current) {
-        return traverse(k, _root, [&](bool exist, _hdle_t cur) {
+    size_t erase_helper(const K &k, _hdle_t root) {
+        return this->traverse(k, root, [&](bool exist, _hdle_t cur) {
             return exist ? (remove(cur), 1) + _erase_helper(k, cur->_left) +
                                _erase_helper(k, cur->_rght) :
                            0;
@@ -453,7 +466,7 @@ public:
 
     template<class K>
     size_t erase(const K &k) {
-        return _erase_helper(k, _root);
+        return this->erase_helper(k, _root);
     }
 
     pair<_hdle_t, bool> insert(_hdle_t hint, _hdle_t p) {
@@ -557,12 +570,13 @@ protected:
         node = nullptr;
     }
 
-    void destruct_tree(_hdle_t node) {
-        if (is_nil(node))
+    void destruct_tree(_hdle_t root) {
+        if (is_nil(root))
             return;
-        destruct_tree(node->_left);
-        destruct_tree(node->_rght);
-        destruct_node(node);
+        _hdle_t left = root->_left, rght = root->_rght;
+        destruct_node(root);
+        destruct_tree(left);
+        destruct_tree(rght);
     }
 
     _hdle_t copy_tree(_hdle_t other, _hdle_t parent = nullptr) {

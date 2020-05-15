@@ -89,12 +89,14 @@ struct _xoshiro_jump<uint_fast64_t> {
   */
 };
 
+#ifndef UINT_FAST32_MAX != UINT_FAST64_MAX
 template<>
 struct _xoshiro_jump<uint_fast32_t> {
     static constexpr uint_fast32_t jmp[] = {0x8764000b, 0xf542d2d3, 0x6fa035c3,
                                        0x77f2db5b};
     // equivalent to 2^64 calls to next()
 };
+#endif
 
 /*
 A    state xor-lshift

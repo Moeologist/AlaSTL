@@ -92,6 +92,18 @@ protected:
         tree_type;
     tree_type tree;
 
+#if _ALA_IS_MAP
+    template<class, class, class, class>
+    friend class CONTAINER;
+    template<class, class, class, class>
+    friend class CONTAINER1;
+#else
+    template<class, class, class, class>
+    friend class CONTAINER;
+    template<class, class, class, class>
+    friend class CONTAINER1;
+#endif
+
 #if _ALA_IS_UNIQ
     template<class Iter, class NodeType>
     struct _insert_return_adaptor {
@@ -396,7 +408,7 @@ public:
 #endif
 
     node_type extract(const_iterator position) {
-        return node_type(tree.extract(position._ptr), tree.get_allocator());
+        return node_type(tree.extract(position._ptr), get_allocator());
     }
 
     node_type extract(const key_type &k) {
@@ -406,10 +418,12 @@ public:
 #if _ALA_IS_MAP
     template<class Comp1>
     void merge(CONTAINER<key_type, mapped_type, Comp1, allocator_type> &source) {
-        for (auto i = source.begin(); i != source.end();) {
-            auto tmp = i++;
-            tree.transfer_node(source.tree, tmp._ptr);
-        }
+        tree.merge(source.tree);
+    }
+
+    template<class Comp1>
+    void merge1(CONTAINER<key_type, mapped_type, Comp1, allocator_type> &source) {
+        tree.merge(source.tree);
     }
 
     template<class Comp1>
@@ -419,10 +433,7 @@ public:
 
     template<class Comp1>
     void merge(CONTAINER1<key_type, mapped_type, Comp1, allocator_type> &source) {
-        for (auto i = source.begin(); i != source.end();) {
-            auto tmp = i++;
-            tree.transfer_node(source.tree, tmp._ptr);
-        }
+        tree.merge(source.tree);
     }
 
     template<class Comp1>
@@ -432,10 +443,7 @@ public:
 #else
     template<class Comp1>
     void merge(CONTAINER<value_type, Comp1, allocator_type> &source) {
-        for (auto i = source.begin(); i != source.end();) {
-            auto tmp = i++;
-            tree.transfer_node(source.tree, tmp._ptr);
-        }
+        tree.merge(source.tree);
     }
 
     template<class Comp1>
@@ -445,10 +453,7 @@ public:
 
     template<class Comp1>
     void merge(CONTAINER1<value_type, Comp1, allocator_type> &source) {
-        for (auto i = source.begin(); i != source.end();) {
-            auto tmp = i++;
-            tree.transfer_node(source.tree, tmp._ptr);
-        }
+        tree.merge(source.tree);
     }
 
     template<class Comp1>
@@ -812,7 +817,7 @@ CONTAINER(InputIter, InputIter, Alloc)
 
 template<class Key, class Alloc>
 CONTAINER(initializer_list<Key>, Alloc) -> CONTAINER<Key, less<Key>, Alloc>;
-    #endif
+    #endif // _ALA_IS_MAP
 
 #endif // _ALA_ENABLE_DEDUCTION_GUIDES
 } // namespace ala
