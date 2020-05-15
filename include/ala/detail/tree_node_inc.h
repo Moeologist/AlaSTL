@@ -28,38 +28,43 @@ struct NODE {
     typedef typename pointer_traits<NodePtr>::element_type _ele_type;
     typedef allocator_traits<allocator_type> _alloc_traits;
 
-    constexpr NODE() noexcept: _ptr(nullptr) {}
-
-    NODE(NODE &&nh) {
-        if (nh._ptr != nullptr) {
-            _ptr = ala::move(nh._ptr);
-            _alloc = ala::move(nh._alloc);
-        }
-        nh._ptr = nullptr;
+protected:
+    void possess(NODE &&other) noexcept {
+        _ptr = ala::move(other._ptr);
+        other._ptr = nullptr;
     }
 
-    NODE &operator=(NODE &&nh) {
-        if (_ptr != nullptr) {
-            _alloc_traits::destroy(_alloc, ala::addressof(_ptr->_data));
-            _alloc_traits::template deallocate_object<remove_pointer_t<NodePtr>>(
-                _alloc, _ptr, 1);
+    template<bool Dummy = _alloc_traits::propagate_on_container_move_assignment::value>
+    enable_if_t<Dummy> move_helper(NODE &&other) {
+        _alloc() = ala::move(other._alloc());
+    }
+
+    template<bool Dummy = _alloc_traits::propagate_on_container_move_assignment::value>
+    enable_if_t<!Dummy> move_helper(NODE &&other) {
+        assert(_alloc() == other._alloc());
+    }
+
+public:
+    constexpr NODE() noexcept {}
+
+    NODE(NODE &&other) {
+        if (other) {
+            this->possess(ala::move(other));
+            this->alloc_ctor(ala::move(other._alloc()));
         }
-        if (nh._ptr != nullptr) {
-            _ptr = ala::move(nh._ptr);
-            ALA_CONST_IF(
-                _alloc_traits::propagate_on_container_move_assignment::value) {
-                _alloc = ala::move(nh._ptr);
-            }
+    }
+
+    NODE &operator=(NODE &&other) {
+        clear();
+        if (other) {
+            this->possess(ala::move(other));
+            this->move_helper(ala::move(other));
         }
-        nh._ptr = nullptr;
+        return *this;
     }
 
     ~NODE() {
-        if (_ptr != nullptr) {
-            _alloc_traits::destroy(_alloc, ala::addressof(_ptr->_data));
-            _alloc_traits::template deallocate_object<remove_pointer_t<NodePtr>>(
-                _alloc, _ptr, 1);
-        }
+        clear();
     }
 
     explicit operator bool() const noexcept {
@@ -71,7 +76,7 @@ struct NODE {
     }
 
     allocator_type get_allocator() const {
-        return _alloc;
+        return _alloc();
     }
 
 #if _ALA_IS_MAP
@@ -88,15 +93,30 @@ struct NODE {
     }
 #endif
 
-    void swap(NODE &nh) noexcept(_alloc_traits::propagate_on_container_swap::value ||
-                                 _alloc_traits::is_always_equal::value) {
-        ala::swap(_ptr, nh._ptr);
-        ALA_CONST_IF(_alloc_traits::propagate_on_container_swap::value) {
-            ala::swap(_alloc, nh._alloc);
-        }
+    template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
+    enable_if_t<Dummy> swap_helper(NODE &other) noexcept {
+        if (*this && other)
+            ala::swap(_alloc(), other._alloc());
+        else if (*this)
+            other.alloc_ctor(ala::move(this->_alloc()));
+        else if (other)
+            this->alloc_ctor(ala::move(other._alloc()));
     }
 
-private:
+    template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
+    enable_if_t<!Dummy>
+    swap_helper(NODE &other) noexcept(_alloc_traits::is_always_equal::value) {
+        assert(_alloc() == other._alloc());
+    }
+
+    void
+    swap(NODE &other) noexcept(_alloc_traits::propagate_on_container_swap::value ||
+                               _alloc_traits::is_always_equal::value) {
+        this->swap_helper(other);
+        ala::swap(_ptr, other._ptr);
+    }
+
+protected:
 #if _ALA_IS_MAP
     template<class, class, class, class>
     friend class map;
@@ -109,11 +129,29 @@ private:
     friend class multiset;
 #endif
     typedef NodePtr node_pointer;
-    node_pointer _ptr;
-    allocator_type _alloc;
-    NODE(node_pointer p): _ptr(p), _alloc() {
-        if (p->_is_nil)
-            p = nullptr;
+    node_pointer _ptr = nullptr;
+    aligned_storage_t<sizeof(allocator_type), alignof(allocator_type)> _am;
+
+    void clear() {
+        if (_ptr != nullptr) {
+            _alloc_traits::destroy(_alloc(), ala::addressof(_ptr->_data));
+            _alloc_traits::template deallocate_object<remove_pointer_t<NodePtr>>(
+                _alloc(), _ptr, 1);
+        }
+    }
+
+    template<class... Args>
+    void alloc_ctor(Args &&... args) {
+        ::new ((void *)&_am) allocator_type(ala::forward<Args>(args)...);
+    }
+
+    allocator_type &_alloc() {
+        return *(allocator_type *)&_am;
+    }
+
+    NODE(node_pointer p, const allocator_type &a): _ptr(p) {
+        if (*this)
+            this->alloc_ctor(a);
     }
 };
 

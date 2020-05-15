@@ -77,7 +77,7 @@ public:
             return comp(lhs.first, rhs.first);
         }
 
-    private:
+    protected:
         friend class CONTAINER<key_type, mapped_type, key_compare, allocator_type>;
         friend class rb_tree<value_type, value_compare, allocator_type,
                              (bool)_ALA_IS_UNIQ>;
@@ -121,10 +121,7 @@ public:
 #endif
 
     // construct/copy/destroy:
-    CONTAINER()
-    noexcept(is_nothrow_default_constructible<allocator_type>::value
-                 &&is_nothrow_default_constructible<key_compare>::value)
-        : tree(value_compare(key_compare()), allocator_type()) {}
+    CONTAINER(): tree(value_compare(key_compare())) {}
 
     explicit CONTAINER(const key_compare &comp,
                        const allocator_type &a = allocator_type())
@@ -135,10 +132,7 @@ public:
 
     CONTAINER(const CONTAINER &m): tree(m.tree) {}
 
-    CONTAINER(CONTAINER &&m)
-    noexcept(is_nothrow_move_constructible<allocator_type>::value
-                 &&is_nothrow_move_constructible<key_compare>::value)
-        : tree(ala::move(m.tree)) {}
+    CONTAINER(CONTAINER &&m): tree(ala::move(m.tree)) {}
 
     CONTAINER(const CONTAINER &m, const allocator_type &a): tree(m.tree, a) {}
 
@@ -302,7 +296,8 @@ public:
     }
 
     template<class P, typename = enable_if_t<is_constructible<value_type, P &&>::value>>
-    pair<iterator, bool> insert(P &&p) {
+    enable_if_t<is_constructible<value_type, P &&>::value, pair<iterator, bool>>
+    insert(P &&p) {
         return tree.emplace(nullptr, ala::forward<P>(p));
     }
 #else
@@ -314,8 +309,8 @@ public:
         return tree.emplace_v(v, nullptr, ala::move(v)).first;
     }
 
-    template<class P, typename = enable_if_t<is_constructible<value_type, P &&>::value>>
-    iterator insert(P &&p) {
+    template<class P>
+    enable_if_t<is_constructible<value_type, P &&>::value, iterator> insert(P &&p) {
         return tree.emplace(nullptr, ala::forward<P>(p)).first;
     }
 #endif
@@ -328,8 +323,9 @@ public:
         return tree.emplace_v(v, position._ptr, ala::move(v)).first;
     }
 
-    template<class P, typename = enable_if_t<is_constructible<value_type, P &&>::value>>
-    iterator insert(const_iterator position, P &&p) {
+    template<class P>
+    enable_if_t<is_constructible<value_type, P &&>::value, iterator>
+    insert(const_iterator position, P &&p) {
         return tree.emplace(position._ptr, ala::forward<P>(p)).first;
     }
 
@@ -340,20 +336,20 @@ public:
     }
 
     void insert(initializer_list<value_type> il) {
-        for (auto i = il.begin(); i != il.end(); ++i)
-            this->insert(*i);
+        this->insert(il.begin(), il.end());
     }
 
 #if _ALA_IS_UNIQ
     insert_return_type insert(node_type &&nh) {
+        assert(nh._alloc() == get_allocator());
         auto pr = tree.insert(nullptr, nh._ptr);
-        if (!pr.second)
-            return {iterator(pr.first), pr.second, ala::move(nh)};
-        nh._ptr = nullptr;
-        return {iterator(pr.first), pr.second, node_type()};
+        if (pr.second)
+            nh._ptr = nullptr;
+        return {iterator(pr.first), pr.second, ala::move(nh)};
     }
 
     iterator insert(const_iterator hint, node_type &&nh) {
+        assert(nh._alloc() == get_allocator());
         auto pr = tree.insert(hint._ptr, nh._ptr);
         if (pr.second)
             nh._ptr = nullptr;
@@ -361,6 +357,7 @@ public:
     }
 #else
     iterator insert(node_type &&nh) {
+        assert(nh._alloc() == get_allocator());
         auto pr = tree.insert(nullptr, nh._ptr);
         if (pr.second)
             nh._ptr = nullptr;
@@ -368,6 +365,7 @@ public:
     }
 
     iterator insert(const_iterator hint, node_type &&nh) {
+        assert(nh._alloc() == get_allocator());
         auto pr = tree.insert(hint._ptr, nh._ptr);
         if (pr.second)
             nh._ptr = nullptr;
@@ -398,12 +396,11 @@ public:
 #endif
 
     node_type extract(const_iterator position) {
-        tree.extract(position._ptr);
-        return node_type(position._ptr);
+        return node_type(tree.extract(position._ptr), tree.get_allocator());
     }
 
     node_type extract(const key_type &k) {
-        return extract(this->find(k));
+        return this->extract(this->find(k));
     }
 
 #if _ALA_IS_MAP
