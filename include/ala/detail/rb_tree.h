@@ -325,14 +325,16 @@ protected:
 
 public:
     rb_tree &operator=(const rb_tree &other) {
-        copy_helper(other);
+        if (this != ala::addressof(other))
+            copy_helper(other);
         return *this;
     }
 
     rb_tree &operator=(rb_tree &&other) noexcept(
         _alloc_traits::is_always_equal::value
             &&is_nothrow_move_assignable<value_compare>::value) {
-        move_helper(ala::move(other));
+        if (this != ala::addressof(other))
+            move_helper(ala::move(other));
         return *this;
     }
 

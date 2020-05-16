@@ -29,7 +29,7 @@ protected:
     typedef _node_t *_hdle_t; // node handle type
     _hdle_t _guard = nullptr;
     size_type _size = 0;
-    allocator_type _alloc();
+    allocator_type _alloc;
 
     _hdle_t head() {
         return _guard;
@@ -42,6 +42,20 @@ protected:
     void link(_hdle_t a, _hdle_t b) {
         a->_suc = b;
         b->_pre = a;
+    }
+
+    void cut(iterator pos) noexcept {
+        for (; pos != end();) {
+            destruct_node(pos++._ptr);
+            --_size;
+        }
+    }
+
+    iterator locate(size_type index) noexcept {
+        iterator i = begin();
+        for (size_type id = 0; id != index && i != end(); ++i)
+            ;
+        return i;
     }
 
     // insert before pos
@@ -113,15 +127,15 @@ protected:
 
 public:
     // construct/copy/destroy:
-    list() {
+    list(): _alloc() {
         initialize();
     }
 
-    explicit list(const Alloc &a = Alloc()): _alloc(a) {
+    explicit list(const allocator_type &a): _alloc(a) {
         initialize();
     }
 
-    explicit list(size_type n) {
+    explicit list(size_type n): _alloc() {
         initialize();
         for (size_type i = 0; i < n; ++i)
             this->emplace_back();
@@ -205,12 +219,15 @@ protected:
 
 public:
     list &operator=(const list &other) {
-        copy_helper(other);
+        if (this != ala::addressof(other))
+            copy_helper(other);
         return *this;
     }
 
+    // TODO:check same obj
     list &operator=(list &&other) noexcept(_alloc_traits::is_always_equal::value) {
-        move_helper(ala::move(other));
+        if (this != ala::addressof(other))
+            move_helper(ala::move(other));
         return *this;
     }
 
@@ -224,18 +241,23 @@ public:
     enable_if_t<is_base_of<input_iterator_tag,
                            typename iterator_traits<InputIter>::iterator_category>::value>
     assign(InputIter first, InputIter last) {
-        clear();
+        iterator i = begin();
+        for (; i != end() && first != last; ++i, ++first)
+            *i = *first;
+        this->cut(i);
         this->insert(end(), first, last);
     }
 
     void assign(size_type n, const value_type &v) {
-        clear();
+        iterator i = begin();
+        for (; i != end() && n != 0; ++i, --n)
+            *i = v;
+        this->cut(i);
         this->insert(end(), n, v);
     }
 
     void assign(initializer_list<T> il) {
-        clear();
-        this->insert(end(), il);
+        this->assign(il.begin(), il.end());
     }
 
     allocator_type get_allocator() const noexcept {
@@ -301,20 +323,6 @@ public:
     }
 
 protected:
-    void cut(iterator pos) noexcept {
-        for (; pos != end();) {
-            destruct_node(pos++._ptr);
-            --_size;
-        }
-    }
-
-    iterator locate(size_type index) noexcept {
-        iterator i = begin();
-        for (size_type id = 0; id != index && i != end(); ++i)
-            ;
-        return i;
-    }
-
     template<class... Args>
     void resize_helper(size_type sz, Args &&... args) {
         if (size() > sz) {
@@ -323,7 +331,7 @@ protected:
             this->cut(pos);
             link(end, tail());
         } else {
-            for (int i = 0; i < sz; ++i)
+            for (int i = size(); i < sz; ++i)
                 this->emplace_back(ala::forward<Args>(args)...);
         }
     }
@@ -503,11 +511,9 @@ public:
 
     template<class UnaryPredicate>
     void remove_if(UnaryPredicate pred) {
-        for (iterator i = begin(); i != end();)
+        for (iterator i = begin(); i != end();++i)
             if (pred(*i))
-                destruct_node(detach(i++._ptr));
-            else
-                ++i;
+                destruct_node(detach(i._ptr));
     }
 
     void unique() {
@@ -519,11 +525,9 @@ public:
     void unique(BinaryPredicate pred) {
         if (size() < 2)
             return;
-        for (iterator i = begin(), j = ++begin(); j != end(); ++i)
+        for (iterator i = begin(), j = ++begin(); j != end(); ++i, ++j)
             if (pred(*i, *j))
-                destruct_node(detach(j++._ptr));
-            else
-                ++j;
+                destruct_node(detach(j._ptr));
     }
 
     void merge(list &other) {

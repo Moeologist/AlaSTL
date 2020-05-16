@@ -13,12 +13,12 @@ struct l_node {
 };
 
 template<class Data>
-constexpr void next_node(l_node<Data> *_ptr) {
+constexpr l_node<Data> *next_node(l_node<Data> *_ptr) {
     return _ptr->_suc;
 }
 
 template<class Data>
-constexpr void prev_node(l_node<Data> *_ptr) {
+constexpr l_node<Data> *prev_node(l_node<Data> *_ptr) {
     return _ptr->_pre;
 }
 
