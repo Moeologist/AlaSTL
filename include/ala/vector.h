@@ -3,6 +3,7 @@
 
 #include <ala/detail/algorithm_base.h>
 #include <ala/detail/allocator.h>
+#include <ala/detail/uninitialized_memory.h>
 
 namespace ala {
 
@@ -31,71 +32,130 @@ private:
     allocator_type _alloc;
 
     void dealloc() {
-        assert(_data != nullptr && _capacity > 0);
-        _alloc.deallocate(_data, _capacity);
-        _capacity = 0;
+        if (_capacity > 0) {
+            assert(_data != nullptr);
+            _alloc.deallocate(_data, _capacity);
+            _data = nullptr;
+            _capacity = 0;
+        } else {
+            assert(_data == nullptr);
+        }
     }
 
-    void alloc(size_type n) {
-        assert(_alloc == nullptr && _capacity == 0);
-        _data = _alloc.allocator(n);
-        _capacity = n;
+    pointer alloc(size_type n) {
+        return _alloc.allocator(n);
     }
 
-    enable_if_t<is_trivial<value_type>::value>
-    cp_elements(pointer dst, pointer first, pointer last) {
-        ala::memmove((void *)(dst), (void *)(first),
-                     sizeof(value_type) * (last - first));
+    void update(pointer m, size_type capacity, size_type size) {
+        assert(m != _data);
+        clear_m();
+        _data = m;
+        _capacity = capacity;
+        _size = size;
     }
 
-    enable_if_t<!is_trivial<value_type>::value>
-    cp_elements(pointer dst, pointer first, pointer last) {
-        for (; first < last; ++first, ++dst)
-            _alloc_traits::construct(_alloc, dst, *first);
+    template<class... Args>
+    void construct(pointer p, Args &&... args) {
+        _alloc_traits::construct(_alloc, p, ala::forward<Args>(args)...);
     }
 
-    enable_if_t<!is_trivial<value_type>::value>
-    mv_elements(pointer dst, pointer first, pointer last) {
-        ala::memmove((void *)(dst), (void *)(first),
-                     sizeof(value_type) * (last - first));
+    void destroy(pointer p) {
+        _alloc_traits::destroy(_alloc, p);
     }
 
-    enable_if_t<!is_trivial<value_type>::value>
-    mv_elements(pointer dst, pointer first, pointer last) {
-        for (; first < last; ++first, ++dst)
-            _alloc_traits::construct(_alloc, dst++, ala::move(*first));
+    template<class... Args>
+    pointer fill_e(pointer first, pointer last, Args &&... args) {
+        for (; first != last; (void)++first)
+            _alloc_traits::construct(_alloc, first, ala::forward<Args>(args)...);
+        return first;
     }
 
-    void resize_alloc(size_type n) {
-        pointer new_data = _alloc.allocate(n);
-        this->move_to(_data, _data + _size, new_data);
-        _capacity = n;
-        _data = new_data;
+    template<class InputIter>
+    pointer mv(InputIter first, InputIter last, pointer out) {
+        for (; first != last; ++first, (void)++out)
+            _alloc_traits::construct(_alloc, out, *first);
+        return out;
     }
 
-    template<class Dummy = value_type>
+    template<class InputIter>
+    pointer cp(InputIter first, InputIter last, pointer out) {
+        for (; first != last; ++first, (void)++out)
+            _alloc_traits::construct(_alloc, out, ala::move(*first));
+        return out;
+    }
+
+    template<class InputIter, class Dummy = value_type>
     enable_if_t<is_nothrow_move_constructible<Dummy>::value ||
                 !is_copy_constructible<Dummy>::value>
-    mv_or_cp(pointer dst, pointer first, pointer last) {
-        mv_elements(dst, first, last);
+    mv_cp(InputIter first, InputIter last, pointer dst) {
+        return this->mv(first, last, dst);
+    }
+
+    template<class InputIter, class Dummy = value_type>
+    enable_if_t<!is_nothrow_move_constructible<Dummy>::value &&
+                is_copy_constructible<Dummy>::value>
+    mv_cp(InputIter first, InputIter last, pointer dst) {
+        return this->cp(first, last, dst);
     }
 
     template<class Dummy = value_type>
     enable_if_t<!is_nothrow_move_constructible<Dummy>::value &&
                 is_copy_constructible<Dummy>::value>
-    mv_or_cp(pointer dst, pointer first, pointer last) {
-        cp_elements(dst, first, last);
+    mv_cp(pointer dst) {
+        return this->mv_cp(begin(), end(), dst);
     }
 
-    pointer expand() {
-        _capacity = _capacity > 0 ? _capacity << 1 : 1;
-        return _alloc.allocate(_capacity);
+    /*
+    *********************** 
+    ↑          ↑           ↑
+ begin()      pos        end()
+    [begin, mid) move(copy) to dst1
+    [mid, end)   move(copy) to dst2
+    */
+    void mv_cp_s(pointer mid, pointer dst1, pointer dst2) {
+        this->mv_cp(begin(), mid, dst1);
+        this->mv_cp(mid, end(), dst2);
+    }
+
+    /*
+    *********************** 
+               ↑           ↑
+             start       end()
+    [first, end) shift right by diff elements
+    */
+    void shift_right(pointer first, difference_type diff) {
+        pointer mid = end() - diff;
+        mid = first < mid ? mid : first;
+        this->mv(mid, end(), end());
+        mid = mid - 1;
+        if (first < mid)
+            ala::move_backward(mid, first - 1, end());
+    }
+
+    void cut(pointer position) {
+        for (; position != end(); ++position)
+            this->destroy(position);
+        _size = position - _data;
+    }
+
+    void realloc(size_type n) {
+        pointer new_data = this->allocate(n);
+        this->mv_cp(begin(), size(), new_data);
+        this->update(new_data, n, _size);
+    }
+
+    size_type expand() {
+        size_type c = capacity();
+        return c > 0 ? c << 1 : 1;
     }
 
     void clone(const vector &other) {
-        this->alloc(other._size);
-        cp_elements(_data, other.begin(), other.end());
-        _size = other._size;
+        size_type n = other.size();
+        pointer new_data = this->alloc(n);
+        this->cp(other.begin(), other.begin() + n, new_data);
+        _capacity = n;
+        _data = new_data;
+        _size = n;
     }
 
     void possess(vector &&other) {
@@ -107,7 +167,7 @@ private:
         other._size = 0;
     }
 
-    void mclear() {
+    void clear_m() {
         clear();
         dealloc();
     }
@@ -116,25 +176,23 @@ public:
     // construct/copy/destroy:
     vector() noexcept(noexcept(allocator_type())) {}
 
-    explicit vector(const allocator_type &a = allocator_type()) noexcept {}
+    explicit vector(const allocator_type &a) noexcept {}
 
     explicit vector(size_type n) {
-        this->alloc(n);
         this->resize(n);
     }
 
     vector(size_type n, const value_type &v,
            const allocator_type &a = allocator_type())
         : _alloc(a) {
-        this->alloc(n);
         this->resize(n, v);
     }
 
-    template<class InputIter,
+    template<class pointer,
              typename = enable_if_t<is_base_of<
                  input_iterator_tag,
-                 typename iterator_traits<InputIter>::iterator_category>::value>>
-    vector(InputIter first, InputIter last,
+                 typename iterator_traits<pointer>::iterator_category>::value>>
+    vector(pointer first, pointer last,
            const allocator_type &a = allocator_type())
         : _alloc(a) {
         this->insert(end(), first, last);
@@ -161,19 +219,19 @@ public:
             this->clone(other);
     }
 
-    vector(initializer_vector<value_type> il,
+    vector(initializer_list<value_type> il,
            const allocator_type &a = allocator_type())
         : vector(il.begin(), il.end(), a) {}
 
     ~vector() {
-        mclear();
+        clear_m();
     }
 
 protected:
     template<bool Dummy = _alloc_traits::propagate_on_container_copy_assignment::value>
     enable_if_t<Dummy> copy_helper(const vector &other) {
         if (_alloc != other._alloc)
-            mclear();
+            clear_m();
         _alloc = other._alloc;
         this->assign(other.begin(), other.end());
     }
@@ -185,7 +243,7 @@ protected:
 
     template<bool Dummy = _alloc_traits::propagate_on_container_move_assignment::value>
     enable_if_t<Dummy> move_helper(vector &&other) noexcept {
-        mclear();
+        clear_m();
         _alloc = ala::move(other._alloc);
         this->possess(ala::move(other));
     }
@@ -194,47 +252,121 @@ protected:
     enable_if_t<!Dummy>
     move_helper(vector &&other) noexcept(_alloc_traits::is_always_equal::value) {
         if (_alloc == other._alloc) {
-            mclear();
+            clear_m();
             this->possess(ala::move(other));
         } else {
             this->assign(other.begin(), other.end());
         }
     }
 
+    template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
+    enable_if_t<Dummy> swap_helper(vector other) {
+        ala::swap(_alloc, other._alloc);
+    }
+
+    template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
+    enable_if_t<!Dummy> swap_helper(vector &other) {
+        assert(_alloc == other._alloc);
+    }
+
 public:
     vector &operator=(const vector &other) {
-        copy_helper(other);
+        if (this != addressof(other))
+            copy_helper(other);
         return *this;
     }
 
     vector &operator=(vector &&other) noexcept(
         _alloc_traits::propagate_on_container_move_assignment::value ||
         _alloc_traits::is_always_equal::value) {
-        move_helper(ala::move(other));
+        if (this != addressof(other))
+            move_helper(ala::move(other));
         return *this;
     }
 
-    vector &operator=(initializer_vector<value_type> il) {
-        clear();
-        this->insert(end(), il);
+    vector &operator=(initializer_list<value_type> il) {
+        this->assign(il.begin(), il.end());
         return *this;
+    }
+
+    void swap(vector &other) {
+        this->swap_helper(other);
+        swap(_data, other._data);
+        swap(_capacity, other._capacity);
+        swap(_size, other._size);
+    }
+
+protected:
+    template<class Size, class InputIter>
+    void assign_realloc(Size n, InputIter first) {
+        InputIter new_data = this->allocate(n);
+        this->cp(first, first + n, new_data);
+        this->update(new_data, n, n);
     }
 
     template<class InputIter>
-    enable_if_t<is_base_of<input_iterator_tag,
-                           typename iterator_traits<InputIter>::iterator_category>::value>
+    void assign_norealloc(InputIter first, InputIter last) {
+        size_type i = 0;
+        for (; first != last && i < size(); ++first, (void)++i)
+            *(_data + i) = *first;
+        if (i < size())
+            this->resize(i);
+        if (first != last)
+            this->insert(end(), first, last);
+    }
+
+    template<class Size, class InputIter>
+    void assign_nv_realloc(size_type n, const value_type &v) {
+        InputIter new_data = this->allocate(n);
+        this->fill_e(new_data, new_data + n, v);
+        this->update(new_data, n, n);
+    }
+
+    void assign_nv_norealloc(size_type n, const value_type &v) {
+        size_type i = 0;
+        for (; n > 0 && i != size(); --n, (void)++i)
+            *(_data + i) = v;
+        if (i != size())
+            this->resize(i);
+        if (n > 0)
+            this->insert(end(), n, v);
+    }
+
+public:
+    template<class InputIter>
+    enable_if_t<
+        is_base_of<input_iterator_tag,
+                   typename iterator_traits<InputIter>::iterator_category>::value &&
+        is_base_of<forward_iterator_tag,
+                   typename iterator_traits<InputIter>::iterator_category>::value>
     assign(InputIter first, InputIter last) {
-        clear();
-        this->insert(end(), first, last);
+        typename iterator_traits<InputIter>::difference_type len;
+        len = distance(first, last);
+        if (len > capacity())
+            assign_realloc(len, first);
+        else
+            assign_norealloc(first, last);
+    }
+
+    template<class InputIter>
+    enable_if_t<
+        is_base_of<input_iterator_tag,
+                   typename iterator_traits<InputIter>::iterator_category>::value &&
+        !is_base_of<forward_iterator_tag,
+                    typename iterator_traits<InputIter>::iterator_category>::value>
+    assign(InputIter first, InputIter last) {
+        assign_norealloc(first, last);
     }
 
     void assign(size_type n, const value_type &v) {
-        clear();
-        this->insert(end(), n, v);
+        if (n > capacity())
+            assign_nv_realloc(n, v);
+        else
+            assign_nv_no_realloc(n, v);
     }
 
-    void assign(initializer_vector<value_type> il) {
-        *this = il;
+    void assign(initializer_list<value_type> il) {
+        this->assign(il.begin(), il.end());
     }
 
     allocator_type get_allocator() const noexcept {
@@ -251,7 +383,7 @@ public:
     }
 
     constexpr iterator end() noexcept {
-        return _data + _size;
+        return end();
     }
 
     constexpr const_iterator end() const noexcept {
@@ -299,29 +431,31 @@ public:
         return numeric_limits<difference_type>::max();
     }
 
-    void resize(size_type sz) {
-        value_type v = value_type();
-        this->resize(sz, v);
+protected:
+    template<class... Args>
+    void resize_helper(size_type n, Args &&... args) {
+        if (size() > n) {
+            this->cut(begin() + n);
+        } else if (n > capacity()) {
+            pointer new_data = this->alloc(n);
+            this->fill_e(new_data + size(), new_data + n,
+                         ala::forward<Args>(args)...);
+            this->mv_cp(new_data);
+            this->update(new_data, n, n);
+        } else {
+            difference_type diff = n - size();
+            this->fill_e(end(), end() + diff, ala::forward<Args>(args)...);
+            _size += diff;
+        }
     }
 
-    void resize(size_type sz, const value_type &v) {
-        if (sz < _size) {
-            for (size_type i = sz; i < _size; ++i)
-                _alloc_traits::destroy(_data + i);
-        } else if (_size < sz) {
-            if (_capacity < sz) {
-                pointer new_data = _alloc.allocate(sz);
-                _capacity = sz;
-                for (size_type i = _size; i < sz; ++i)
-                    _alloc_traits::construct(new_data + i);
-                move_to(_data, _data + _size, new_data);
-                _data = new_data;
-            } else {
-                for (size_type i = _size; i < sz; ++i)
-                    _alloc_traits::construct(_data + i);
-            }
-        }
-        _size = sz;
+public:
+    void resize(size_type n) {
+        this->resize_helper(n);
+    }
+
+    void resize(size_type n, const value_type &v) {
+        this->resize_helper(n, v);
     }
 
     size_type capacity() const noexcept {
@@ -333,13 +467,13 @@ public:
     }
 
     void reserve(size_type n) {
-        if (n > _capacity)
-            resize_alloc(n);
+        if (n > capacity())
+            this->realloc(n);
     }
 
     void shrink_to_fit() {
-        if (_capacity > _size)
-            resize_alloc(_size);
+        if (capacity() > size())
+            this->realloc(size());
     }
 
     // element access:
@@ -391,17 +525,17 @@ public:
     // modifiers:
     template<class... Args>
     reference emplace_back(Args &&... args) {
-        if (_size + 1 > _capacity) {
-            pointer new_data = expand();
-            _alloc_traits::construct(_alloc, new_data + _size,
-                                     ala::forward<Args>(args)...);
-            move_to(_data, _data + _size, new_data);
-            _data = new_data;
+        size_type new_size = size() + 1;
+        if (new_size > capacity()) {
+            size_type new_capa = expand();
+            pointer new_data = this->alloc(new_capa);
+            this->construct(new_data + size(), ala::forward<Args>(args)...);
+            this->mv_cp(new_data);
+            this->update(new_data, new_capa, new_size);
         } else {
-            _alloc_traits::construct(_alloc, _data + _size,
-                                     ala::forward<Args>(args)...);
+            this->construct(end(), ala::forward<Args>(args)...);
+            ++_size;
         }
-        ++_size;
         return *end();
     }
 
@@ -414,30 +548,29 @@ public:
     }
 
     void pop_back() {
-        _alloc_traits::destroy(_alloc, end() - 1);
+        this->destroy(end() - 1);
         --_size;
     }
 
     template<class... Args>
     iterator emplace(const_iterator position, Args &&... args) {
-        size_type offset = position - cbegin();
-        if (_size + 1 > _capacity) {
-            pointer new_data = expand();
-            _alloc_traits::construct(_alloc, new_data + offset,
-                                     ala::forward<Args>(args)...);
-            move_to(_data, _data + offset, new_data);
-            move_to(_data + offset + 1, _data + _size, new_data + offset + 1);
-            _data = new_data;
+        difference_type offset = position - cbegin();
+        pointer pos = position;
+        size_type new_size = size() + 1;
+        if (new_size > capacity()) {
+            size_type new_capa = expand();
+            pointer new_data = this->alloc(new_capa);
+            pointer new_pos = new_data + offset;
+            this->construct(new_pos, ala::forward<Args>(args)...);
+            this->mv_cp_s(pos, new_data, new_pos + 1);
+            this->update(new_data, new_capa, new_size);
         } else {
-            T tmp(ala::forward<Args>(args)...);
-            _alloc_traits::construct(_alloc, _data + _size,
-                                     ala::move(*(_data + _size - 1)));
-            ala::move_backward(_data + offset + 1, _data + _size,
-                               _data + _size + 1);
-            _alloc_traits::construct(_alloc, _data + offset, ala::move(tmp));
+            value_type tmp(ala::forward<Args>(args)...);
+            this->shift_right(position, 1);
+            this->mv_cp(&tmp, &tmp + 1, pos);
+            ++_size;
         }
-        ++_size;
-        return _data + offset;
+        return begin() + offset;
     }
 
     iterator insert(const_iterator position, const value_type &v) {
@@ -450,58 +583,49 @@ public:
 
     iterator insert(const_iterator position, size_type n, const value_type &v) {
         difference_type offset = position - cbegin();
-        if (_size + n > _capacity) {
-            pointer new_data = _alloc.allocate(_size + n);
-            _capacity = _size + n;
-            for (size_type i = 0; i < n; ++i)
-                _alloc_traits::construct(_alloc, new_data + offset + i, v);
-            move_to(_data, _data + offset, new_data);
-            move_to(_data + offset + 1, _data + _size, new_data + offset + n);
-            _data = new_data;
+        pointer pos = position;
+        size_type new_size = size() + n;
+        if (new_size > _capacity) {
+            size_type new_capa = new_size;
+            pointer new_data = this->alloc(new_capa);
+            pointer new_pos = new_data + offset;
+            this->fill_e(new_pos, new_pos + n, v);
+            this->mv_cp_s(pos, new_pos, new_pos + n);
+            this->update(new_data, new_capa, new_size);
         } else {
-            for (size_type i = 0; i < n; ++i)
-                _alloc_traits::construct(_alloc, _data + _size + i,
-                                         ala::move(*(_data + _size + i - n)));
-            ala::move_backward(_data + offset + 1, _data + _size,
-                               _data + _size + n);
-            for (size_type i = 0; i < n; ++i)
-                _alloc_traits::construct(_alloc, _data + offset + i, v);
+            this->shift_right(offset, n);
+            this->fill_e(pos, pos + n, v);
+            _size += n;
         }
-        _size += n;
-        return _data + offset;
+        return begin() + offset;
     }
 
-    template<class ForwardIter>
+    template<class InputIter>
     enable_if_t<
         is_base_of<input_iterator_tag,
-                   typename iterator_traits<ForwardIter>::iterator_category>::value &&
+                   typename iterator_traits<InputIter>::iterator_category>::value &&
             is_base_of<forward_iterator_tag,
-                       typename iterator_traits<ForwardIter>::iterator_category>::value,
+                       typename iterator_traits<InputIter>::iterator_category>::value,
         iterator>
-    insert(const_iterator position, ForwardIter first, ForwardIter last) {
-        difference_type offset = position - cbegin();
-        typedef typename iterator_traits<ForwardIter>::difference_type diff_t;
+    insert(const_iterator position, InputIter first, InputIter last) {
+        typedef typename iterator_traits<InputIter>::difference_type diff_t;
         diff_t n = distance(first, last);
-        if (_size + n > _capacity) {
-            pointer new_data = _alloc.allocate(_size + n);
-            _capacity = _size + n;
-            for (size_type i = 0; i < n; ++i)
-                _alloc_traits::construct(_alloc, new_data + offset + i,
-                                         *(first++));
-            move_to(_data, _data + offset, new_data);
-            move_to(_data + offset + 1, _data + _size, new_data + offset + n);
-            _data = new_data;
+        difference_type offset = position - cbegin();
+        pointer pos = position;
+        size_type new_size = size() + n;
+        if (new_size > _capacity) {
+            size_type new_capa = new_size;
+            pointer new_data = this->alloc(new_capa);
+            pointer new_pos = new_data + offset;
+            this->cp(first, last, new_pos);
+            this->mv_cp_s(pos, new_pos, new_pos + n);
+            this->update(new_data, new_capa, new_size);
         } else {
-            for (size_type i = 0; i < n; ++i)
-                _alloc_traits::construct(_alloc, _data + _size + i,
-                                         ala::move(*(_data + _size + i - n)));
-            ala::move_backward(_data + offset + 1, _data + _size,
-                               _data + _size + n);
-            for (size_type i = 0; i < n; ++i)
-                _alloc_traits::construct(_alloc, _data + offset + i, *(first++));
+            this->shift_right(offset, n);
+            this->cp(first, last, pos);
+            _size += n;
         }
-        _size += n;
-        return _data + offset;
+        return begin() + offset;
     }
 
     template<class InputIter>
@@ -518,14 +642,12 @@ public:
         return position - n;
     }
 
-    iterator insert(const_iterator position, initializer_vector<value_type> il) {
+    iterator insert(const_iterator position, initializer_list<value_type> il) {
         return this->insert(position, il.begin(), il.end());
     }
 
     iterator erase(const_iterator position) {
-        ALA_CONST_IF(!is_trivially_destructible<value_type>::value) {
-            _alloc_traits::destroy(_alloc, position);
-        }
+        this->destroy(position);
         if (position + 1 < cend())
             ala::move(position + 1, cend(), position);
         --_size;
@@ -533,31 +655,16 @@ public:
     }
 
     iterator erase(const_iterator first, const_iterator last) {
-        ALA_CONST_IF(!is_trivially_destructible<value_type>::value) {
-            for (const_iterator i = first; i < last; ++i, --_size)
-                _alloc_traits::destroy(_alloc, first);
-        }
+        for (const_iterator i = first; i < last; ++i, --_size)
+            this->destroy(i);
         if (last < cend())
             ala::move(last, cend(), first);
         return (iterator)first;
     }
 
-    void swap(vector &other) {
-        swap(_data, other._data);
-        swap(_capacity, other._capacity);
-        swap(_size, other._size);
-        ALA_CONST_IF(_alloc_traits::propagate_on_container_move_assignment::value) {
-            swap(_alloc, other._alloc);
-        }
-    }
-
     void clear() noexcept {
-        ALA_CONST_IF(!is_trivially_destructible<value_type>::value) {
-            size_type sz = size();
-            for (size_type i = 0; i < sz; ++i, --_size)
-                _alloc_traits::destroy(_data + i);
-        }
-        _size = 0;
+        for (iterator i = begin(); i != end(); --_size, (void)++i)
+            this->destroy(i);
     }
 };
 

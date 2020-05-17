@@ -13,8 +13,8 @@ using std::memmove;
 
 // Minimum/maximum operations
 #ifdef min
-#warning "undef min macro"
-#undef min
+    #warning "undef min macro"
+    #undef min
 #endif
 template<class T>
 constexpr const T &min(const T &a, const T &b) {
@@ -27,8 +27,8 @@ constexpr const T &min(const T &a, const T &b, Comp comp) {
 }
 
 #ifdef max
-#warning "undef max macro"
-#undef max
+    #warning "undef max macro"
+    #undef max
 #endif
 template<class T>
 constexpr const T &max(const T &a, const T &b) {
@@ -104,9 +104,8 @@ constexpr enable_if_t<
       is_pointer<InputIter>::value && is_pointer<OutputIter>::value),
     OutputIter>
 copy_n(InputIter first, Size count, OutputIter out) {
-    if (count > 0)
-        for (Size i = 0; i < count; ++i)
-            *out++ = *first++;
+    for (; count > 0; --count)
+        *out++ = *first++;
     return out;
 }
 
@@ -118,6 +117,32 @@ constexpr enable_if_t<
      is_pointer<InputIter>::value && is_pointer<OutputIter>::value),
     OutputIter>
 copy_n(InputIter first, Size count, OutputIter out) {
+    ala::memmove((void *)(out), (void *)(first),
+                 sizeof(typename iterator_traits<InputIter>::value_type) * count);
+    return out + count;
+}
+
+template<class InputIter, class Size, class OutputIter>
+constexpr enable_if_t<
+    !(is_trivial<typename iterator_traits<InputIter>::value_type>::value &&
+      is_same<typename iterator_traits<InputIter>::value_type,
+              typename iterator_traits<OutputIter>::value_type>::value &&
+      is_pointer<InputIter>::value && is_pointer<OutputIter>::value),
+    OutputIter>
+move_n(InputIter first, Size count, OutputIter out) {
+    for (; count > 0; --count)
+        *out++ = ala::move(*first++);
+    return out;
+}
+
+template<class InputIter, class Size, class OutputIter>
+constexpr enable_if_t<
+    (is_trivial<typename iterator_traits<InputIter>::value_type>::value &&
+     is_same<typename iterator_traits<InputIter>::value_type,
+             typename iterator_traits<OutputIter>::value_type>::value &&
+     is_pointer<InputIter>::value && is_pointer<OutputIter>::value),
+    OutputIter>
+move_n(InputIter first, Size count, OutputIter out) {
     ala::memmove((void *)(out), (void *)(first),
                  sizeof(typename iterator_traits<InputIter>::value_type) * count);
     return out + count;
