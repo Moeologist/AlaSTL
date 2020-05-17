@@ -137,21 +137,23 @@ public:
 
     explicit list(size_type n): _alloc() {
         initialize();
-        for (size_type i = 0; i < n; ++i)
-            this->emplace_back();
+        this->resize(n);
     }
 
-    list(size_type n, const value_type &value, const Alloc &a = Alloc())
+    list(size_type n, const value_type &value,
+         const allocator_type &a = allocator_type())
         : _alloc(a) {
         initialize();
-        this->insert(end(), n, value);
+        this->resize(n, v);
     }
 
     template<class InputIter,
              class = enable_if_t<is_base_of<
                  input_iterator_tag,
                  typename iterator_traits<InputIter>::iterator_category>::value>>
-    list(InputIter first, InputIter last, const Alloc &a = Alloc()): _alloc(a) {
+    list(InputIter first, InputIter last,
+         const allocator_type &a = allocator_type())
+        : _alloc(a) {
         initialize();
         this->insert(end(), first, last);
     }
@@ -168,17 +170,21 @@ public:
         this->possess(other);
     }
 
-    list(const list &other, const Alloc &a): _alloc(a) {
+    list(const list &other, const allocator_type &a): _alloc(a) {
         initialize();
         this->clone(other);
     }
 
-    list(list &&other, const Alloc &a): _alloc(a) {
+    list(list &&other, const allocator_type &a): _alloc(a) {
         initialize();
-        this->possess(other);
+        if (_alloc == other._alloc)
+            this->possess(ala::move(other));
+        else
+            this->clone(other);
     }
 
-    list(initializer_list<value_type> il, const Alloc &a = Alloc())
+    list(initializer_list<value_type> il,
+         const allocator_type &a = allocator_type())
         : list(il.begin(), il.end(), a) {}
 
     ~list() {
@@ -217,6 +223,16 @@ protected:
         }
     }
 
+    template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
+    enable_if_t<Dummy> swap_helper(list &other) {
+        ala::swap(_alloc, other._alloc);
+    }
+
+    template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
+    enable_if_t<!Dummy> swap_helper(list &other) {
+        assert(_alloc == other._alloc);
+    }
+
 public:
     list &operator=(const list &other) {
         if (this != ala::addressof(other))
@@ -224,7 +240,6 @@ public:
         return *this;
     }
 
-    // TODO:check same obj
     list &operator=(list &&other) noexcept(_alloc_traits::is_always_equal::value) {
         if (this != ala::addressof(other))
             move_helper(ala::move(other));
@@ -232,9 +247,14 @@ public:
     }
 
     list &operator=(initializer_list<value_type> il) {
-        clear();
-        this->insert(end(), il);
+        this->assign(il.begin(), il.end());
         return *this;
+    }
+
+    void swap(list &other) noexcept(_alloc_traits::is_always_equal::value) {
+        this->swap_helper(other);
+        ala::swap(_guard, other._guard);
+        ala::swap(_size, other._size);
     }
 
     template<class InputIter>
@@ -450,22 +470,6 @@ public:
             i = erase(i);
     }
 
-    template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
-    enable_if_t<Dummy> _swap_helper(list other) {
-        ala::swap(_alloc, other._alloc);
-    }
-
-    template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
-    enable_if_t<!Dummy> _swap_helper(list &other) {
-        assert(_alloc == other._alloc);
-    }
-
-    void swap(list &other) noexcept(_alloc_traits::is_always_equal::value) {
-        ala::swap(_guard, other._guard);
-        ala::swap(_size, other._size);
-        _swap_helper(other);
-    }
-
     void clear() noexcept {
         cut(begin());
     }
@@ -495,7 +499,7 @@ public:
     void splice(const_iterator position, list &other, const_iterator first,
                 const_iterator last) {
         assert(_alloc == other._alloc);
-        size_type len = ala::distance(first, last);
+        auto len = ala::distance(first, last);
         other.detach_range(first, last, len);
         this->attach_range_to(position, first, last, len);
     }
@@ -511,7 +515,7 @@ public:
 
     template<class UnaryPredicate>
     void remove_if(UnaryPredicate pred) {
-        for (iterator i = begin(); i != end();++i)
+        for (iterator i = begin(); i != end(); ++i)
             if (pred(*i))
                 destruct_node(detach(i._ptr));
     }

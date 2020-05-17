@@ -390,11 +390,11 @@ public:
     void
     swap(rb_tree &other) noexcept(_alloc_traits::is_always_equal::value &&
                                       is_nothrow_swappable<value_compare>::value) {
+        this->swap_helper(other);
         ala::swap(_comp, other._comp);
         ala::swap(_root, other._root);
         ala::swap(_size, other._size);
         ala::swap(_guard, other._guard);
-        swap_helper(other);
     }
 
     template<class RBTree>
