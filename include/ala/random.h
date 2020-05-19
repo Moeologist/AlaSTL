@@ -1,11 +1,11 @@
 #ifndef _ALA_RANDOM_H
 #define _ALA_RANDOM_H
 
-#include <ala/type_traits.h>
+#include <ala/intrin/bit.h>
 
 #if defined(_ALA_X86) && \
     ((defined(__RDSEED__) && defined(__RDRND__)) || defined(_ALA_MSVC))
-#include <ala/intrin/rdrand.h>
+    #include <ala/intrin/rdrand.h>
 #endif
 
 namespace ala {
@@ -76,8 +76,10 @@ struct _xoshiro_jump;
 
 template<>
 struct _xoshiro_jump<uint_fast64_t> {
-    static constexpr uint_fast64_t jmp[] = {0x180ec6d33cfd0aba, 0xd5a61266f0c9392c,
-                                       0xa9582618e03fc9aa, 0x39abdc4529b1661c};
+    static constexpr uint_fast64_t jmp[] = {0x180ec6d33cfd0aba,
+                                            0xd5a61266f0c9392c,
+                                            0xa9582618e03fc9aa,
+                                            0x39abdc4529b1661c};
     // equivalent to 2^128 calls to next()
 
     /*
@@ -89,11 +91,11 @@ struct _xoshiro_jump<uint_fast64_t> {
   */
 };
 
-#ifndef UINT_FAST32_MAX != UINT_FAST64_MAX
+#if UINT_FAST32_MAX != UINT_FAST64_MAX
 template<>
 struct _xoshiro_jump<uint_fast32_t> {
     static constexpr uint_fast32_t jmp[] = {0x8764000b, 0xf542d2d3, 0x6fa035c3,
-                                       0x77f2db5b};
+                                            0x77f2db5b};
     // equivalent to 2^64 calls to next()
 };
 #endif
@@ -234,6 +236,103 @@ generate_real(URBG &&g) {
     UInt s = (g() >> (bits - fraction)) | (e << fraction);
     return *(Real *)(&s) - (Real)1.0;
 }
+
+template<class Int = int>
+struct uniform_int_distribution {
+    using result_type = Int;
+    struct param_type {
+        result_type _a;
+        result_type _b;
+
+        typedef uniform_int_distribution distribution_type;
+
+        explicit param_type(result_type a = 0,
+                            result_type b = numeric_limits<result_type>::max())
+            : _a(a), _b(b) {}
+
+        result_type a() const {
+            return _a;
+        }
+        result_type b() const {
+            return _b;
+        }
+
+        friend bool operator==(const param_type &lhs, const param_type &rhs) {
+            return lhs._a == rhs._a && lhs._b == rhs._b;
+        }
+
+        friend bool operator!=(const param_type &lhs, const param_type &rhs) {
+            return !(lhs == rhs);
+        }
+    };
+
+protected:
+    param_type _p;
+
+public:
+    // constructors and reset functions
+    explicit uniform_int_distribution(
+        result_type a = 0, result_type b = numeric_limits<result_type>::max())
+        : _p(a, b) {}
+    explicit uniform_int_distribution(const param_type &p): _p(p) {}
+    void reset() {}
+
+    // generating functions
+
+    template<class URNG>
+    result_type operator()(URNG &g) {
+        return (*this)(g, _p);
+    }
+
+    template<class URNG>
+    result_type operator()(URNG &g, const param_type &p) {
+        result_type a = p.a();
+        result_type b = p.b();
+        result_type l = b - a;
+        if (l == 0)
+            return a;
+        int z = ala::intrin::clz(l);
+        result_type mask = numeric_limits<result_type>::max() >> z;
+        result_type r = g() & mask;
+        for (; l < r;)
+            r = g() & mask;
+        return a + r;
+    }
+
+    // property functions
+    result_type a() const {
+        return _p.a();
+    }
+    result_type b() const {
+        return _p.b();
+    }
+
+    param_type param() const {
+        return _p;
+    }
+
+    void param(const param_type &p) {
+        _p = p;
+    }
+
+    result_type min() const {
+        return a();
+    }
+
+    result_type max() const {
+        return b();
+    }
+
+    friend bool operator==(const uniform_int_distribution &lhs,
+                           const uniform_int_distribution &rhs) {
+        return lhs._p == rhs._p;
+    }
+
+    friend bool operator!=(const uniform_int_distribution &lhs,
+                           const uniform_int_distribution &rhs) {
+        return !(lhs == rhs);
+    }
+};
 
 } // namespace ala
 #endif // HEAD

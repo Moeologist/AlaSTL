@@ -1044,6 +1044,25 @@ template<typename T1, typename T2> struct common_reference<T1, T2>: _common_refe
 template<typename T1, typename T2, typename... Ts>
 struct common_reference<T1, T2, Ts...>: _common_reference_n<T1, T2, Ts...> {};
 
+constexpr int                _convert_to_integral(int val)                { return val; }
+constexpr unsigned           _convert_to_integral(unsigned val)           { return val; }
+constexpr long               _convert_to_integral(long val)               { return val; }
+constexpr unsigned long      _convert_to_integral(unsigned long val)      { return val; }
+constexpr long long          _convert_to_integral(long long val)          { return val; }
+constexpr unsigned long long _convert_to_integral(unsigned long long val) { return val; }
+
+#ifdef _ALA_INT128
+constexpr __int128_t  _convert_to_integral(__int128_t val)  { return val; }
+constexpr __uint128_t _convert_to_integral(__uint128_t val) { return val; }
+#endif
+
+template<typename Float>
+constexpr enable_if_t<is_floating_point<Float>::value, long long>
+_convert_to_integral(Float val) {
+    return val;
+}
+
+
 } // namespace ala
 
 // clang-format on
