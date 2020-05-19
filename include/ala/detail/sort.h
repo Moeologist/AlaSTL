@@ -146,22 +146,6 @@ void shell_sort(RandomIter first, RandomIter last) {
 namespace detail {
 
 template<class T, class Comp>
-T &&median(T &&a, T &&b, T &&c, Comp comp) {
-    if (comp(a, b))
-        if (comp(b, c))
-            return ala::forward<T>(b);
-        else if (comp(a, c))
-            return ala::forward<T>(c);
-        else
-            return ala::forward<T>(a);
-    else if (comp(a, c))
-        return ala::forward<T>(a);
-    else if (comp(b, c))
-        return ala::forward<T>(c);
-    return ala::forward<T>(b);
-}
-
-template<class T, class Comp>
 void set_median(T &a, T &b, T &c, Comp comp) {
     if (comp(a, b)) {
         if (comp(b, c))
@@ -175,29 +159,34 @@ void set_median(T &a, T &b, T &c, Comp comp) {
 }
 
 template<class RandomIter, class Comp>
+RandomIter partition_c(RandomIter first, RandomIter last, Comp comp) {
+    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+    diff_t len = last - first;
+    assert(!(len < 3));
+    ala::detail::set_median(*first, *(first + len / 2), *(last - 1), comp);
+    RandomIter left = first + 1, right = last - 1;
+    for (;; ++left, --right) {
+        while (comp(*left, *first))
+            ++left;
+        while (comp(*first, *right))
+            --right;
+        if (!(left < right))
+            break;
+        ala::iter_swap(left, right);
+    }
+    return left;
+}
+
+template<class RandomIter, class Comp>
 void quick_sort_impl(RandomIter first, RandomIter last, Comp comp) {
     typedef typename iterator_traits<RandomIter>::difference_type diff_t;
     diff_t len = last - first;
     if (len <= ALA_INSERTION_THRESHOLD)
         return;
-    ala::detail::set_median(*first, *(first + len / 2), *(last - 1), comp);
-    RandomIter left = first + 1, right = last - 1;
-    for (;; ++left, --right) {
-        while (comp(*left, *first)) {
-            // assert(left < last);
-            ++left;
-        }
-        while (comp(*first, *right)) {
-            // assert(right >= first);
-            --right;
-        }
-        if (!(left < right))
-            break;
-        iter_swap(left, right);
-    }
+    RandomIter left = ala::detail::partition_c(first, last, comp);
     ala::detail::quick_sort_impl(first, left, comp);
     ala::detail::quick_sort_impl(left, last, comp);
-} // namespace detail
+}
 
 // quick-sort with three-way partion
 template<class RandomIter, class Comp>
@@ -221,6 +210,20 @@ void quick_sort_three_way_impl(RandomIter first, RandomIter last, Comp comp) {
     ala::detail::quick_sort_three_way_impl(right, last, comp);
 }
 
+template<class RandomIter, class Comp>
+constexpr void sort_impl(RandomIter first, RandomIter last, unsigned depth,
+                         Comp comp) {
+    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+    diff_t len = last - first;
+    while ((len = last - first) > ALA_INSERTION_THRESHOLD) {
+        RandomIter left = ala::detail::partition_c(first, last, comp);
+        ala::detail::sort_impl(left, last, --depth, comp);
+        last = left;
+    }
+    if (depth == 0)
+        ala::insertion_sort(first, last, comp);
+}
+
 } // namespace detail
 
 template<class RandomIter, class Comp>
@@ -239,38 +242,6 @@ template<class RandomIter>
 void quick_sort(RandomIter first, RandomIter last) {
     return quick_sort(first, last, less<>());
 }
-
-namespace detail {
-
-template<class RandomIter, class Comp>
-constexpr void sort_impl(RandomIter first, RandomIter last, unsigned depth,
-                         Comp comp) {
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
-    diff_t len = last - first;
-    while ((len = last - first) > ALA_INSERTION_THRESHOLD) {
-        ala::detail::set_median(*first, *(first + len / 2), *(last - 1), comp);
-        RandomIter left = first + 1, right = last - 1;
-        for (;; ++left, --right) {
-            while (comp(*left, *first)) {
-                // assert(left < last);
-                ++left;
-            }
-            while (comp(*first, *right)) {
-                // assert(right >= first);
-                --right;
-            }
-            if (!(left < right))
-                break;
-            ala::iter_swap(left, right);
-        }
-        ala::detail::sort_impl(left, last, --depth, comp);
-        last = left;
-    }
-    if (depth == 0)
-        ala::insertion_sort(first, last, comp);
-}
-
-} // namespace detail
 
 // a quick-sort variety form eastl
 template<class RandomIter, class Comp>
@@ -294,12 +265,14 @@ template<class InputIter1, class InputIter2, class OutputIter, class Comp>
 constexpr OutputIter merge(InputIter1 first1, InputIter1 last1, InputIter2 first2,
                            InputIter2 last2, OutputIter out, Comp comp) {
     while (first1 != last1 && first2 != last2)
-        *out++ = comp(*first2, *first1) ? *first2++ : *first1++;
-    while (first1 != last1)
-        *out++ = *first1++;
-    while (first2 != last2)
-        *out++ = *first2++;
-    return out;
+        if (comp(*first2, *first1))
+            *out++ = *first2++;
+        else
+            *out++ = *first1++;
+    if (first1 != last1)
+        return ala::copy(first1, last1, out);
+    else
+        return ala::copy(first2, last2, out);
 }
 
 template<class InputIter1, class InputIter2, class OutputIter>
@@ -308,29 +281,21 @@ constexpr OutputIter merge(InputIter1 first1, InputIter1 last1,
     return ala::merge(first1, last1, first2, last2, out, less<>());
 }
 
-template<class BidirIter, class Comp>
-void inplace_merge(BidirIter first, BidirIter middle, BidirIter last, Comp comp) {
-    typedef typename iterator_traits<BidirIter>::difference_type diff_t;
-    typedef typename iterator_traits<BidirIter>::value_type T;
-    diff_t len = ala::distance(first, last);
-    T *tmp = new T[len];
-    ala::merge(first, middle, middle, last, tmp, comp);
-    ala::move(tmp, tmp + len, first);
-    delete[] tmp;
-}
-
-template<class BidirIter>
-void inplace_merge(BidirIter first, BidirIter middle, BidirIter last) {
-    return ala::inplace_merge(first, middle, last, less<>());
-}
-
 namespace detail {
 
-template<class I>
-void mv(I a, I b, I c) {
-    ala::move(a, b, c);
-    for (auto i = a; i < b; ++i)
-        *i = 0;
+template<class InputIter1, class InputIter2, class OutputIter, class Comp>
+constexpr OutputIter merge_mv(InputIter1 first1, InputIter1 last1,
+                              InputIter2 first2, InputIter2 last2,
+                              OutputIter out, Comp comp) {
+    while (first1 != last1 && first2 != last2)
+        if (comp(*first2, *first1))
+            *out++ = ala::move(*first2++);
+        else
+            *out++ = ala::move(*first1++);
+    if (first1 != last1)
+        return ala::move(first1, last1, out);
+    else
+        return ala::move(first2, last2, out);
 }
 
 template<class RandomIter, class Size, class Comp>
@@ -357,6 +322,22 @@ bool merge_sort_impl(RandomIter first, RandomIter tmp, Size len, Comp comp) {
 }
 
 } // namespace detail
+
+template<class BidirIter, class Comp>
+void inplace_merge(BidirIter first, BidirIter middle, BidirIter last, Comp comp) {
+    typedef typename iterator_traits<BidirIter>::difference_type diff_t;
+    typedef typename iterator_traits<BidirIter>::value_type T;
+    diff_t len = ala::distance(first, last);
+    T *tmp = new T[len];
+    ala::detail::merge_mv(first, middle, middle, last, tmp, comp);
+    ala::move(tmp, tmp + len, first);
+    delete[] tmp;
+}
+
+template<class BidirIter>
+void inplace_merge(BidirIter first, BidirIter middle, BidirIter last) {
+    return ala::inplace_merge(first, middle, last, less<>());
+}
 
 // top-down merge-sort, no-copyback
 template<class RandomIter, class Comp>
@@ -394,16 +375,16 @@ constexpr void stable_sort(RandomIter first, RandomIter last, Comp comp) {
             RandomIter left = first, right = last;
             T *out = tmp;
             for (; left < right; left += size2, (void)(out += size2))
-                ala::merge(left, ala::min(left + size, right),
-                           ala::min(left + size, right),
-                           ala::min(left + size2, right), out, comp);
+                ala::detail::merge_mv(left, ala::min(left + size, right),
+                                      ala::min(left + size, right),
+                                      ala::min(left + size2, right), out, comp);
         } else {
             T *left = tmp, *right = tmp + len;
             RandomIter out = first;
             for (; left < right; left += size2, (void)(out += size2))
-                ala::merge(left, ala::min(left + size, right),
-                           ala::min(left + size, right),
-                           ala::min(left + size2, right), out, comp);
+                ala::detail::merge_mv(left, ala::min(left + size, right),
+                                      ala::min(left + size, right),
+                                      ala::min(left + size2, right), out, comp);
         }
         flag = !flag;
     }
@@ -576,21 +557,7 @@ constexpr void partial_sort(RandomIter first, RandomIter middle,
             ala::iter_swap(first + 1, first);
         return;
     }
-    ala::detail::set_median(*first, *(first + len / 2), *(last - 1), comp);
-    RandomIter left = first + 1, right = last - 1;
-    for (;; ++left, (void)--right) {
-        while (comp(*left, *first)) {
-            // assert(left < last);
-            ++left;
-        }
-        while (comp(*first, *right)) {
-            // assert(right >= first);
-            --right;
-        }
-        if (!(left < right))
-            break;
-        ala::iter_swap(left, right);
-    }
+    RandomIter left = ala::detail::partition_c(first, last, comp);
     if (left < middle) {
         ala::partial_sort(left, middle, last, comp);
         ala::sort(first, middle, comp);
@@ -615,21 +582,7 @@ constexpr void nth_element(RandomIter first, RandomIter nth, RandomIter last,
                 ala::iter_swap(first + 1, first);
             return;
         }
-        ala::detail::set_median(*first, *(first + len / 2), *(last - 1), comp);
-        RandomIter left = first + 1, right = last - 1;
-        for (;; ++left, --right) {
-            while (comp(*left, *first)) {
-                // assert(left < last);
-                ++left;
-            }
-            while (comp(*first, *right)) {
-                // assert(right >= first);
-                --right;
-            }
-            if (!(left < right))
-                break;
-            ala::iter_swap(left, right);
-        }
+        RandomIter left = ala::detail::partition_c(first, last, comp);
         ala::iter_swap(left - 1, first);
         if (nth < left - 1)
             last = left - 1;
@@ -652,9 +605,9 @@ constexpr RandomIter partial_sort_copy(Iter first1, Iter last1, RandomIter first
     diff_t n = 0;
     for (; first1 != last1 && n < last2 - first2; ++first1, (void)++n)
         first2[n] = *first1;
-    if (n == 1) {
-        return last2;
-    } else if (first1 != last1) {
+    if (n == 0)
+        return first2;
+    if (first1 != last1) {
         ala::make_heap(first2, last2, comp);
         for (; first1 != last1; ++first1)
             if (comp(*first1, *first2)) {
@@ -662,11 +615,10 @@ constexpr RandomIter partial_sort_copy(Iter first1, Iter last1, RandomIter first
                 ala::detail::heap_sink(first2, (diff_t)0, (diff_t)n, comp);
             }
         ala::sort_heap(first2, last2, comp);
-        return last2;
     } else {
         ala::sort(first2, first2 + n, comp);
-        return first2 + n;
     }
+    return first2 + n;
 }
 
 template<class Iter, class RandomIter>
