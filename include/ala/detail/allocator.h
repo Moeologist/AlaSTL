@@ -7,16 +7,16 @@
 #include <ala/detail/macro.h>
 
 #ifdef _ALA_MSVC
-#pragma warning(push)
-#pragma warning(disable : 4348)
+    #pragma warning(push)
+    #pragma warning(disable : 4348)
 #endif
 
 namespace ala {
 #if _ALA_ENABLE_ALIGNED_NEW
-using std::align_val_t;
+using ::std::align_val_t;
 #endif
 
-using std::bad_array_new_length;
+using ::std::bad_array_new_length;
 
 template<class T>
 const T *addressof(const T &&) = delete;
@@ -30,7 +30,7 @@ template<typename Ptr>
 struct pointer_traits {
     ALA_HAS_MEM_TYPE(element_type)
     template<typename T, bool = _has_element_type<T>::value>
-    struct _get_element_type {};
+    struct _get_element_type;
 
     template<typename T>
     struct _get_element_type<T, true> {
@@ -70,11 +70,10 @@ struct pointer_traits {
     template<typename U>
     using rebind = typename _get_rebind<pointer, U>::type;
 
-    struct _void_dummy {};
+    struct _dummy {};
 
-    constexpr static pointer
-    pointer_to(conditional_t<is_void<element_type>::value, _void_dummy,
-                             element_type> &r) noexcept {
+    constexpr static pointer pointer_to(
+        conditional_t<is_void<element_type>::value, _dummy, element_type &> r) noexcept {
         return pointer::pointer_to(r);
     }
 };
@@ -135,15 +134,15 @@ struct allocator {
 #endif
     }
 
-    template<class U, class... Args>
-    void construct(U *p, Args &&... args) {
-        ::new ((void *)p) U(ala::forward<Args>(args)...);
-    }
+    // template<class U, class... Args>
+    // void construct(U *p, Args &&... args) {
+    //     ::new ((void *)p) U(ala::forward<Args>(args)...);
+    // }
 
-    template<class U>
-    void destroy(U *p) {
-        p->~U();
-    }
+    // template<class U>
+    // void destroy(U *p) {
+    //     p->~U();
+    // }
 
     ALA_NODISCARD void *allocate_bytes(size_t nbytes,
                                        size_t alignment = alignof(max_align_t)) {
@@ -188,9 +187,9 @@ bool operator!=(const allocator<T> &, const allocator<U> &) noexcept {
 
 template<class Alloc>
 struct allocator_traits {
-    // clang-format off
-    typedef Alloc                       allocator_type;
+    typedef Alloc allocator_type;
     typedef typename allocator_type::value_type value_type;
+    // clang-format off
     ALA_HAS_MEM_TYPEDEF(allocator_type, pointer,            value_type*)
     ALA_HAS_MEM_TYPEDEF(allocator_type, const_pointer,      typename pointer_traits<pointer>::template rebind<const value_type>)
     ALA_HAS_MEM_TYPEDEF(allocator_type, void_pointer,       typename pointer_traits<pointer>::template rebind<void>)
@@ -200,7 +199,7 @@ struct allocator_traits {
     ALA_HAS_MEM_TYPEDEF(allocator_type, propagate_on_container_copy_assignment, false_type)
     ALA_HAS_MEM_TYPEDEF(allocator_type, propagate_on_container_move_assignment, false_type)
     ALA_HAS_MEM_TYPEDEF(allocator_type, propagate_on_container_swap,            false_type)
-    ALA_HAS_MEM_TYPEDEF(allocator_type, is_always_equal,                        false_type)
+    ALA_HAS_MEM_TYPEDEF(allocator_type, is_always_equal,    typename is_empty<allocator_type>::type)
     // clang-format on
 
     template<typename T, typename U, typename = void>
@@ -239,13 +238,13 @@ struct allocator_traits {
         : true_type {};
 
     template<typename Dummy = allocator_type>
-    static enable_if_t<_has_select<void, Dummy>::value, Dummy>
+    static enable_if_t<_has_select<void, Dummy>::value, allocator_type>
     select_on_container_copy_construction(const Dummy &a) {
         return a.select_on_container_copy_construction();
     }
 
     template<typename Dummy = allocator_type>
-    static enable_if_t<!_has_select<void, Dummy>::value, Dummy>
+    static enable_if_t<!_has_select<void, Dummy>::value, allocator_type>
     select_on_container_copy_construction(const Dummy &a) {
         return a;
     }
@@ -265,28 +264,41 @@ struct allocator_traits {
     struct _has_destroy<void_t<decltype(declval<A &>().destroy(declval<P>()))>, A, P>
         : ala::true_type {};
 
-    template<typename T, typename... Args>
-    static enable_if_t<_has_construct<void, allocator_type &, T *, Args...>::value>
-    construct(allocator_type &a, T *p, Args &&... args) {
+    template<typename Pointer, typename... Args>
+    static enable_if_t<_has_construct<void, allocator_type &, Pointer, Args...>::value>
+    construct(allocator_type &a, Pointer p, Args &&... args) {
+        using T = typename pointer_traits<Pointer>::element_type;
+        static_assert(is_same<remove_cv_t<T>, value_type>::value,
+                      "Can not process incompatible type");
         a.construct(p, ala::forward<Args>(args)...);
     }
 
-    template<typename T, typename... Args>
-    static enable_if_t<!_has_construct<void, allocator_type &, T *, Args...>::value>
-    construct(allocator_type &a, T *p, Args &&... args) {
-        ::new ((void *)p) T(ala::forward<Args>(args)...);
+    template<typename Pointer, typename... Args>
+    static enable_if_t<!_has_construct<void, allocator_type &, Pointer, Args...>::value>
+    construct(allocator_type &a, Pointer p, Args &&... args) {
+        using T = typename pointer_traits<Pointer>::element_type;
+        static_assert(is_same<remove_cv_t<T>, value_type>::value,
+                      "Can not process incompatible type");
+        ::new ((void *)ala::addressof(*p))
+            value_type(ala::forward<Args>(args)...);
     }
 
-    template<typename T>
-    static enable_if_t<_has_destroy<void, allocator_type &, T *>::value>
-    destroy(allocator_type &a, T *p) {
+    template<typename Pointer>
+    static enable_if_t<_has_destroy<void, allocator_type &, Pointer>::value>
+    destroy(allocator_type &a, Pointer p) {
+        using T = typename pointer_traits<Pointer>::element_type;
+        static_assert(is_same<remove_cv_t<T>, value_type>::value,
+                      "Can not process incompatible type");
         a.destroy(p);
     }
 
-    template<typename T>
-    static enable_if_t<!_has_destroy<void, allocator_type &, T *>::value>
-    destroy(allocator_type &a, T *p) {
-        p->~T();
+    template<typename Pointer>
+    static enable_if_t<!_has_destroy<void, allocator_type &, Pointer>::value>
+    destroy(allocator_type &a, Pointer p) {
+        using T = typename pointer_traits<Pointer>::element_type;
+        static_assert(is_same<remove_cv_t<T>, value_type>::value,
+                      "Can not process incompatible type");
+        (*p).~value_type();
     }
 
     template<typename Void, typename A, typename U>
@@ -367,12 +379,33 @@ struct allocator_traits {
     deallocate_object(allocator_type &a, U *p, size_t n = 1) {
         a.template deallocate_object<U>(p, n);
     }
+
+    template<typename Void, typename A>
+    struct _has_max_size: false_type {};
+
+    template<typename A>
+    struct _has_max_size<void_t<decltype(declval<const A &>().max_size())>, A>
+        : true_type {};
+
+    template<typename Dummy = allocator_type>
+    static enable_if_t<_has_max_size<void, Dummy>::value, size_type>
+    max_size(const allocator_type &a) {
+        size_type sz = a.max_size();
+        size_type mx = numeric_limits<difference_type>::max();
+        return sz < mx ? sz : mx;
+    }
+
+    template<typename Dummy = allocator_type>
+    static enable_if_t<!_has_max_size<void, Dummy>::value, size_type>
+    max_size(const allocator_type &a) {
+        return numeric_limits<difference_type>::max();
+    }
 };
 
 } // namespace ala
 
 #ifdef _ALA_MSVC
-#pragma warning(pop)
+    #pragma warning(pop)
 #endif
 
 #endif

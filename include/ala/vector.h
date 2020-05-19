@@ -3,7 +3,6 @@
 
 #include <ala/detail/algorithm_base.h>
 #include <ala/detail/allocator.h>
-#include <ala/detail/uninitialized_memory.h>
 
 namespace ala {
 
@@ -24,8 +23,10 @@ public:
     typedef const_pointer const_iterator;
     typedef ala::reverse_iterator<iterator> reverse_iterator;
     typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
+    static_assert(is_same<value_type, typename _alloc_traits::value_type>::value,
+                  "Allocator value_type mismatch");
 
-private:
+protected:
     pointer _data = nullptr;
     size_type _capacity = 0;
     size_type _size = 0;
@@ -43,7 +44,7 @@ private:
     }
 
     pointer alloc(size_type n) {
-        return _alloc.allocator(n);
+        return _alloc.allocate(n);
     }
 
     void update(pointer m, size_type capacity, size_type size) {
@@ -70,38 +71,52 @@ private:
         return first;
     }
 
-    template<class InputIter>
-    pointer mv(InputIter first, InputIter last, pointer out) {
-        for (; first != last; ++first, (void)++out)
-            _alloc_traits::construct(_alloc, out, *first);
-        return out;
-    }
-
-    template<class InputIter>
-    pointer cp(InputIter first, InputIter last, pointer out) {
+    template<class InputIter, class Dummy = value_type>
+    enable_if_t<is_move_constructible<Dummy>::value>
+    mv(InputIter first, InputIter last, pointer out) {
         for (; first != last; ++first, (void)++out)
             _alloc_traits::construct(_alloc, out, ala::move(*first));
-        return out;
     }
 
     template<class InputIter, class Dummy = value_type>
-    enable_if_t<is_nothrow_move_constructible<Dummy>::value ||
-                !is_copy_constructible<Dummy>::value>
+    enable_if_t<!is_move_constructible<Dummy>::value>
+    mv(InputIter first, InputIter last, pointer out) {
+        for (; first != last; ++first, (void)++out) {
+            _alloc_traits::construct(_alloc, out);
+            *out = ala::move(*first);
+        }
+    }
+
+    template<class InputIter, class Dummy = value_type>
+    enable_if_t<true> cp(InputIter first, InputIter last, pointer out) {
+        for (; first != last; ++first, (void)++out)
+            _alloc_traits::construct(_alloc, out, *first);
+    }
+
+    // template<class InputIter, class Dummy = value_type>
+    // enable_if_t<!is_copy_constructible<Dummy>::value>
+    // cp(InputIter first, InputIter last, pointer out) {
+    //     for (; first != last; ++first, (void)++out) {
+    //         _alloc_traits::construct(_alloc, out);
+    //         *out = *first;
+    //     }
+    // }
+
+    template<class InputIter, class Dummy = value_type>
+    enable_if_t<(is_nothrow_move_constructible<Dummy>::value ||
+                 !is_copy_constructible<Dummy>::value)>
     mv_cp(InputIter first, InputIter last, pointer dst) {
         return this->mv(first, last, dst);
     }
 
     template<class InputIter, class Dummy = value_type>
-    enable_if_t<!is_nothrow_move_constructible<Dummy>::value &&
-                is_copy_constructible<Dummy>::value>
+    enable_if_t<!(is_nothrow_move_constructible<Dummy>::value ||
+                  !is_copy_constructible<Dummy>::value)>
     mv_cp(InputIter first, InputIter last, pointer dst) {
         return this->cp(first, last, dst);
     }
 
-    template<class Dummy = value_type>
-    enable_if_t<!is_nothrow_move_constructible<Dummy>::value &&
-                is_copy_constructible<Dummy>::value>
-    mv_cp(pointer dst) {
+    void mv_cp(pointer dst) {
         return this->mv_cp(begin(), end(), dst);
     }
 
@@ -120,7 +135,7 @@ private:
     /*
     *********************** 
                ↑           ↑
-             start       end()
+             first       end()
     [first, end) shift right by diff elements
     */
     void shift_right(pointer first, difference_type diff) {
@@ -129,30 +144,48 @@ private:
         this->mv(mid, end(), end());
         mid = mid - 1;
         if (first < mid)
-            ala::move_backward(mid, first - 1, end());
+            ala::move_backward(first, mid, end());
     }
 
-    void cut(pointer position) {
-        for (; position != end(); ++position)
+    void cut(pointer position) noexcept {
+        pointer e = end();
+        for (; position != e; ++position, (void)--_size)
             this->destroy(position);
-        _size = position - _data;
     }
 
     void realloc(size_type n) {
-        pointer new_data = this->allocate(n);
-        this->mv_cp(begin(), size(), new_data);
+        pointer new_data = this->alloc(n);
+        this->mv_cp(begin(), end(), new_data);
         this->update(new_data, n, _size);
     }
 
     size_type expand() {
         size_type c = capacity();
-        return c > 0 ? c << 1 : 1;
+        return c + (c >> 1) + 1;
+    }
+
+    size_type expand2() {
+        size_type c = capacity();
+        return (c << 1) + 1;
     }
 
     void clone(const vector &other) {
+        if (other.empty())
+            return;
         size_type n = other.size();
         pointer new_data = this->alloc(n);
         this->cp(other.begin(), other.begin() + n, new_data);
+        _capacity = n;
+        _data = new_data;
+        _size = n;
+    }
+
+    void clone(vector &&other) {
+        if (other.empty())
+            return;
+        size_type n = other.size();
+        pointer new_data = this->alloc(n);
+        this->mv(other.begin(), other.begin() + n, new_data);
         _capacity = n;
         _data = new_data;
         _size = n;
@@ -172,30 +205,73 @@ private:
         dealloc();
     }
 
+    template<class Iter>
+    enable_if_t<!is_base_of<forward_iterator_tag,
+                            typename iterator_traits<Iter>::iterator_category>::value>
+    iter_ctor_helper(Iter first, Iter last) {
+        for (; first != last; ++first) {
+            size_type new_size = size() + 1;
+            if (new_size > capacity()) {
+                size_type new_capa = expand2();
+                pointer new_data = this->alloc(new_capa);
+                this->construct(new_data + size(), *first);
+                this->mv_cp(new_data);
+                this->update(new_data, new_capa, new_size);
+            } else {
+                this->construct(end(), *first);
+                ++_size;
+            }
+        }
+    }
+
+    template<class Iter>
+    enable_if_t<is_base_of<forward_iterator_tag,
+                           typename iterator_traits<Iter>::iterator_category>::value>
+    iter_ctor_helper(Iter first, Iter last) {
+        if (ala::distance(first, last) < 1)
+            return;
+        size_type new_size = ala::distance(first, last);
+        size_type new_capa = new_size;
+        pointer new_data = this->alloc(new_capa);
+        this->cp(first, last, new_data);
+        this->update(new_data, new_capa, new_size);
+    }
+
+    template<class... Args>
+    void nv_ctor_helper(size_type n, Args &&... args) {
+        if (n < 1)
+            return;
+        size_type new_size = n;
+        size_type new_capa = new_size;
+        pointer new_data = this->alloc(new_capa);
+        this->fill_e(new_data, new_data + n, ala::forward<Args>(args)...);
+        this->update(new_data, new_capa, new_size);
+    }
+
 public:
     // construct/copy/destroy:
-    vector() noexcept(noexcept(allocator_type())) {}
+    vector() noexcept(is_nothrow_default_constructible<allocator_type>::value)
+        : _alloc() {}
 
-    explicit vector(const allocator_type &a) noexcept {}
+    explicit vector(const allocator_type &a) noexcept: _alloc(a) {}
 
-    explicit vector(size_type n) {
-        this->resize(n);
+    explicit vector(size_type n, const allocator_type &a = allocator_type())
+        : _alloc(a) {
+        this->nv_ctor_helper(n);
     }
 
     vector(size_type n, const value_type &v,
            const allocator_type &a = allocator_type())
         : _alloc(a) {
-        this->resize(n, v);
+        this->nv_ctor_helper(n, v);
     }
 
-    template<class pointer,
+    template<class Iter,
              typename = enable_if_t<is_base_of<
-                 input_iterator_tag,
-                 typename iterator_traits<pointer>::iterator_category>::value>>
-    vector(pointer first, pointer last,
-           const allocator_type &a = allocator_type())
+                 input_iterator_tag, typename iterator_traits<Iter>::iterator_category>::value>>
+    vector(Iter first, Iter last, const allocator_type &a = allocator_type())
         : _alloc(a) {
-        this->insert(end(), first, last);
+        this->iter_ctor_helper(first, last);
     }
 
     vector(const vector &other)
@@ -216,7 +292,7 @@ public:
         if (_alloc == other._alloc)
             this->possess(ala::move(other));
         else
-            this->clone(other);
+            this->clone(ala::move(other));
     }
 
     vector(initializer_list<value_type> il,
@@ -255,17 +331,19 @@ protected:
             clear_m();
             this->possess(ala::move(other));
         } else {
-            this->assign(other.begin(), other.end());
+            this->assign(ala::make_move_iterator(other.begin()),
+                         ala::make_move_iterator(other.end()));
         }
     }
 
     template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
-    enable_if_t<Dummy> swap_helper(vector other) {
+    enable_if_t<Dummy> swap_helper(vector &other) noexcept {
         ala::swap(_alloc, other._alloc);
     }
 
     template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
-    enable_if_t<!Dummy> swap_helper(vector &other) {
+    enable_if_t<!Dummy>
+    swap_helper(vector &other) noexcept(_alloc_traits::is_always_equal::value) {
         assert(_alloc == other._alloc);
     }
 
@@ -289,18 +367,20 @@ public:
         return *this;
     }
 
-    void swap(vector &other) {
+    void
+    swap(vector &other) noexcept(_alloc_traits::propagate_on_container_swap::value ||
+                                 _alloc_traits::is_always_equal::value) {
         this->swap_helper(other);
-        swap(_data, other._data);
-        swap(_capacity, other._capacity);
-        swap(_size, other._size);
+        ala::swap(_data, other._data);
+        ala::swap(_capacity, other._capacity);
+        ala::swap(_size, other._size);
     }
 
 protected:
     template<class Size, class InputIter>
-    void assign_realloc(Size n, InputIter first) {
-        InputIter new_data = this->allocate(n);
-        this->cp(first, first + n, new_data);
+    void assign_realloc(Size n, InputIter first, InputIter last) {
+        pointer new_data = this->alloc(n);
+        this->cp(first, last, new_data);
         this->update(new_data, n, n);
     }
 
@@ -310,14 +390,13 @@ protected:
         for (; first != last && i < size(); ++first, (void)++i)
             *(_data + i) = *first;
         if (i < size())
-            this->resize(i);
+            this->cut(begin() + i);
         if (first != last)
-            this->insert(end(), first, last);
+            this->insert(cend(), first, last);
     }
 
-    template<class Size, class InputIter>
     void assign_nv_realloc(size_type n, const value_type &v) {
-        InputIter new_data = this->allocate(n);
+        pointer new_data = this->alloc(n);
         this->fill_e(new_data, new_data + n, v);
         this->update(new_data, n, n);
     }
@@ -327,7 +406,7 @@ protected:
         for (; n > 0 && i != size(); --n, (void)++i)
             *(_data + i) = v;
         if (i != size())
-            this->resize(i);
+            this->cut(begin() + i);
         if (n > 0)
             this->insert(end(), n, v);
     }
@@ -341,11 +420,11 @@ public:
                    typename iterator_traits<InputIter>::iterator_category>::value>
     assign(InputIter first, InputIter last) {
         typename iterator_traits<InputIter>::difference_type len;
-        len = distance(first, last);
+        len = ala::distance(first, last);
         if (len > capacity())
-            assign_realloc(len, first);
+            this->assign_realloc(len, first, last);
         else
-            assign_norealloc(first, last);
+            this->assign_norealloc(first, last);
     }
 
     template<class InputIter>
@@ -355,14 +434,14 @@ public:
         !is_base_of<forward_iterator_tag,
                     typename iterator_traits<InputIter>::iterator_category>::value>
     assign(InputIter first, InputIter last) {
-        assign_norealloc(first, last);
+        this->assign_norealloc(first, last);
     }
 
     void assign(size_type n, const value_type &v) {
         if (n > capacity())
-            assign_nv_realloc(n, v);
+            this->assign_nv_realloc(n, v);
         else
-            assign_nv_no_realloc(n, v);
+            this->assign_nv_norealloc(n, v);
     }
 
     void assign(initializer_list<value_type> il) {
@@ -383,7 +462,7 @@ public:
     }
 
     constexpr iterator end() noexcept {
-        return end();
+        return _data + size();
     }
 
     constexpr const_iterator end() const noexcept {
@@ -428,7 +507,7 @@ public:
     }
 
     size_type max_size() const noexcept {
-        return numeric_limits<difference_type>::max();
+        return _alloc_traits::max_size(_alloc);
     }
 
 protected:
@@ -515,11 +594,15 @@ public:
 
     // data access:
     value_type *data() noexcept {
-        return _data;
+        if (empty())
+            return nullptr;
+        return ala::addressof(*_data);
     }
 
     const value_type *data() const noexcept {
-        return _data;
+        if (empty())
+            return nullptr;
+        return ala::addressof(*_data);
     }
 
     // modifiers:
@@ -536,7 +619,7 @@ public:
             this->construct(end(), ala::forward<Args>(args)...);
             ++_size;
         }
-        return *end();
+        return back();
     }
 
     void push_back(const value_type &v) {
@@ -555,7 +638,7 @@ public:
     template<class... Args>
     iterator emplace(const_iterator position, Args &&... args) {
         difference_type offset = position - cbegin();
-        pointer pos = position;
+        pointer pos = begin() + offset;
         size_type new_size = size() + 1;
         if (new_size > capacity()) {
             size_type new_capa = expand();
@@ -566,7 +649,7 @@ public:
             this->update(new_data, new_capa, new_size);
         } else {
             value_type tmp(ala::forward<Args>(args)...);
-            this->shift_right(position, 1);
+            this->shift_right(pos, 1);
             this->mv_cp(&tmp, &tmp + 1, pos);
             ++_size;
         }
@@ -583,17 +666,17 @@ public:
 
     iterator insert(const_iterator position, size_type n, const value_type &v) {
         difference_type offset = position - cbegin();
-        pointer pos = position;
+        pointer pos = begin() + offset;
         size_type new_size = size() + n;
         if (new_size > _capacity) {
             size_type new_capa = new_size;
             pointer new_data = this->alloc(new_capa);
             pointer new_pos = new_data + offset;
             this->fill_e(new_pos, new_pos + n, v);
-            this->mv_cp_s(pos, new_pos, new_pos + n);
+            this->mv_cp_s(pos, new_data, new_pos + n);
             this->update(new_data, new_capa, new_size);
         } else {
-            this->shift_right(offset, n);
+            this->shift_right(pos, n);
             this->fill_e(pos, pos + n, v);
             _size += n;
         }
@@ -609,19 +692,19 @@ public:
         iterator>
     insert(const_iterator position, InputIter first, InputIter last) {
         typedef typename iterator_traits<InputIter>::difference_type diff_t;
-        diff_t n = distance(first, last);
+        diff_t n = ala::distance(first, last);
         difference_type offset = position - cbegin();
-        pointer pos = position;
+        pointer pos = begin() + offset;
         size_type new_size = size() + n;
         if (new_size > _capacity) {
             size_type new_capa = new_size;
             pointer new_data = this->alloc(new_capa);
             pointer new_pos = new_data + offset;
             this->cp(first, last, new_pos);
-            this->mv_cp_s(pos, new_pos, new_pos + n);
+            this->mv_cp_s(pos, new_data, new_pos + n);
             this->update(new_data, new_capa, new_size);
         } else {
-            this->shift_right(offset, n);
+            this->shift_right(pos, n);
             this->cp(first, last, pos);
             _size += n;
         }
@@ -636,10 +719,10 @@ public:
                         typename iterator_traits<InputIter>::iterator_category>::value,
         iterator>
     insert(const_iterator position, InputIter first, InputIter last) {
-        size_type n = 0;
-        for (; first != last; ++first, ++position, ++n)
+        difference_type offset = position - cbegin();
+        for (; first != last; ++first, (void)++position)
             position = this->emplace(position, *first);
-        return position - n;
+        return begin() + offset;
     }
 
     iterator insert(const_iterator position, initializer_list<value_type> il) {
@@ -647,31 +730,33 @@ public:
     }
 
     iterator erase(const_iterator position) {
-        this->destroy(position);
-        if (position + 1 < cend())
-            ala::move(position + 1, cend(), position);
+        pointer pos = begin() + (position - cbegin());
+        if (pos == end())
+            return end();
+        ala::move(pos + 1, end(), pos);
+        this->destroy(end() - 1);
         --_size;
-        return (iterator)position;
+        return pos;
     }
 
     iterator erase(const_iterator first, const_iterator last) {
-        for (const_iterator i = first; i < last; ++i, --_size)
-            this->destroy(i);
-        if (last < cend())
-            ala::move(last, cend(), first);
-        return (iterator)first;
+        pointer left = begin() + (first - cbegin());
+        pointer rght = begin() + (last - cbegin());
+        difference_type n = rght - left;
+        ala::move(rght, end(), left);
+        this->cut(end() - n);
+        return left;
     }
 
     void clear() noexcept {
-        for (iterator i = begin(); i != end(); --_size, (void)++i)
-            this->destroy(i);
+        this->cut(begin());
     }
 };
 
 template<class T, class Alloc>
 bool operator==(const vector<T, Alloc> &lhs, const vector<T, Alloc> &rhs) {
     if (lhs.size() == rhs.size())
-        return equal(lhs.begin(), lhs.end(), rhs.begin());
+        return ala::equal(lhs.begin(), lhs.end(), rhs.begin());
     return false;
 }
 
@@ -713,6 +798,29 @@ template<class InputIter,
 vector(InputIter, InputIter, Alloc = Alloc())
     -> vector<typename iterator_traits<InputIter>::value_type, Alloc>;
 #endif
+
+// C++20
+template<class T, class Alloc, class U>
+constexpr typename vector<T, Alloc>::size_type erase(vector<T, Alloc> &c,
+                                                     const U &value) {
+    using iter_t = typename vector<T, Alloc>::iterator;
+    using diff_t = typename vector<T, Alloc>::difference_type;
+    iter_t i = ala::remove(c.begin(), c.end(), value);
+    diff_t n = ala::distance(i, c.end());
+    c.erase(i, c.end());
+    return n;
+}
+
+template<class T, class Alloc, class Pred>
+constexpr typename vector<T, Alloc>::size_type erase_if(vector<T, Alloc> &c,
+                                                        Pred pred) {
+    using iter_t = typename vector<T, Alloc>::iterator;
+    using diff_t = typename vector<T, Alloc>::difference_type;
+    iter_t i = ala::remove_if(c.begin(), c.end(), pred);
+    diff_t n = ala::distance(i, c.end());
+    c.erase(i, c.end());
+    return n;
+}
 
 } // namespace ala
 
