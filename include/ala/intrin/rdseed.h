@@ -13,7 +13,7 @@ extern "C" {
 extern int _rdseed16_step(unsigned short *);
 extern int _rdseed32_step(unsigned int *);
 
-#ifdef _ALA_X86_64
+#ifdef _ALA_X64
 extern int _rdseed64_step(unsigned long long *);
 #endif
 

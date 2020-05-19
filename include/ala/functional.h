@@ -11,7 +11,7 @@
 
 namespace ala {
 #if ALA_USE_RTTI
-using std::type_info;
+using ::std::type_info;
 #endif
 
 struct identity {

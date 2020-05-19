@@ -9,7 +9,7 @@
 
 namespace ala {
 
-using std::memmove;
+using ::std::memmove;
 
 // Minimum/maximum operations
 #ifdef min
@@ -369,6 +369,43 @@ constexpr bool binary_search(ForwardIter first, ForwardIter last,
 template<class ForwardIter, class T>
 constexpr bool binary_search(ForwardIter first, ForwardIter last, const T &value) {
     return ala::binary_search(first, last, value, less<>());
+}
+
+template<class InputIter, class T>
+constexpr InputIter find(InputIter first, InputIter last, const T &value) {
+    for (; first != last; ++first)
+        if (*first == value)
+            return first;
+    return last;
+}
+
+template<class InputIter, class UnaryPred>
+constexpr InputIter find_if(InputIter first, InputIter last, UnaryPred pred) {
+    for (; first != last; ++first)
+        if (pred(*first))
+            return first;
+    return last;
+}
+
+template<class ForwardIter, class T>
+constexpr ForwardIter remove(ForwardIter first, ForwardIter last, const T &value) {
+    first = ala::find(first, last, value);
+    if (first != last)
+        for (ForwardIter i = first; ++i != last;)
+            if (!(*i == value))
+                *first++ = ala::move(*i);
+    return first;
+}
+
+template<class ForwardIter, class UnaryPred>
+constexpr ForwardIter remove_if(ForwardIter first, ForwardIter last,
+                                UnaryPred pred) {
+    first = ala::find_if(first, last, pred);
+    if (first != last)
+        for (ForwardIter i = first; ++i != last;)
+            if (!pred(*i))
+                *first++ = ala::move(*i);
+    return first;
 }
 
 } // namespace ala
