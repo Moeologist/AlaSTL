@@ -13,20 +13,29 @@ class random_access_iterator_tag;
 
 namespace ala {
 
-using std::input_iterator_tag;
-using std::output_iterator_tag;
-using std::forward_iterator_tag;
-using std::bidirectional_iterator_tag;
-using std::random_access_iterator_tag;
+using ::std::input_iterator_tag;
+using ::std::output_iterator_tag;
+using ::std::forward_iterator_tag;
+using ::std::bidirectional_iterator_tag;
+using ::std::random_access_iterator_tag;
+
+template<typename Iter, typename Void = void>
+struct _iterator_traits_helper {};
 
 template<typename Iter>
-struct iterator_traits {
+struct _iterator_traits_helper<
+    Iter, void_t<typename Iter::difference_type, typename Iter::value_type,
+                 typename Iter::pointer, typename Iter::reference,
+                 typename Iter::iterator_category>> {
     using difference_type = typename Iter::difference_type;
     using value_type = typename Iter::value_type;
     using pointer = typename Iter::pointer;
     using reference = typename Iter::reference;
     using iterator_category = typename Iter::iterator_category;
 };
+
+template<typename Iter>
+struct iterator_traits: _iterator_traits_helper<Iter> {};
 
 template<typename T>
 struct iterator_traits<T *> {
@@ -103,10 +112,27 @@ struct reverse_iterator {
         return current++;
     }
 
-    constexpr reverse_iterator operator+(difference_type n) const;
-    constexpr reverse_iterator operator-(difference_type n) const;
-    constexpr reverse_iterator &operator+=(difference_type n);
-    constexpr reverse_iterator &operator-=(difference_type n);
+    constexpr reverse_iterator &operator+=(difference_type n) {
+        current += n;
+        return *this;
+    }
+
+    constexpr reverse_iterator operator+(difference_type n) const {
+        reverse_iterator tmp = *this;
+        tmp += n;
+        return tmp;
+    }
+
+    constexpr reverse_iterator &operator-=(difference_type n) {
+        current -= n;
+        return *this;
+    }
+
+    constexpr reverse_iterator operator-(difference_type n) const {
+        reverse_iterator tmp = *this;
+        tmp -= n;
+        return tmp;
+    }
 
 protected:
     template<class>
@@ -123,24 +149,46 @@ constexpr bool operator==(const reverse_iterator<Iter1> &lhs,
 template<class Iter1, class Iter2>
 constexpr bool operator!=(const reverse_iterator<Iter1> &lhs,
                           const reverse_iterator<Iter2> &rhs) {
-    return lhs.base() != rhs.base();
+    return !(lhs == rhs);
 }
 
 template<class Iter1, class Iter2>
 constexpr bool operator<(const reverse_iterator<Iter1> &lhs,
-                         const reverse_iterator<Iter2> &rhs);
+                         const reverse_iterator<Iter2> &rhs) {
+    return lhs.base() < rhs.base();
+}
 
 template<class Iter1, class Iter2>
 constexpr bool operator<=(const reverse_iterator<Iter1> &lhs,
-                          const reverse_iterator<Iter2> &rhs);
+                          const reverse_iterator<Iter2> &rhs) {
+    return !(lhs > rhs);
+}
 
 template<class Iter1, class Iter2>
 constexpr bool operator>(const reverse_iterator<Iter1> &lhs,
-                         const reverse_iterator<Iter2> &rhs);
+                         const reverse_iterator<Iter2> &rhs) {
+    return rhs.base() < lhs.base();
+}
 
 template<class Iter1, class Iter2>
 constexpr bool operator>=(const reverse_iterator<Iter1> &lhs,
-                          const reverse_iterator<Iter2> &rhs);
+                          const reverse_iterator<Iter2> &rhs) {
+    return !(lhs > rhs);
+}
+
+template<class Iter>
+constexpr reverse_iterator<Iter>
+operator+(typename reverse_iterator<Iter>::difference_type n,
+          const reverse_iterator<Iter> &it) {
+    return reverse_iterator<Iter>(it.base() + n);
+}
+
+template<class Iter1, class Iter2>
+constexpr auto operator-(const reverse_iterator<Iter1> &lhs,
+                         const reverse_iterator<Iter2> &rhs)
+    -> decltype(lhs.base() - rhs.base()) {
+    return lhs.base() - rhs.base();
+}
 
 template<class Iter>
 constexpr reverse_iterator<Iter> make_reverse_iterator(Iter i) {
@@ -225,7 +273,7 @@ constexpr auto begin(const C &c) -> decltype(c.begin()) {
     return c.begin();
 }
 
-template<class T, std::size_t N>
+template<class T, size_t N>
 constexpr T *begin(T (&array)[N]) noexcept {
     return array;
 }
@@ -237,7 +285,7 @@ constexpr const T *begin(initializer_list<T> il) noexcept {
 
 template<class C>
 constexpr auto cbegin(const C &c) noexcept(noexcept(ala::begin(c)))
-    -> decltype(std::begin(c)) {
+    -> decltype(ala::begin(c)) {
     return c.begin();
 }
 
@@ -251,7 +299,7 @@ constexpr auto end(const C &c) -> decltype(c.end()) {
     return c.end();
 }
 
-template<class T, std::size_t N>
+template<class T, size_t N>
 constexpr T *end(T (&array)[N]) noexcept {
     return array + N;
 }
@@ -263,8 +311,152 @@ constexpr const T *end(initializer_list<T> il) noexcept {
 
 template<class C>
 constexpr auto cend(const C &c) noexcept(noexcept(ala::end(c)))
-    -> decltype(std::end(c)) {
+    -> decltype(ala::end(c)) {
     return c.end();
+}
+
+template<class Iter>
+class move_iterator {
+public:
+    using iterator_type = Iter;
+    using iterator_category =
+        typename iterator_traits<iterator_type>::iterator_category;
+    using value_type = typename iterator_traits<iterator_type>::value_type;
+    using difference_type = typename iterator_traits<iterator_type>::difference_type;
+    using pointer = iterator_type;
+    using _raw_ref_t = typename iterator_traits<iterator_type>::reference;
+    using reference = conditional_t<
+        is_reference<_raw_ref_t>::value,
+        add_rvalue_reference_t<remove_reference_t<_raw_ref_t>>, _raw_ref_t>;
+
+    constexpr move_iterator(): current() {}
+    constexpr explicit move_iterator(Iter i): current(i) {}
+    template<class U>
+    constexpr move_iterator(const move_iterator<U> &other)
+        : current(other.base()) {}
+
+    template<class U>
+    constexpr move_iterator &operator=(const move_iterator<U> &other) {
+        current = other.current;
+    }
+
+    constexpr iterator_type base() const & {
+        return current;
+    }
+
+    constexpr iterator_type base() && {
+        return current;
+    }
+
+    constexpr reference operator*() const {
+        return static_cast<reference>(*base());
+    }
+
+    constexpr pointer operator->() const {
+        return base();
+    }
+
+    constexpr move_iterator &operator++() {
+        ++current;
+        return *this;
+    }
+
+    constexpr move_iterator &operator--() {
+        --current;
+        return *this;
+    }
+
+    constexpr move_iterator operator++(int) {
+        return current++;
+    }
+
+    constexpr move_iterator operator--(int) {
+        return current--;
+    }
+
+    constexpr move_iterator &operator+=(difference_type n) {
+        current += n;
+        return *this;
+    }
+
+    constexpr move_iterator operator+(difference_type n) const {
+        move_iterator tmp = *this;
+        tmp += n;
+        return tmp;
+    }
+
+    constexpr move_iterator &operator-=(difference_type n) {
+        current -= n;
+        return *this;
+    }
+
+    constexpr move_iterator operator-(difference_type n) const {
+        move_iterator tmp = *this;
+        tmp -= n;
+        return tmp;
+    }
+
+    constexpr reference operator[](difference_type n) const {
+        return ala::move(base()[n]);
+    }
+
+private:
+    Iter current; // exposition only
+};
+
+template<class Iter1, class Iter2>
+constexpr bool operator==(const move_iterator<Iter1> &lhs,
+                          const move_iterator<Iter2> &rhs) {
+    return lhs.base() == rhs.base();
+}
+
+template<class Iter1, class Iter2>
+constexpr bool operator!=(const move_iterator<Iter1> &lhs,
+                          const move_iterator<Iter2> &rhs) {
+    return !(lhs == rhs);
+}
+
+template<class Iter1, class Iter2>
+constexpr bool operator<(const move_iterator<Iter1> &lhs,
+                         const move_iterator<Iter2> &rhs) {
+    return lhs.base() < rhs.base();
+}
+
+template<class Iter1, class Iter2>
+constexpr bool operator<=(const move_iterator<Iter1> &lhs,
+                          const move_iterator<Iter2> &rhs) {
+    return !(lhs > rhs);
+}
+
+template<class Iter1, class Iter2>
+constexpr bool operator>(const move_iterator<Iter1> &lhs,
+                         const move_iterator<Iter2> &rhs) {
+    return rhs.base() < lhs.base();
+}
+
+template<class Iter1, class Iter2>
+constexpr bool operator>=(const move_iterator<Iter1> &lhs,
+                          const move_iterator<Iter2> &rhs) {
+    return !(lhs > rhs);
+}
+
+template<class Iter>
+constexpr move_iterator<Iter>
+operator+(typename move_iterator<Iter>::difference_type n,
+          const move_iterator<Iter> &it) {
+    return move_iterator<Iter>(it.base() + n);
+}
+
+template<class Iter1, class Iter2>
+constexpr auto operator-(const move_iterator<Iter1> &lhs,
+                         const move_iterator<Iter2> &rhs)
+    -> decltype(lhs.base() - rhs.base()) {
+    return lhs.base() - rhs.base();
+}
+
+template<class Iter>
+move_iterator<Iter> make_move_iterator(Iter i) {
+    return ala::move_iterator<Iter>(ala::move(i));
 }
 
 } // namespace ala

@@ -293,29 +293,6 @@ template<typename T>
 struct is_nothrow_destructible: _is_nt_destructible_helper<remove_all_extents_t<T>> {};
 
 // constructible
-template<typename, typename = void>
-struct _is_default_constructible_impl: false_type {};
-template<typename T>
-struct _is_default_constructible_impl<T, void_t<decltype(T())>>: true_type {};
-
-template<typename T, bool = is_array<T>::value>
-struct _is_default_constructible_helper: _and_<_not_<is_void<T>>,
-                                               _is_default_constructible_impl<T>> {};
-template<typename T>
-struct _is_default_constructible_helper<T, true>: _and_<is_bounded_array<T>,
-                                                         is_default_constructible<remove_extent_t<T>>> {};
-
-template<typename T>
-struct is_default_constructible: _is_default_constructible_helper<T> {};
-
-template<typename T, bool = is_default_constructible<T>::value>
-struct _is_nt_default_constructible_helper: bool_constant<noexcept(remove_all_extents_t<T>())> {};
-template<typename T>
-struct _is_nt_default_constructible_helper<T, false>: false_type {};
-
-template<typename T> struct is_nothrow_default_constructible: _is_nt_default_constructible_helper<T> {};
-template<typename T> struct is_trivially_default_constructible: _and_<is_default_constructible<T>,
-                                                                       is_trivially_constructible<remove_all_extents_t<T>>> {};
 
 // ref special case
 template<typename T, typename Arg>
@@ -350,8 +327,8 @@ struct _is_a_constructible_helper: _and_<is_destructible<T>, _is_a_constructible
 
 template<typename T, typename Arg, bool = is_reference<T>::value>
 struct _is_a_constructible: _and_<is_convertible<Arg, T>,
-                                   _not_<typename _is_base_to_derived_cast<T, Arg>::type>,
-                                   _not_<typename _is_lvalue_to_rvalue_cast<T, Arg>::type>> {};
+                                  _not_<typename _is_base_to_derived_cast<T, Arg>::type>,
+                                  _not_<typename _is_lvalue_to_rvalue_cast<T, Arg>::type>> {};
 // Clang version before 4.0 static_cast not work well
 
 template<typename T, typename Arg>
@@ -362,6 +339,18 @@ struct _is_va_constructible: false_type {};
 template<typename T, typename... Args>
 struct _is_va_constructible<void_t<decltype(T(declval<Args>()...))>, T, Args...>: true_type {};
 
+template<typename, typename>
+struct _is_def_constructible_impl: false_type {};
+template<typename T>
+struct _is_def_constructible_impl<T, void_t<decltype(T())>>: true_type {};
+
+template<typename T, bool = is_array<T>::value>
+struct _is_def_constructible_helper: _and_<_not_<is_void<T>>,
+                                           _is_def_constructible_impl<T, void>> {};
+template<typename T>
+struct _is_def_constructible_helper<T, true>: _and_<is_bounded_array<T>,
+                                                    _is_def_constructible_helper<remove_extent_t<T>>> {};
+
 template<typename T, typename... Args>
 struct is_constructible: _is_va_constructible<void, T, Args...> {};
 
@@ -369,11 +358,11 @@ template<typename T, typename Arg>
 struct is_constructible<T, Arg>: _is_a_constructible<T, Arg> {};
 
 template<typename T>
-struct is_constructible<T>: is_default_constructible<T> {};
+struct is_constructible<T>: _is_def_constructible_helper<T> {};
 
 template<typename T, typename... Args>
 struct is_trivially_constructible: _and_<is_constructible<T, Args...>,
-                                          bool_constant<__is_trivially_constructible(remove_all_extents_t<T>, Args...)>> {};
+                                         bool_constant<__is_trivially_constructible(remove_all_extents_t<T>, Args...)>> {};
 // Add remove_all_extent in bif to avoid gcc crash
 
 template<typename T, typename... Args>
@@ -458,6 +447,10 @@ struct _is_nt_convertible_helper<From, To, true>
 
 template<typename From, typename To>
 struct is_nothrow_convertible: _is_nt_convertible_helper<From, To> {};
+
+template<typename T> struct is_default_constructible : is_constructible<T> {};
+template<typename T> struct is_trivially_default_constructible : is_trivially_constructible<T> {};
+template<typename T> struct is_nothrow_default_constructible : is_nothrow_constructible<T> {};
 
 template<typename T> struct is_copy_constructible: is_constructible<T, add_lvalue_reference_t<add_const_t<T>>> {};
 template<typename T> struct is_trivially_copy_constructible: is_trivially_constructible<T, add_lvalue_reference_t<add_const_t<T>>> {};
