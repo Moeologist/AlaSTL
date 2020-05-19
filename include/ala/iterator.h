@@ -3,7 +3,13 @@
 
 #include <ala/type_traits.h>
 
-#include <iterator>
+namespace std {
+class input_iterator_tag;
+class output_iterator_tag;
+class forward_iterator_tag;
+class bidirectional_iterator_tag;
+class random_access_iterator_tag;
+} // namespace std
 
 namespace ala {
 

@@ -3,71 +3,54 @@
 
 #include <ala/intrin/bit.h>
 
-#if defined(_ALA_X86) && \
-    ((defined(__RDSEED__) && defined(__RDRND__)) || defined(_ALA_MSVC))
-    #include <ala/intrin/rdrand.h>
-#endif
+#include <ala/intrin/rdrand.h>
+#include <ala/intrin/rdseed.h>
 
 namespace ala {
 
-#if defined(_ALA_X86) && \
-    ((defined(__RDSEED__) && defined(__RDRND__)) || defined(_ALA_MSVC))
-
-template<class UInt>
-enable_if_t<sizeof(UInt) == 2, int> rdseed(UInt *p) {
-    return _rdseed16_step(p);
-}
-
-template<class UInt>
-enable_if_t<sizeof(UInt) == 4, int> rdseed(UInt *p) {
-    return _rdseed32_step(p);
-}
-
-template<class UInt>
-enable_if_t<sizeof(UInt) == 8, int> rdseed(UInt *p) {
-    return _rdseed64_step(p);
-}
-
-template<class UInt>
-enable_if_t<sizeof(UInt) == 2, int> rdrand(UInt *p) {
-    return _rdrand16_step(p);
-}
-
-template<class UInt>
-enable_if_t<sizeof(UInt) == 4, int> rdrand(UInt *p) {
-    return _rdrand32_step(p);
-}
-
-template<class UInt>
-enable_if_t<sizeof(UInt) == 8, int> rdrand(UInt *p) {
-    return _rdrand64_step(p);
-}
+struct bad_random_device: exception {
+    explicit bad_random_device() {}
+};
 
 template<class UInt, bool RdSeed = true>
 struct random_device_adaptor {
     typedef UInt result_type;
     result_type s;
+
     random_device_adaptor() {}
     explicit random_device_adaptor(const std::string &token);
     random_device_adaptor(const random_device_adaptor &) = delete;
     random_device_adaptor &operator=(const random_device_adaptor &) = delete;
+
     static constexpr result_type min() {
         return numeric_limits<result_type>::min();
     }
+
     static constexpr result_type max() {
         return numeric_limits<result_type>::max();
     }
+
     result_type operator()() {
-        int r = RdSeed ? rdseed(&s) : rdrand(&s);
+        int r = this->rd(&s);
         if (r)
             return s;
-        throw exception{};
+        throw bad_random_device{};
+    }
+
+protected:
+    template<bool Dummy = RdSeed>
+    enable_if_t<Dummy, int> rd(UInt *p) {
+        return ala::intrin::rdseed(&s);
+    }
+
+    template<bool Dummy = RdSeed>
+    enable_if_t<!Dummy, int> rd(UInt *p) {
+        return ala::intrin::rdrand(&s);
     }
 };
 
 using random_device = random_device_adaptor<uint_fast32_t>;
-
-#endif
+using random_device_64 = random_device_adaptor<uint_fast64_t>;
 
 // see http://xoshiro.di.unimi.it/
 

@@ -52,7 +52,7 @@
     defined(__amd64__)
     #define _ALA_X86
     #if defined(_M_AMD64) || defined(__amd64__)
-        #define _ALA_AMD64
+        #define _ALA_X64
     #endif
 #elif defined(_M_ARM) || defined(__arm__) || defined(_M_ARM64) || \
     defined(__aarch64__)

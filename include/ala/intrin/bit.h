@@ -4,7 +4,14 @@
 #include <ala/type_traits.h>
 
 #ifdef _ALA_MSVC
-    #include <intrin.h>
+unsigned char _BitScanForward(unsigned long *, unsigned long);
+unsigned char _BitScanReverse(unsigned long *, unsigned long);
+
+#if defined(_ALA_X64) || defined(_ALA_ARM64)
+unsigned char _BitScanForward64(unsigned long *, unsigned long long);
+unsigned char _BitScanReverse64(unsigned long *, unsigned long long);
+#endif
+
 #endif
 
 namespace ala {
@@ -42,7 +49,7 @@ inline int _ctzl(unsigned long x) {
 
 inline int _ctzll(unsigned long long x) {
     unsigned long result;
-    #if defined(_ALA_ARM64) || defined(_ALA_AMD64)
+    #if defined(_ALA_ARM64) || defined(_ALA_X64)
     if (_BitScanForward64(&result, x))
         return static_cast<int>(result);
     #else
@@ -72,7 +79,7 @@ inline int _clzl(unsigned long x) {
 
 inline int _clzll(unsigned long long x) {
     unsigned long result;
-    #if defined(_ALA_ARM64) || defined(_ALA_AMD64)
+    #if defined(_ALA_ARM64) || defined(_ALA_X64)
     if (_BitScanReverse64(&result, x))
         return static_cast<int>(63 - result);
     #else
