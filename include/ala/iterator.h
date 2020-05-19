@@ -168,8 +168,11 @@ advance(Iter &it, Distance n) {
 }
 
 template<class Iter, class Distance>
-constexpr enable_if_t<!is_base_of<
-    random_access_iterator_tag, typename iterator_traits<Iter>::iterator_category>::value>
+constexpr enable_if_t<
+    !is_base_of<random_access_iterator_tag,
+                typename iterator_traits<Iter>::iterator_category>::value &&
+    is_base_of<bidirectional_iterator_tag,
+               typename iterator_traits<Iter>::iterator_category>::value>
 advance(Iter &it, Distance n) {
     if (n > 0)
         for (Distance i = 0; i < n; ++i)
@@ -177,6 +180,85 @@ advance(Iter &it, Distance n) {
     else if (n < 0)
         for (Distance i = 0; i > n; --i)
             --it;
+}
+
+template<class Iter, class Distance>
+constexpr enable_if_t<
+    !is_base_of<random_access_iterator_tag,
+                typename iterator_traits<Iter>::iterator_category>::value &&
+    !is_base_of<bidirectional_iterator_tag,
+                typename iterator_traits<Iter>::iterator_category>::value &&
+    is_base_of<input_iterator_tag, typename iterator_traits<Iter>::iterator_category>::value>
+advance(Iter &it, Distance n) {
+    if (n > 0)
+        for (Distance i = 0; i < n; ++i)
+            ++it;
+}
+
+template<class BidirIter>
+BidirIter prev(BidirIter it,
+               typename iterator_traits<BidirIter>::difference_type n = 1) {
+    ala::advance(it, -n);
+    return it;
+}
+
+template<class ForwardIter>
+ForwardIter next(ForwardIter it,
+                 typename iterator_traits<ForwardIter>::difference_type n = 1) {
+    ala::advance(it, n);
+    return it;
+}
+
+template<class C>
+constexpr auto begin(C &c) -> decltype(c.begin()) {
+    return c.begin();
+}
+
+template<class C>
+constexpr auto begin(const C &c) -> decltype(c.begin()) {
+    return c.begin();
+}
+
+template<class T, std::size_t N>
+constexpr T *begin(T (&array)[N]) noexcept {
+    return array;
+}
+
+template<class T>
+constexpr const T *begin(initializer_list<T> il) noexcept {
+    return il.begin();
+}
+
+template<class C>
+constexpr auto cbegin(const C &c) noexcept(noexcept(ala::begin(c)))
+    -> decltype(std::begin(c)) {
+    return c.begin();
+}
+
+template<class C>
+constexpr auto end(C &c) -> decltype(c.end()) {
+    return c.end();
+}
+
+template<class C>
+constexpr auto end(const C &c) -> decltype(c.end()) {
+    return c.end();
+}
+
+template<class T, std::size_t N>
+constexpr T *end(T (&array)[N]) noexcept {
+    return array + N;
+}
+
+template<class T>
+constexpr const T *end(initializer_list<T> il) noexcept {
+    return il.end();
+}
+
+template<class C>
+constexpr auto cend(const C &c) noexcept(noexcept(ala::end(c)))
+    -> decltype(std::end(c)) {
+    return c.end();
 }
 
 } // namespace ala

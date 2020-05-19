@@ -58,7 +58,7 @@ constexpr Fn for_each(InputIter first, InputIter last, Fn f) {
 
 template<class InputIter, class Size, class Fn>
 constexpr InputIter for_each_n(InputIter first, Size n, Fn f) {
-    for (Size i = 0; i < n; ++first, ++i)
+    for (Size i = 0; i < n; ++first, (void)++i)
         f(*first);
     return first;
 }
@@ -67,7 +67,8 @@ template<class ForwardIter1, class ForwardIter2, class BinPred>
 ForwardIter1 search(ForwardIter1 first1, ForwardIter1 last1,
                     ForwardIter2 first2, ForwardIter2 last2, BinPred pred) {
     for (;; ++first1) {
-        for (ForwardIter1 i = first1, j = first2;; ++i, ++j) {
+        ForwardIter1 i = first1;
+        for (ForwardIter2 j = first2;; ++i, (void)++j) {
             if (j == last2)
                 return first1;
             if (i == last1)
@@ -82,6 +83,12 @@ template<class ForwardIter1, class ForwardIter2>
 ForwardIter1 search(ForwardIter1 first1, ForwardIter1 last1,
                     ForwardIter2 first2, ForwardIter2 last2) {
     return search(first1, last1, first2, last2, equal_to<>());
+}
+
+template<class ForwardIter, class Searcher>
+constexpr ForwardIter search(ForwardIter first, ForwardIter last,
+                             const Searcher &searcher) {
+    return searcher(first, last).first;
 }
 
 template<class ForwardIter1, class ForwardIter2, class BinPred>
@@ -106,7 +113,7 @@ constexpr ForwardIter1 find_end(ForwardIter1 first1, ForwardIter1 last1,
 template<class ForwardIter1, class ForwardIter2>
 constexpr ForwardIter1 find_end(ForwardIter1 first1, ForwardIter1 last1,
                                 ForwardIter2 first2, ForwardIter2 last2) {
-    return find_end(first1, last2, first2, last2, equal_to<>());
+    return find_end(first1, last1, first2, last2, equal_to<>());
 }
 
 template<class InputIter, class ForwardIter, class BinPred>
@@ -132,7 +139,7 @@ constexpr ForwardIter adjacent_find(ForwardIter first, ForwardIter last,
     if (first == last)
         return last;
     ForwardIter next = first;
-    for (++next; next != last; ++next, ++first)
+    for (++next; next != last; ++next, (void)++first)
         if (pred(*first, *next))
             return first;
     return last;
@@ -169,7 +176,7 @@ template<class InputIter1, class InputIter2, class BinPred>
 constexpr pair<InputIter1, InputIter2>
 mismatch(InputIter1 first1, InputIter1 last1, InputIter2 first2, BinPred pred) {
     while (first1 != last1 && pred(*first1, *first2))
-        ++first1, ++first2;
+        ++first1, (void)++first2;
     return ala::make_pair(first1, first2);
 }
 
@@ -184,7 +191,7 @@ constexpr pair<InputIter1, InputIter2>
 mismatch(InputIter1 first1, InputIter1 last1, InputIter2 first2,
          InputIter2 last2, BinPred pred) {
     while (first1 != last1 && first2 != last2 && pred(*first1, *first2))
-        ++first1, ++first2;
+        ++first1, (void)++first2;
     return ala::make_pair(first1, first2);
 }
 
@@ -198,16 +205,17 @@ mismatch(InputIter1 first1, InputIter1 last1, InputIter2 first2,
 template<class ForwardIter, class Size, class T, class BinPred>
 constexpr ForwardIter search_n(ForwardIter first, ForwardIter last, Size count,
                                const T &value, BinPred pred) {
-    if (count <= 0)
+    auto n = ala::_convert_to_integral(count);
+    if (n < 1)
         return first;
     for (; first != last; ++first) {
         if (!pred(*first, value))
             continue;
         ForwardIter tmp = first;
-        Size n = 0;
+        decltype(n) i = 0;
         while (true) {
-            ++n;
-            if (n >= count)
+            ++i;
+            if (!(i < n))
                 return tmp;
             ++first;
             if (first == last)
@@ -230,9 +238,9 @@ constexpr ForwardIter search_n(ForwardIter first, ForwardIter last, Size count,
 template<class InputIter, class OutputIter, class UnaryPred>
 constexpr OutputIter copy_if(InputIter first, InputIter last, OutputIter out,
                              UnaryPred pred) {
-    while (first != last)
+    for (; first != last; ++first)
         if (pred(*first))
-            *out++ = *first++;
+            *out++ = *first;
     return out;
 }
 
@@ -288,9 +296,9 @@ constexpr OutputIter replace_copy_if(InputIter first, InputIter last,
 
 template<class OutputIter, class Size, class T>
 constexpr OutputIter fill_n(OutputIter first, Size count, const T &value) {
-    if (count > 0)
-        for (Size i = 0; i < count; ++i)
-            *first++ = value;
+    auto n = ala::_convert_to_integral(count);
+    for (; 0 < n; --n)
+        *first++ = value;
     return first;
 }
 
@@ -302,14 +310,15 @@ constexpr void generate(ForwardIter first, ForwardIter last, Generator gen) {
 
 template<class OutputIter, class Size, class Generator>
 constexpr OutputIter generate_n(OutputIter first, Size count, Generator gen) {
-    if (count > 0)
-        for (Size i = 0; i < count; ++i)
-            *first++ = gen();
+    auto n = ala::_convert_to_integral(count);
+    for (; 0 < n; --n)
+        *first++ = gen();
     return first;
 }
 
 template<class ForwardIter, class T>
 constexpr ForwardIter remove(ForwardIter first, ForwardIter last, const T &value) {
+    first = ala::find(first, last, value);
     if (first != last)
         for (ForwardIter i = first; ++i != last;)
             if (!(*i == value))
@@ -320,6 +329,7 @@ constexpr ForwardIter remove(ForwardIter first, ForwardIter last, const T &value
 template<class ForwardIter, class UnaryPred>
 constexpr ForwardIter remove_if(ForwardIter first, ForwardIter last,
                                 UnaryPred pred) {
+    first = ala::find_if(first, last, pred);
     if (first != last)
         for (ForwardIter i = first; ++i != last;)
             if (!pred(*i))
@@ -340,7 +350,7 @@ template<class InputIter, class OutputIter, class UnaryPred>
 constexpr OutputIter remove_copy_if(InputIter first, InputIter last,
                                     OutputIter out, UnaryPred pred) {
     for (; first != last; ++first)
-        if (pred(*first))
+        if (!pred(*first))
             *out++ = *first;
     return out;
 }
@@ -365,7 +375,7 @@ template<class ForwardIter, class OutputIter, class BinPred>
 constexpr OutputIter unique_copy(ForwardIter first, ForwardIter last,
                                  OutputIter out, BinPred pred) {
     if (first == last)
-        return last;
+        return out;
     for (ForwardIter tmp; first != last;) {
         *out++ = *first;
         for (tmp = first++; first != last && pred(*tmp, *first);)
@@ -383,14 +393,15 @@ constexpr OutputIter unique_copy(ForwardIter first, ForwardIter last,
 template<class BidirIter>
 void reverse(BidirIter first, BidirIter last) {
     while ((first != last) && (first != --last))
-        iter_swap(first++, last);
+        ala::iter_swap(first++, last);
 }
 
 template<class BidirIter, class OutputIter>
 constexpr OutputIter reverse_copy(BidirIter first, BidirIter last,
                                   OutputIter out) {
-    while (first != --last)
-        *out = *last;
+    while (first != last)
+        *out++ = *--last;
+    return out;
 }
 
 template<class ForwardIter>
@@ -423,48 +434,66 @@ constexpr OutputIter rotate_copy(ForwardIter first, ForwardIter middle,
     return ala::copy(first, middle, ala::copy(middle, last, out));
 }
 
-// TODO: uniform_distributtion
-// template<class RandomIter, class URBG>
-// constexpr void shuffle(RandomIter first, RandomIter last, URBG &&g) {
-//     typedef typename iterator_traits<RandomIter>::difference_type diff_t;
-//     typedef uniform_int_distribution<diff_t> uid_t;
-//     typedef typename uid_t::param_type param_t;
-//     diff_t len = last - first;
-//     if (len < 2)
-//         return;
-//     uid_t uid;
-//     for (--last, --len; first < last; ++first, --d) {
-//         diff_t offset = uid(g, param_t(0, len));
-//         if (offset != difference_type(0))
-//             ala::iter_swap(first, first + offset);
-//     }
-// }
+template<class RandomIter, class URBG>
+constexpr void shuffle(RandomIter first, RandomIter last, URBG &&g) {
+    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+    typedef uniform_int_distribution<diff_t> ud_t;
+    typedef typename ud_t::param_type param_t;
+    diff_t len = last - first;
+    if (len < 2)
+        return;
+    ud_t uid;
+    for (--last, (void)--len; first < last; ++first, (void)--len) {
+        diff_t offset = uid(g, param_t(0, len));
+        if (offset != diff_t(0))
+            ala::iter_swap(first, first + offset);
+    }
+}
 
-// // TODO: make this work with input iterator
-// template<class PopulationIterator, class SampleIterator, class Distance, class URBG>
-// constexpr SampleIterator sample(PopulationIterator first, PopulationIterator last,
-//                                 SampleIterator out, Distance n, URBG &&g) {
-//     typedef typename iterator_traits<RandomIter>::difference_type diff_t;
-//     typedef uniform_int_distribution<diff_t> uid_t;
-//     typedef typename uid_t::param_type param_t;
+template<class ForwardIter, class OutputIter, class Distance, class URBG>
+constexpr enable_if_t<
+    is_base_of<input_iterator_tag,
+               typename iterator_traits<ForwardIter>::iterator_category>::value &&
+        !is_base_of<forward_iterator_tag,
+                    typename iterator_traits<ForwardIter>::iterator_category>::value,
+    OutputIter>
+sample(ForwardIter first, ForwardIter last, OutputIter out, Distance n, URBG &&g) {
+    Distance i = 0;
+    for (; first != last && i < n; ++first, (void)++i)
+        *(out + i) = *first;
+    for (Distance len = i; first != last; ++first, (void)++i) {
+        Distance r = ala::uniform_int_distribution<Distance>(0, i)(g);
+        if (r < len)
+            *(out + r) = *first;
+    }
+    return out + ala::min(n, i);
+}
 
-//     Distance len = ala::distance(first, last);
-//     uid_t uid;
-//     for (n = ala::min(n, len); n != 0; ++first) {
-//         if (uid(g, param_t(0, --len)) < n) {
-//             *out++ = *first;
-//             --n;
-//         }
-//     }
-//     return out;
-// }
+template<class ForwardIter, class OutputIter, class Distance, class URBG>
+constexpr enable_if_t<
+    is_base_of<forward_iterator_tag,
+               typename iterator_traits<ForwardIter>::iterator_category>::value,
+    OutputIter>
+sample(ForwardIter first, ForwardIter last, OutputIter out, Distance n, URBG &&g) {
+    Distance len = ala::distance(first, last);
+    for (n = ala::min(n, len); n != 0; ++first) {
+        Distance r = ala::uniform_int_distribution<Distance>(0, --len)(g);
+        if (r < n) {
+            *out++ = *first;
+            --n;
+        }
+    }
+    return out;
+}
 
 // Partitioning operations
 template<class InputIter, class UnaryPred>
 constexpr bool is_partitioned(InputIter first, InputIter last, UnaryPred pred) {
     for (; first != last; ++first)
-        if (!pred(*first))
+        if (!pred(*first)) {
+            ++first;
             break;
+        }
     for (; first != last; ++first)
         if (pred(*first))
             return false;
@@ -513,12 +542,11 @@ template<class InputIter, class OutputIter1, class OutputIter2, class UnaryPred>
 constexpr pair<OutputIter1, OutputIter2>
 partition_copy(InputIter first, InputIter last, OutputIter1 out_true,
                OutputIter2 out_false, UnaryPred pred) {
-    while (first != last) {
-        if (pred(*first++))
+    for (; first != last; ++first)
+        if (pred(*first))
             *out_true++ = *first;
         else
             *out_false++ = *first;
-    }
     return ala::pair<OutputIter1, OutputIter2>(out_true, out_false);
 }
 
@@ -600,10 +628,9 @@ constexpr OutputIter set_union(InputIter1 first1, InputIter1 last1,
         if (comp(*first2, *first1)) {
             *out = *first2++;
         } else {
-            *out = *first1;
             if (!comp(*first1, *first2))
                 ++first2;
-            ++first1;
+            *out = *first1++;
         }
     }
     return ala::copy(first2, last2, out);
@@ -691,12 +718,14 @@ template<class InputIter1, class InputIter2, class OutputIter>
 constexpr OutputIter
 set_symmetric_difference(InputIter1 first1, InputIter1 last1, InputIter2 first2,
                          InputIter2 last2, OutputIter out) {
-    return ala::set_difference(first1, last1, first2, last2, out, less<>());
+    return ala::set_symmetric_difference(first1, last1, first2, last2, out,
+                                         less<>());
 }
 
 template<class T, class Comp>
 constexpr pair<const T &, const T &> minmax(const T &a, const T &b, Comp comp) {
-    return pair<const T &, const T &>(min(a, b, comp), max(a, b, comp));
+    return comp(b, a) ? ala::pair<const T &, const T &>(b, a) :
+                        ala::pair<const T &, const T &>(a, b);
 }
 
 template<class T>
@@ -705,7 +734,10 @@ constexpr pair<const T &, const T &> minmax(const T &a, const T &b) {
 }
 
 template<class ForwardIter, class Comp>
-constexpr ForwardIter min_element(ForwardIter first, ForwardIter last, Comp comp) {
+enable_if_t<is_base_of<forward_iterator_tag,
+                       typename iterator_traits<ForwardIter>::iterator_category>::value,
+            ForwardIter> constexpr min_element(ForwardIter first,
+                                               ForwardIter last, Comp comp) {
     if (first == last)
         return last;
     ForwardIter min = first;
@@ -722,7 +754,11 @@ constexpr ForwardIter min_element(ForwardIter first, ForwardIter last) {
 }
 
 template<class ForwardIter, class Comp>
-constexpr ForwardIter max_element(ForwardIter first, ForwardIter last, Comp comp) {
+constexpr enable_if_t<
+    is_base_of<forward_iterator_tag,
+               typename iterator_traits<ForwardIter>::iterator_category>::value,
+    ForwardIter>
+max_element(ForwardIter first, ForwardIter last, Comp comp) {
     if (first == last)
         return last;
     ForwardIter max = first;
@@ -739,17 +775,36 @@ constexpr ForwardIter max_element(ForwardIter first, ForwardIter last) {
 }
 
 template<class ForwardIter, class Comp>
-constexpr pair<ForwardIter, ForwardIter>
+constexpr enable_if_t<
+    is_base_of<forward_iterator_tag,
+               typename iterator_traits<ForwardIter>::iterator_category>::value,
+    pair<ForwardIter, ForwardIter>>
 minmax_element(ForwardIter first, ForwardIter last, Comp comp) {
     if (first == last)
-        return last;
+        return pair<ForwardIter, ForwardIter>(last, last);
     ForwardIter min = first;
     ForwardIter max = first;
     for (++first; first != last; ++first) {
-        if (comp(*first, *min))
-            min = first;
-        else if (comp(*max, *first))
-            max = first;
+        ForwardIter prev = first;
+        if (++first == last) {
+            if (comp(*prev, *min))
+                min = prev;
+            else if (!(comp(*prev, *max)))
+                max = prev;
+            break;
+        } else {
+            if (comp(*first, *prev)) {
+                if (comp(*first, *min))
+                    min = first;
+                if (!(comp(*prev, *max)))
+                    max = prev;
+            } else {
+                if (comp(*prev, *min))
+                    min = prev;
+                if (!(comp(*first, *max)))
+                    max = first;
+            }
+        }
     }
     return ala::make_pair(min, max);
 }
@@ -762,7 +817,7 @@ constexpr pair<ForwardIter, ForwardIter> minmax_element(ForwardIter first,
 
 template<class T, class Comp>
 constexpr T min(initializer_list<T> t, Comp comp) {
-    return ala::min_element(t.begin(), t.end(), comp);
+    return *ala::min_element(t.begin(), t.end(), comp);
 }
 
 template<class T>
@@ -772,7 +827,7 @@ constexpr T min(initializer_list<T> t) {
 
 template<class T, class Comp>
 constexpr T max(initializer_list<T> t, Comp comp) {
-    return ala::max_element(t.begin(), t.end(), comp);
+    return *ala::max_element(t.begin(), t.end(), comp);
 }
 
 template<class T>
@@ -782,8 +837,11 @@ constexpr T max(initializer_list<T> t) {
 
 template<class T, class Comp>
 constexpr pair<T, T> minmax(initializer_list<T> t, Comp comp) {
-    return ala::minmax_element(t.begin(), t.end(), comp);
+    using iter_t = typename initializer_list<T>::iterator;
+    pair<iter_t, iter_t> pr = ala::minmax_element(t.begin(), t.end(), comp);
+    return pair<T, T>(*pr.first, *pr.second);
 }
+
 template<class T>
 constexpr pair<T, T> minmax(initializer_list<T> t) {
     return minmax(t, less<>());
@@ -802,24 +860,24 @@ constexpr const T &clamp(const T &v, const T &lo, const T &hi) {
 // Permutation operations
 template<class BidirIter, class Comp>
 constexpr bool prev_permutation(BidirIter first, BidirIter last, Comp comp) {
-    if (first == last)
+    BidirIter i = last;
+    if (first == last || first == --i)
         return false;
-    auto cur = last, pre = last;
-    if (--cur == first)
-        return false;
-    ----pre;
-    while (cur != first && comp(*pre, *cur))
-        --cur, --pre;
-    if (cur == first) {
-        reverse(first, last);
-        return false;
+    while (true) {
+        BidirIter i1 = i;
+        if (comp(*i1, *--i)) {
+            BidirIter j = last;
+            while (!comp(*--j, *i))
+                ;
+            ala::swap(*i, *j);
+            ala::reverse(i1, last);
+            return true;
+        }
+        if (i == first) {
+            ala::reverse(first, last);
+            return false;
+        }
     }
-    cur = last, --cur;
-    while (cur != first && comp(*pre, *cur))
-        --cur;
-    iter_swap(cur, pre);
-    reverse(++pre, last);
-    return true;
 }
 
 template<class BidirIter>
@@ -829,24 +887,24 @@ constexpr bool prev_permutation(BidirIter first, BidirIter last) {
 
 template<class BidirIter, class Comp>
 constexpr bool next_permutation(BidirIter first, BidirIter last, Comp comp) {
-    if (first == last)
+    BidirIter i = last;
+    if (first == last || first == --i)
         return false;
-    auto cur = last, pre = last;
-    if (--cur == first)
-        return false;
-    ----pre;
-    while (cur != first && comp(*cur, *pre))
-        --cur, --pre;
-    if (cur == first) {
-        reverse(first, last);
-        return false;
+    while (true) {
+        BidirIter i1 = i;
+        if (comp(*--i, *i1)) {
+            BidirIter j = last;
+            while (!comp(*i, *--j))
+                ;
+            ala::swap(*i, *j);
+            ala::reverse(i1, last);
+            return true;
+        }
+        if (i == first) {
+            ala::reverse(first, last);
+            return false;
+        }
     }
-    cur = last, --cur;
-    while (cur != first && comp(*cur, *pre))
-        --cur;
-    iter_swap(cur, pre);
-    reverse(++pre, last);
-    return true;
 }
 
 template<class BidirIter>
@@ -858,17 +916,14 @@ template<class ForwardIter1, class ForwardIter2, class BinPred>
 constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
                               ForwardIter2 first2, BinPred pred) {
     typedef typename iterator_traits<ForwardIter1>::value_type T;
-    if (first1 != last1) {
-        ForwardIter2 last2 = first2;
-        ala::advance(last2, ala::distance(first1, last1));
-        for (ForwardIter1 i = first1; i != last1; ++i) {
-            auto unary = [&](const T &x) { return pred(x, *i); };
-            if (i != ala::find_if(first1, i, unary))
-                continue;
-            if (ala::count_if(i, last1, unary) !=
-                ala::count_if(first2, last2, unary))
-                return false;
-        }
+    ForwardIter2 last2 = first2;
+    ala::advance(last2, ala::distance(first1, last1));
+    for (ForwardIter1 i = first1; i != last1; ++i) {
+        auto unary = [&](const T &x) { return pred(x, *i); };
+        if (i != ala::find_if(first1, i, unary))
+            continue; // check i appear first time
+        if (ala::count_if(i, last1, unary) != ala::count_if(first2, last2, unary))
+            return false;
     }
     return true;
 }
@@ -880,15 +935,44 @@ constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
 }
 
 template<class ForwardIter1, class ForwardIter2, class BinPred>
-constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
-                              ForwardIter2 first2, ForwardIter2 last2,
-                              BinPred pred) {
+constexpr enable_if_t<
+    !(is_base_of<random_access_iterator_tag,
+                 typename iterator_traits<ForwardIter1>::iterator_category>::value &&
+      is_base_of<random_access_iterator_tag,
+                 typename iterator_traits<ForwardIter2>::iterator_category>::value),
+    bool>
+is_permutation(ForwardIter1 first1, ForwardIter1 last1, ForwardIter2 first2,
+               ForwardIter2 last2, BinPred pred) {
+    typedef typename iterator_traits<ForwardIter1>::value_type T;
+    ForwardIter1 i = first1;
+    ForwardIter2 j = first2;
+    for (; i != last1 && j != last2; ++i, (void)++j) {
+        auto unary = [&](const T &x) { return pred(x, *i); };
+        if (i != ala::find_if(first1, i, unary))
+            continue;
+        if (ala::count_if(i, last1, unary) != ala::count_if(first2, last2, unary))
+            return false;
+    }
+    if (i == last1 && j == last2)
+        return true;
+    return false;
+}
+
+template<class ForwardIter1, class ForwardIter2, class BinPred>
+constexpr enable_if_t<
+    (is_base_of<random_access_iterator_tag,
+                typename iterator_traits<ForwardIter1>::iterator_category>::value &&
+     is_base_of<random_access_iterator_tag,
+                typename iterator_traits<ForwardIter2>::iterator_category>::value),
+    bool>
+is_permutation(ForwardIter1 first1, ForwardIter1 last1, ForwardIter2 first2,
+               ForwardIter2 last2, BinPred pred) {
     if (ala::distance(first1, last1) == ala::distance(first2, last2))
         return is_permutation(first1, last1, first2, pred);
     return false;
 }
 
-template<class ForwardIter1, class ForwardIter2, class BinPred>
+template<class ForwardIter1, class ForwardIter2>
 constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
                               ForwardIter2 first2, ForwardIter2 last2) {
     return ala::is_permutation(first1, last1, first2, last2, equal_to<>());

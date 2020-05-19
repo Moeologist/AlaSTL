@@ -35,9 +35,9 @@ template<class T>
 constexpr enable_if_t<is_move_constructible<T>::value && is_move_assignable<T>::value>
 swap(T &lhs, T &rhs) noexcept(is_nothrow_move_constructible<T>::value
                                   &&is_nothrow_move_assignable<T>::value) {
-    T tmp = move(lhs);
-    lhs = move(rhs);
-    rhs = move(tmp);
+    T tmp = ala::move(lhs);
+    lhs = ala::move(rhs);
+    rhs = ala::move(tmp);
 }
 
 template<class T, size_t N>

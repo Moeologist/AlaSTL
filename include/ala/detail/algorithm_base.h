@@ -16,14 +16,15 @@ using std::memmove;
     #warning "undef min macro"
     #undef min
 #endif
-template<class T>
-constexpr const T &min(const T &a, const T &b) {
-    return min(a, b, less<>());
-}
 
 template<class T, class Comp>
 constexpr const T &min(const T &a, const T &b, Comp comp) {
     return comp(b, a) ? b : a;
+}
+
+template<class T>
+constexpr const T &min(const T &a, const T &b) {
+    return ala::min(a, b, less<>());
 }
 
 #ifdef max
@@ -104,7 +105,8 @@ constexpr enable_if_t<
       is_pointer<InputIter>::value && is_pointer<OutputIter>::value),
     OutputIter>
 copy_n(InputIter first, Size count, OutputIter out) {
-    for (; count > 0; --count)
+    auto n = ala::_convert_to_integral(count);
+    for (; 0 < n; --n)
         *out++ = *first++;
     return out;
 }
@@ -117,8 +119,9 @@ constexpr enable_if_t<
      is_pointer<InputIter>::value && is_pointer<OutputIter>::value),
     OutputIter>
 copy_n(InputIter first, Size count, OutputIter out) {
+    auto n = ala::_convert_to_integral(count);
     ala::memmove((void *)(out), (void *)(first),
-                 sizeof(typename iterator_traits<InputIter>::value_type) * count);
+                 sizeof(typename iterator_traits<InputIter>::value_type) * n);
     return out + count;
 }
 
@@ -130,7 +133,8 @@ constexpr enable_if_t<
       is_pointer<InputIter>::value && is_pointer<OutputIter>::value),
     OutputIter>
 move_n(InputIter first, Size count, OutputIter out) {
-    for (; count > 0; --count)
+    auto n = ala::_convert_to_integral(count);
+    for (; 0 < n; --n)
         *out++ = ala::move(*first++);
     return out;
 }
@@ -143,8 +147,9 @@ constexpr enable_if_t<
      is_pointer<InputIter>::value && is_pointer<OutputIter>::value),
     OutputIter>
 move_n(InputIter first, Size count, OutputIter out) {
+    auto n = ala::_convert_to_integral(count);
     ala::memmove((void *)(out), (void *)(first),
-                 sizeof(typename iterator_traits<InputIter>::value_type) * count);
+                 sizeof(typename iterator_traits<InputIter>::value_type) * n);
     return out + count;
 }
 
@@ -169,10 +174,11 @@ constexpr enable_if_t<
      is_pointer<BidirIter1>::value && is_pointer<BidirIter2>::value),
     BidirIter2>
 copy_backward(BidirIter1 first, BidirIter1 last, BidirIter2 out) {
-    ala::memmove((void *)(out), (void *)(first),
-                 sizeof(typename iterator_traits<BidirIter1>::value_type) *
-                     (last - first));
-    return out + (last - first);
+    size_t len = last - first;
+    size_t nbyte = sizeof(typename iterator_traits<BidirIter1>::value_type) *
+                   (last - first);
+    ala::memmove((void *)(out - len), (void *)(first), nbyte);
+    return out - len;
 }
 
 template<class BidirIter1, class BidirIter2>
@@ -196,10 +202,11 @@ constexpr enable_if_t<
      is_pointer<BidirIter1>::value && is_pointer<BidirIter2>::value),
     BidirIter2>
 move_backward(BidirIter1 first, BidirIter1 last, BidirIter2 out) {
-    ala::memmove((void *)(out), (void *)(first),
-                 sizeof(typename iterator_traits<BidirIter1>::value_type) *
-                     (last - first));
-    return out + (last - first);
+    size_t len = last - first;
+    size_t nbyte = sizeof(typename iterator_traits<BidirIter1>::value_type) *
+                   (last - first);
+    ala::memmove((void *)(out - len), (void *)(first), nbyte);
+    return out - len;
 }
 
 template<class ForwardIter, class T>
@@ -225,36 +232,55 @@ constexpr ForwardIter2 swap_ranges(ForwardIter1 first1, ForwardIter1 last1,
 
 template<class Iter1, class Iter2, class BinPred>
 constexpr bool equal(Iter1 first1, Iter1 last1, Iter2 first2, BinPred pred) {
-    for (; first1 != last1; ++first1, ++first2) {
-        if (!pred(*first1, *first2)) {
+    for (; first1 != last1; ++first1, (void)++first2)
+        if (!pred(*first1, *first2))
             return false;
-        }
-    }
     return true;
 }
 
 template<class Iter1, class Iter2>
 constexpr bool equal(Iter1 first1, Iter1 last1, Iter2 first2) {
-    return equal(first1, last1, first2, equal_to<>());
+    return ala::equal(first1, last1, first2, equal_to<>());
 }
 
 template<class Iter1, class Iter2, class BinPred>
-constexpr bool equal(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2,
-                     BinPred pred) {
+constexpr enable_if_t<
+    !(is_base_of<random_access_iterator_tag,
+                 typename iterator_traits<Iter1>::iterator_category>::value &&
+      is_base_of<random_access_iterator_tag,
+                 typename iterator_traits<Iter2>::iterator_category>::value),
+    bool>
+equal(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2, BinPred pred) {
+    for (; first1 != last1 && first2 != last2; ++first1, (void)++first2)
+        if (!pred(*first1, *first2))
+            return false;
+    if (first1 == last1 && first2 == last2)
+        return true;
+    return false;
+}
+
+template<class Iter1, class Iter2, class BinPred>
+constexpr enable_if_t<
+    (is_base_of<random_access_iterator_tag,
+                typename iterator_traits<Iter1>::iterator_category>::value &&
+     is_base_of<random_access_iterator_tag,
+                typename iterator_traits<Iter2>::iterator_category>::value),
+    bool>
+equal(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2, BinPred pred) {
     if (ala::distance(first1, last1) != ala::distance(first2, last2))
         return false;
-    return equal(first1, last1, first2, pred);
+    return ala::equal(first1, last1, first2, pred);
 }
 
 template<class Iter1, class Iter2>
 constexpr bool equal(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2) {
-    return equal(first1, last1, first2, last2, equal_to<>());
+    return ala::equal(first1, last1, first2, last2, equal_to<>());
 }
 
 template<class Iter1, class Iter2, class Compare>
 constexpr bool lexicographical_compare(Iter1 first1, Iter1 last1, Iter2 first2,
                                        Iter2 last2, Compare comp) {
-    for (; (first1 != last1) && (first2 != last2); ++first1, ++first2) {
+    for (; (first1 != last1) && (first2 != last2); ++first1, (void)++first2) {
         if (comp(*first1, *first2))
             return true;
         if (comp(*first2, *first1))
@@ -266,7 +292,7 @@ constexpr bool lexicographical_compare(Iter1 first1, Iter1 last1, Iter2 first2,
 template<class Iter1, class Iter2>
 constexpr bool lexicographical_compare(Iter1 first1, Iter1 last1, Iter2 first2,
                                        Iter2 last2) {
-    return lexicographical_compare(first1, last1, first2, last2, less<>());
+    return ala::lexicographical_compare(first1, last1, first2, last2, less<>());
 }
 
 // Binary search operations (on sorted ranges)
@@ -342,7 +368,7 @@ constexpr bool binary_search(ForwardIter first, ForwardIter last,
 
 template<class ForwardIter, class T>
 constexpr bool binary_search(ForwardIter first, ForwardIter last, const T &value) {
-    return binary_search(first, last, value, less<>());
+    return ala::binary_search(first, last, value, less<>());
 }
 
 } // namespace ala

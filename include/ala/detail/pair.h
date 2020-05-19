@@ -115,10 +115,13 @@ struct pair {
     pair(const pair &) = default;
     pair(pair &&) = default;
 
-    template<typename U1 = T1, typename U2 = T2>
-    constexpr enable_if_t<
-        is_copy_assignable<U1>::value && is_copy_assignable<U2>::value, pair> &
-    operator=(const pair &p) {
+    template<int>
+    struct _dummy {};
+
+    constexpr pair &operator=(
+        conditional_t<is_copy_assignable<T1>::value && is_copy_assignable<T2>::value,
+                      const pair &, _dummy<0>>
+            p) {
         first = p.first;
         second = p.second;
         return *this;
@@ -127,19 +130,18 @@ struct pair {
     template<typename U1, typename U2>
     constexpr enable_if_t<is_assignable<first_type &, const U1 &>::value &&
                               is_assignable<second_type &, const U2 &>::value,
-                          pair> &
+                          pair &>
     operator=(const pair<U1, U2> &p) {
         first = p.first;
         second = p.second;
         return *this;
     }
 
-    template<typename U1 = T1, typename U2 = T2>
-    constexpr enable_if_t<
-        is_move_assignable<U1>::value && is_move_assignable<U2>::value, pair> &
-    operator=(pair &&p) noexcept(
-        is_nothrow_move_assignable<first_type>::value
-            &&is_nothrow_move_assignable<second_type>::value) {
+    constexpr pair &operator=(
+        conditional_t<is_move_assignable<T1>::value && is_move_assignable<T2>::value,
+                      pair &&, _dummy<1>>
+            p) noexcept(is_nothrow_move_assignable<first_type>::value
+                            &&is_nothrow_move_assignable<second_type>::value) {
         first = ala::forward<first_type>(p.first);
         second = ala::forward<second_type>(p.second);
         return *this;
@@ -148,7 +150,7 @@ struct pair {
     template<typename U1, typename U2>
     constexpr enable_if_t<is_assignable<first_type &, U1 &&>::value &&
                               is_assignable<second_type &, U2 &&>::value,
-                          pair> &
+                          pair &>
     operator=(pair<U1, U2> &&p) {
         first = ala::forward<U1>(p.first);
         second = ala::forward<U2>(p.second);
@@ -245,49 +247,57 @@ get(const pair<T1, T2> &&p) noexcept {
 
 template<class T, class U>
 constexpr T &get(pair<type_identity_t<T>, U> &p) noexcept {
-    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
+    static_assert(!is_same<T, U>::value,
+                  "No specified type or more than one type");
     return static_cast<T &>(p.first);
 }
 
 template<class T, class U>
 constexpr const T &get(const pair<type_identity_t<T>, U> &p) noexcept {
-    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
+    static_assert(!is_same<T, U>::value,
+                  "No specified type or more than one type");
     return static_cast<const T &>(p.first);
 }
 
 template<class T, class U>
 constexpr T &&get(pair<type_identity_t<T>, U> &&p) noexcept {
-    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
+    static_assert(!is_same<T, U>::value,
+                  "No specified type or more than one type");
     return static_cast<T &&>(p.first);
 }
 
 template<class T, class U>
 constexpr const T &&get(const pair<type_identity_t<T>, U> &&p) noexcept {
-    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
+    static_assert(!is_same<T, U>::value,
+                  "No specified type or more than one type");
     return static_cast<const T &&>(p.first);
 }
 
 template<class T, class U>
 constexpr T &get(pair<U, type_identity_t<T>> &p) noexcept {
-    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
+    static_assert(!is_same<T, U>::value,
+                  "No specified type or more than one type");
     return static_cast<T &>(p.second);
 }
 
 template<class T, class U>
 constexpr const T &get(const pair<U, type_identity_t<T>> &p) noexcept {
-    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
+    static_assert(!is_same<T, U>::value,
+                  "No specified type or more than one type");
     return static_cast<const T &>(p.second);
 }
 
 template<class T, class U>
 constexpr T &&get(pair<U, type_identity_t<T>> &&p) noexcept {
-    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
+    static_assert(!is_same<T, U>::value,
+                  "No specified type or more than one type");
     return static_cast<T &&>(p.second);
 }
 
 template<class T, class U>
 constexpr const T &&get(const pair<U, type_identity_t<T>> &&p) noexcept {
-    static_assert(!is_same<T, U>::value, "No specified type or more than one type");
+    static_assert(!is_same<T, U>::value,
+                  "No specified type or more than one type");
     return static_cast<const T &&>(p.second);
 }
 
