@@ -87,10 +87,9 @@ struct pointer_traits<T *> {
     template<typename U>
     using rebind = U *;
 
-    struct _void_dummy {};
-    constexpr static pointer
-    pointer_to(conditional_t<is_void<element_type>::value, _void_dummy,
-                             element_type> &r) noexcept {
+    struct _dummy {};
+    constexpr static pointer pointer_to(
+        conditional_t<is_void<element_type>::value, _dummy, element_type> &r) noexcept {
         return ala::addressof(r);
     }
 };
@@ -185,6 +184,38 @@ bool operator!=(const allocator<T> &, const allocator<U> &) noexcept {
     return false;
 }
 
+template<class Ptr>
+constexpr auto to_address(const Ptr &p) noexcept;
+
+template<class T>
+constexpr T *to_address(T *p) noexcept;
+
+template<class Ptr, class = void>
+struct _to_address_helper {
+    static auto impl(const Ptr &p) noexcept {
+        return ala::to_address(p.operator->());
+    }
+};
+
+template<class Ptr>
+struct _to_address_helper<
+    Ptr, void_t<decltype(pointer_traits<Ptr>::to_address(declval<const Ptr &>()))>> {
+    static auto impl(const Ptr &p) noexcept {
+        return pointer_traits<Ptr>::to_address(p);
+    }
+};
+
+template<class Ptr>
+constexpr auto to_address(const Ptr &p) noexcept {
+    return ala::_to_address_helper<Ptr>::impl(p);
+}
+
+template<class T>
+constexpr T *to_address(T *p) noexcept {
+    static_assert(!is_function<T>::value, "Ill-formed, T is a function type");
+    return p;
+}
+
 template<class Alloc>
 struct allocator_traits {
     typedef Alloc allocator_type;
@@ -262,7 +293,7 @@ struct allocator_traits {
 
     template<typename A, typename P>
     struct _has_destroy<void_t<decltype(declval<A &>().destroy(declval<P>()))>, A, P>
-        : ala::true_type {};
+        : true_type {};
 
     template<typename Pointer, typename... Args>
     static enable_if_t<_has_construct<void, allocator_type &, Pointer, Args...>::value>
@@ -277,10 +308,10 @@ struct allocator_traits {
     static enable_if_t<!_has_construct<void, allocator_type &, Pointer, Args...>::value>
     construct(allocator_type &a, Pointer p, Args &&... args) {
         using T = typename pointer_traits<Pointer>::element_type;
-        static_assert(is_same<remove_cv_t<T>, value_type>::value,
-                      "Can not process incompatible type");
-        ::new ((void *)ala::addressof(*p))
-            value_type(ala::forward<Args>(args)...);
+        // static_assert(is_same<remove_cv_t<T>, value_type>::value,
+        //               "Can not process incompatible type");
+        void *raw = static_cast<void *>(ala::to_address(p));
+        ::new (raw) T(ala::forward<Args>(args)...);
     }
 
     template<typename Pointer>
@@ -296,9 +327,9 @@ struct allocator_traits {
     static enable_if_t<!_has_destroy<void, allocator_type &, Pointer>::value>
     destroy(allocator_type &a, Pointer p) {
         using T = typename pointer_traits<Pointer>::element_type;
-        static_assert(is_same<remove_cv_t<T>, value_type>::value,
-                      "Can not process incompatible type");
-        (*p).~value_type();
+        // static_assert(is_same<remove_cv_t<T>, value_type>::value,
+        //               "Can not process incompatible type");
+        (*p).~T();
     }
 
     template<typename Void, typename A, typename U>
@@ -321,10 +352,14 @@ struct allocator_traits {
     ALA_NODISCARD static enable_if_t<
         _choose_alloc_obj<void, allocator_type, U>::value == 0, U *>
     allocate_object(allocator_type &a, size_t n = 1) {
+#if !ALA_USE_ALLOC_REBIND
         static_assert(
-            _choose_alloc_obj<void, allocator_type, U>::value != 0,
+            is_always_equal::value,
             "Your allocator has no allocate_object(or allocate_bytes), "
-            "it is necessary for node-based container");
+            "it is necessary for node-based container, "
+            "or use stateless(is_always_equal) allocator");
+#endif // always use rebind in is_always_equal allocator
+        return ala::to_address(rebind_alloc<U>(a).allocate(n));
     }
 
     template<class U>
@@ -362,10 +397,16 @@ struct allocator_traits {
     template<class U>
     static enable_if_t<_choose_dealloc_obj<void, allocator_type, U>::value == 0>
     deallocate_object(allocator_type &a, U *p, size_t n = 1) {
+#if !ALA_USE_ALLOC_REBIND
         static_assert(
-            _choose_dealloc_obj<void, allocator_type, U>::value != 0,
-            "Your allocator has no deallocate_object(or deallocate_bytes), "
-            "it is necessary for node-based container");
+            is_always_equal::value,
+            "Your allocator has no allocate_object(or allocate_bytes), "
+            "it is necessary for node-based container, "
+            "or use stateless(is_always_equal) allocator");
+#endif // always use rebind in is_always_equal allocator
+        using pointer = typename rebind_traits<U>::pointer;
+        pointer wp = pointer_traits<pointer>::pointer_to(*p);
+        return rebind_alloc<U>(a).deallocate(wp, n);
     }
 
     template<class U>

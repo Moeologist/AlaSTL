@@ -13,4 +13,8 @@
     #define ALA_USE_RTTI 1
 #endif
 
+#ifndef ALA_USE_ALLOC_REBIND
+    #define ALA_USE_ALLOC_REBIND 0
+#endif
+
 #endif // HEAD

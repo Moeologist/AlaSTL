@@ -2,7 +2,7 @@
 #define _ALA_LIST_H
 
 #include <ala/detail/linked_list.h>
-#include <ala/detail/functional_base.h>
+#include <ala/detail/algorithm_base.h>
 
 namespace ala {
 
@@ -13,8 +13,8 @@ public:
     typedef T value_type;
     typedef value_type &reference;
     typedef const value_type &const_reference;
-    typedef l_iterator<l_node<value_type> *, false> iterator;
-    typedef l_iterator<l_node<value_type> *, true> const_iterator;
+    typedef l_iterator<value_type, l_node<value_type> *, false> iterator;
+    typedef l_iterator<value_type, l_node<value_type> *, true> const_iterator;
     typedef Alloc allocator_type;
     typedef allocator_traits<Alloc> _alloc_traits;
     typedef typename _alloc_traits::size_type size_type;
@@ -23,6 +23,8 @@ public:
     typedef typename _alloc_traits::const_pointer const_pointer;
     typedef ala::reverse_iterator<iterator> reverse_iterator;
     typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
+    static_assert(is_same<value_type, typename _alloc_traits::value_type>::value,
+                  "allocator::value_type mismatch");
 
 protected:
     typedef l_node<value_type> _node_t;
@@ -45,31 +47,32 @@ protected:
     }
 
     void cut(iterator pos) noexcept {
-        for (; pos != end();) {
-            destruct_node(pos++._ptr);
-            --_size;
-        }
+        _hdle_t e = pos._ptr->_pre;
+        for (; pos != end(); --_size)
+            pos = destruct_node(pos._ptr);
+        link(e, tail());
     }
 
     iterator locate(size_type index) noexcept {
         iterator i = begin();
-        for (size_type id = 0; id != index && i != end(); ++i)
+        for (; index != 0 && i != end(); --index, (void)++i)
             ;
         return i;
     }
 
     // insert before pos
-    void attach_to(_hdle_t pos, _hdle_t node) {
+    void attach(_hdle_t pos, _hdle_t node) {
         assert(pos != head());
         link(pos->_pre, node);
         link(node, pos);
         ++_size;
     }
 
-    void attach_range_to(_hdle_t pos, _hdle_t first, _hdle_t last, size_type len) {
+    // [left, rght], not [)
+    void attach_range(_hdle_t pos, _hdle_t left, _hdle_t rght, size_type len) {
         assert(pos != head());
-        link(pos->_pre, first);
-        link(last, pos);
+        link(pos->_pre, left);
+        link(rght, pos);
         _size += len;
     }
 
@@ -81,10 +84,10 @@ protected:
         return pos;
     }
 
-    void detach_range(_hdle_t first, _hdle_t last, size_type len) {
-        assert(first != head() && first != tail());
-        assert(last != head());
-        _hdle_t pre = first->_pre, suc = last;
+    void detach_range(_hdle_t left, _hdle_t rght, size_type len) {
+        assert(left != head() && left != tail());
+        assert(rght != head() && rght != tail());
+        _hdle_t pre = left->_pre, suc = rght->_suc;
         link(pre, suc);
         _size -= len;
     }
@@ -105,23 +108,29 @@ protected:
         return node;
     }
 
-    void destruct_node(_hdle_t node) {
+    _hdle_t destruct_node(_hdle_t node) {
         _alloc_traits::destroy(_alloc, ala::addressof(node->_data));
+        _hdle_t rv = node->_suc;
         _alloc_traits::template deallocate_object<_node_t>(_alloc, node, 1);
-        node = nullptr;
+        return rv;
     }
 
     void clone(const list &other) {
         this->insert(end(), other.begin(), other.end());
     }
 
+    void clone(list &&other) {
+        this->insert(end(), ala::make_move_iterator(other.begin()),
+                     ala::make_move_iterator(other.end()));
+    }
+
     void possess(list &&other) {
-        if (other._size > 0) {
+        if (!other.empty()) {
             _hdle_t bgn = other.head()->_suc;
-            _hdle_t end = other.tail();
+            _hdle_t end = other.tail()->_pre;
             size_type n = other._size;
-            other.detach_range(bgn, end, other._size);
-            this->attach_range_to(tail(), bgn, end, other._size);
+            other.detach_range(bgn, end, n);
+            this->attach_range(tail(), bgn, end, n);
         }
     }
 
@@ -135,12 +144,13 @@ public:
         initialize();
     }
 
-    explicit list(size_type n): _alloc() {
+    explicit list(size_type n, const allocator_type &a = allocator_type())
+        : _alloc(a) {
         initialize();
         this->resize(n);
     }
 
-    list(size_type n, const value_type &value,
+    list(size_type n, const value_type &v,
          const allocator_type &a = allocator_type())
         : _alloc(a) {
         initialize();
@@ -155,7 +165,8 @@ public:
          const allocator_type &a = allocator_type())
         : _alloc(a) {
         initialize();
-        this->insert(end(), first, last);
+        for (; first != last; ++first)
+            this->emplace_back(*first);
     }
 
     list(const list &other)
@@ -167,7 +178,7 @@ public:
 
     list(list &&other): _alloc(ala::move(other._alloc)) {
         initialize();
-        this->possess(other);
+        this->possess(ala::move(other));
     }
 
     list(const list &other, const allocator_type &a): _alloc(a) {
@@ -180,7 +191,7 @@ public:
         if (_alloc == other._alloc)
             this->possess(ala::move(other));
         else
-            this->clone(other);
+            this->clone(ala::move(other));
     }
 
     list(initializer_list<value_type> il,
@@ -209,7 +220,7 @@ protected:
     enable_if_t<Dummy> move_helper(list &&other) noexcept {
         clear();
         _alloc = ala::move(other._alloc);
-        this->possess(other);
+        this->possess(ala::move(other));
     }
 
     template<bool Dummy = _alloc_traits::propagate_on_container_move_assignment::value>
@@ -219,7 +230,8 @@ protected:
             clear();
             this->possess(ala::move(other));
         } else {
-            this->assign(other.begin(), other.end());
+            this->assign(ala::make_move_iterator(other.begin()),
+                         ala::make_move_iterator(other.end()));
         }
     }
 
@@ -262,7 +274,7 @@ public:
                            typename iterator_traits<InputIter>::iterator_category>::value>
     assign(InputIter first, InputIter last) {
         iterator i = begin();
-        for (; i != end() && first != last; ++i, ++first)
+        for (; i != end() && first != last; ++i, (void)++first)
             *i = *first;
         this->cut(i);
         this->insert(end(), first, last);
@@ -270,7 +282,7 @@ public:
 
     void assign(size_type n, const value_type &v) {
         iterator i = begin();
-        for (; i != end() && n != 0; ++i, --n)
+        for (; i != end() && n != 0; ++i, (void)--n)
             *i = v;
         this->cut(i);
         this->insert(end(), n, v);
@@ -339,7 +351,7 @@ public:
     }
 
     size_type max_size() const noexcept {
-        return numeric_limits<difference_type>::max();
+        return _alloc_traits::max_size(_alloc);
     }
 
 protected:
@@ -347,9 +359,7 @@ protected:
     void resize_helper(size_type sz, Args &&... args) {
         if (size() > sz) {
             iterator pos = this->locate(sz);
-            _hdle_t end = pos._ptr->_pre;
             this->cut(pos);
-            link(end, tail());
         } else {
             for (int i = size(); i < sz; ++i)
                 this->emplace_back(ala::forward<Args>(args)...);
@@ -365,7 +375,7 @@ public:
         resize_helper(sz, v);
     }
 
-    bool empty() const noexcept {
+    ALA_NODISCARD bool empty() const noexcept {
         return size() == 0;
     }
 
@@ -388,13 +398,13 @@ public:
 
     // modifiers:
     template<class... Args>
-    void emplace_front(Args &&... args) {
-        this->emplace(begin(), ala::forward<Args>(args)...);
+    reference emplace_front(Args &&... args) {
+        return *(this->emplace(begin(), ala::forward<Args>(args)...));
     }
 
     template<class... Args>
-    void emplace_back(Args &&... args) {
-        this->emplace(end(), ala::forward<Args>(args)...);
+    reference emplace_back(Args &&... args) {
+        return *(this->emplace(end(), ala::forward<Args>(args)...));
     }
 
     void push_front(const value_type &v) {
@@ -424,7 +434,7 @@ public:
     template<class... Args>
     iterator emplace(const_iterator position, Args &&... args) {
         _hdle_t node = construct_node(ala::forward<Args>(args)...);
-        attach_to(position._ptr, node);
+        attach(position._ptr, node);
         return iterator(node);
     }
 
@@ -437,8 +447,21 @@ public:
     }
 
     iterator insert(const_iterator position, size_type n, const value_type &v) {
-        for (size_type i = 0; i < n; ++i)
-            position = this.insert(position, v);
+        size_type in = 0;
+        try {
+            for (; in < n; ++in)
+                position = this->insert(position, v);
+        } catch (...) {
+            if (in == 1) {
+                this->destruct_node(this->detach(position._ptr));
+            } else if (in > 1) {
+                iterator last = ala::next(position, in - 1);
+                this->detach_range(position._ptr, last._ptr, in);
+                for (_hdle_t h = position._ptr; in != 0; --in)
+                    h = this->destruct_node(h);
+            }
+            throw;
+        }
         return position;
     }
 
@@ -448,10 +471,26 @@ public:
                 iterator>
     insert(const_iterator position, InputIter first, InputIter last) {
         iterator rv = position;
-        if (first != last)
-            rv = this->insert(position, *first++);
-        for (; first != last;)
-            this->insert(position, *first++);
+        size_type in = 0;
+        try {
+            if (first != last) {
+                rv = position = this->insert(position, *first++);
+                ++position;
+                ++in;
+            }
+            for (; first != last; ++position, (void)++in)
+                position = this->insert(position, *first++);
+        } catch (...) {
+            if (in == 1) {
+                this->destruct_node(this->detach(rv._ptr));
+            } else if (in > 1) {
+                iterator last = ala::next(rv, in - 1);
+                this->detach_range(rv._ptr, last._ptr, in);
+                for (_hdle_t h = rv._ptr; in != 0; --in)
+                    h = this->destruct_node(h);
+            }
+            throw;
+        }
         return rv;
     }
 
@@ -460,14 +499,14 @@ public:
     }
 
     iterator erase(const_iterator position) {
-        _hdle_t next = position._ptr->_suc;
-        destruct_node(detach(position._ptr));
-        return iterator(next);
+        return destruct_node(detach(position._ptr));
     }
 
     iterator erase(const_iterator first, const_iterator last) {
-        for (iterator i = first; i != last;)
+        iterator i = first;
+        for (; i != last;)
             i = erase(i);
+        return i;
     }
 
     void clear() noexcept {
@@ -478,8 +517,12 @@ public:
     void splice(const_iterator position, list &other) {
         assert(_alloc == other._alloc);
         size_type len = other.size();
-        other.detach_range(other.begin(), other.end(), len);
-        this->attach_range_to(position, other.begin(), other.end(), len);
+        if (len == 0 && this != ala::addressof(other))
+            return;
+        _hdle_t left = other.head()->_suc;
+        _hdle_t rght = other.tail()->_pre;
+        other.detach_range(left, rght, len);
+        this->attach_range(position._ptr, left, rght, len);
     }
 
     void splice(const_iterator position, list &&other) {
@@ -488,8 +531,8 @@ public:
 
     void splice(const_iterator position, list &other, const_iterator i) {
         assert(_alloc == other._alloc);
-        destruct_node(other.detach(i._ptr));
-        this->attach_to(position->_ptr, i._ptr);
+        if (position._ptr != i._ptr)
+            this->attach(position._ptr, other.detach(i._ptr));
     }
 
     void splice(const_iterator position, list &&other, const_iterator i) {
@@ -500,8 +543,12 @@ public:
                 const_iterator last) {
         assert(_alloc == other._alloc);
         auto len = ala::distance(first, last);
-        other.detach_range(first, last, len);
-        this->attach_range_to(position, first, last, len);
+        if (len == 0)
+            return;
+        _hdle_t left = first._ptr;
+        _hdle_t rght = (--last)._ptr;
+        other.detach_range(left, rght, len);
+        this->attach_range(position._ptr, left, rght, len);
     }
 
     void splice(const_iterator position, list &&other, const_iterator first,
@@ -509,15 +556,28 @@ public:
         this->splice(position, other, first, last);
     }
 
-    void remove(const value_type &value) {
-        this->remove([&](const value_type &v) { return v == value; });
+    size_type remove(const value_type &value) {
+        return this->remove_if(
+            [&](const value_type &elem) { return value == elem; });
     }
 
     template<class UnaryPredicate>
-    void remove_if(UnaryPredicate pred) {
-        for (iterator i = begin(); i != end(); ++i)
-            if (pred(*i))
-                destruct_node(detach(i._ptr));
+    size_type remove_if(UnaryPredicate pred) {
+        size_type n = 0;
+        _hdle_t rmh = nullptr;
+        for (iterator i = begin(); i != end();)
+            if (pred(*i)) {
+                _hdle_t h = this->detach(i._ptr);
+                ++i;
+                h->_suc = rmh;
+                rmh = h;
+                ++n;
+            } else {
+                ++i;
+            }
+        for (_hdle_t i = rmh; i != nullptr;)
+            i = destruct_node(i);
+        return n;
     }
 
     void unique() {
@@ -529,9 +589,14 @@ public:
     void unique(BinaryPredicate pred) {
         if (size() < 2)
             return;
-        for (iterator i = begin(), j = ++begin(); j != end(); ++i, ++j)
+        iterator j = begin();
+        for (iterator i = j++; j != end();)
             if (pred(*i, *j))
-                destruct_node(detach(j._ptr));
+                j = destruct_node(detach(j._ptr));
+            else {
+                ++j;
+                ++i;
+            }
     }
 
     void merge(list &other) {
@@ -548,13 +613,12 @@ protected:
                          Compare comp) {
         iterator i = first, j = mid;
         while (i != j && j != last) {
-            if (comp(*i, *j))
-                ++i;
-            else {
+            if (comp(*j, *i)) {
                 if (i == first)
                     first = j;
-                this->attach_to(i._ptr, detach(j++._ptr));
-            }
+                this->attach(i._ptr, detach(j++._ptr));
+            } else
+                ++i;
         }
         return first;
     }
@@ -583,13 +647,13 @@ public:
     template<class Compare>
     void merge(list &other, Compare comp) {
         assert(_alloc == other._alloc);
-        assert(ala::is_sorted(this->begin(), this->end()));
-        assert(ala::is_sorted(other.begin(), other.end()));
+        // assert(ala::is_sorted(this->begin(), this->end()));
+        // assert(ala::is_sorted(other.begin(), other.end()));
         iterator i = this->begin();
         iterator j = other.begin();
         while (j != other.end())
             if (i == end() || comp(*j, *i))
-                this->attach_to(i._ptr, other.detach(j++._ptr));
+                this->attach(i._ptr, other.detach(j++._ptr));
             else
                 ++i;
     }
@@ -616,6 +680,65 @@ public:
         link(first, tail());
     }
 };
+
+template<class T, class Alloc>
+bool operator==(const list<T, Alloc> &lhs, const list<T, Alloc> &rhs) {
+    if (lhs.size() == rhs.size())
+        return ala::equal(lhs.begin(), lhs.end(), rhs.begin());
+    return false;
+}
+
+template<class T, class Alloc>
+bool operator!=(const list<T, Alloc> &lhs, const list<T, Alloc> &rhs) {
+    return !(lhs == rhs);
+}
+
+template<class T, class Alloc>
+bool operator<(const list<T, Alloc> &lhs, const list<T, Alloc> &rhs) {
+    return ala::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
+                                        rhs.end());
+}
+
+template<class T, class Alloc>
+bool operator>(const list<T, Alloc> &lhs, const list<T, Alloc> &rhs) {
+    return rhs < lhs;
+}
+
+template<class T, class Alloc>
+bool operator<=(const list<T, Alloc> &lhs, const list<T, Alloc> &rhs) {
+    return !(rhs < lhs);
+}
+
+template<class T, class Alloc>
+bool operator>=(const list<T, Alloc> &lhs, const list<T, Alloc> &rhs) {
+    return !(lhs < rhs);
+}
+
+template<class T, class Alloc>
+void swap(list<T, Alloc> &lhs,
+          list<T, Alloc> &rhs) noexcept(noexcept(lhs.swap(rhs))) {
+    lhs.swap(rhs);
+}
+
+#if _ALA_ENABLE_DEDUCTION_GUIDES
+template<class InputIter,
+         class Alloc = allocator<typename iterator_traits<InputIter>::value_type>>
+list(InputIter, InputIter, Alloc = Alloc())
+    -> list<typename iterator_traits<InputIter>::value_type, Alloc>;
+#endif
+
+// C++20
+template<class T, class Alloc, class U>
+constexpr typename list<T, Alloc>::size_type erase(list<T, Alloc> &c,
+                                                   const U &value) {
+    return c.remove_if([&value](const auto &elem) { return elem == value; });
+}
+
+template<class T, class Alloc, class Pred>
+constexpr typename list<T, Alloc>::size_type erase_if(list<T, Alloc> &c,
+                                                      Pred pred) {
+    return c.remove_if(pred);
+}
 } // namespace ala
 
 #endif
