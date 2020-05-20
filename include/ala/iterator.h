@@ -105,11 +105,11 @@ struct reverse_iterator {
     }
 
     constexpr reverse_iterator operator++(int) {
-        return current--;
+        return reverse_iterator(current--);
     }
 
     constexpr reverse_iterator operator--(int) {
-        return current++;
+        return reverse_iterator(current++);
     }
 
     constexpr reverse_iterator &operator+=(difference_type n) {
@@ -330,7 +330,7 @@ public:
         add_rvalue_reference_t<remove_reference_t<_raw_ref_t>>, _raw_ref_t>;
 
     constexpr move_iterator(): current() {}
-    constexpr explicit move_iterator(Iter i): current(i) {}
+    constexpr explicit move_iterator(iterator_type i): current(i) {}
     template<class U>
     constexpr move_iterator(const move_iterator<U> &other)
         : current(other.base()) {}
@@ -367,11 +367,11 @@ public:
     }
 
     constexpr move_iterator operator++(int) {
-        return current++;
+        return move_iterator(current++);
     }
 
     constexpr move_iterator operator--(int) {
-        return current--;
+        return move_iterator(current--);
     }
 
     constexpr move_iterator &operator+=(difference_type n) {
@@ -401,7 +401,7 @@ public:
     }
 
 private:
-    Iter current; // exposition only
+    iterator_type current; // exposition only
 };
 
 template<class Iter1, class Iter2>
