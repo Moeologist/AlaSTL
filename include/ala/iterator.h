@@ -2,6 +2,7 @@
 #define _ALA_ITERATOR_H
 
 #include <ala/type_traits.h>
+#include <ala/detail/memory_base.h>
 
 namespace std {
 class input_iterator_tag;
@@ -84,12 +85,12 @@ struct reverse_iterator {
 
     constexpr reference operator*() const {
         Iter tmp = current;
-        return (--tmp).operator*();
+        return *--tmp;
     }
 
     constexpr pointer operator->() const {
         Iter tmp = current;
-        return (--tmp).operator->();
+        return ala::addressof(operator*());
     }
 
     constexpr reference operator[](difference_type n) const;
@@ -286,7 +287,7 @@ constexpr const T *begin(initializer_list<T> il) noexcept {
 template<class C>
 constexpr auto cbegin(const C &c) noexcept(noexcept(ala::begin(c)))
     -> decltype(ala::begin(c)) {
-    return c.begin();
+    return ala::begin(c);
 }
 
 template<class C>
@@ -312,7 +313,59 @@ constexpr const T *end(initializer_list<T> il) noexcept {
 template<class C>
 constexpr auto cend(const C &c) noexcept(noexcept(ala::end(c)))
     -> decltype(ala::end(c)) {
-    return c.end();
+    return ala::end(c);
+}
+
+template<class C>
+constexpr auto rbegin(C &c) -> decltype(c.rbegin()) {
+    return c.rbegin();
+}
+
+template<class C>
+constexpr auto rbegin(const C &c) -> decltype(c.rbegin()) {
+    return c.rbegin();
+}
+
+template<class T, size_t N>
+constexpr T *rbegin(T (&array)[N]) noexcept {
+    return make_reverse_iterator(ala::end(array));
+}
+
+template<class T>
+constexpr const T *rbegin(initializer_list<T> il) noexcept {
+    return il.rbegin();
+}
+
+template<class C>
+constexpr auto crbegin(const C &c) noexcept(noexcept(ala::rbegin(c)))
+    -> decltype(ala::rbegin(c)) {
+    return ala::rbegin(c);
+}
+
+template<class C>
+constexpr auto rend(C &c) -> decltype(c.rend()) {
+    return c.rend();
+}
+
+template<class C>
+constexpr auto rend(const C &c) -> decltype(c.rend()) {
+    return c.rend();
+}
+
+template<class T, size_t N>
+constexpr T *rend(T (&array)[N]) noexcept {
+    return make_reverse_iterator(ala::begin(array));
+}
+
+template<class T>
+constexpr const T *rend(initializer_list<T> il) noexcept {
+    return il.rend();
+}
+
+template<class C>
+constexpr auto crend(const C &c) noexcept(noexcept(ala::rend(c)))
+    -> decltype(ala::rend(c)) {
+    return ala::rend(c);
 }
 
 template<class Iter>

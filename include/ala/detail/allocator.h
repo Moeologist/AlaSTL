@@ -1,10 +1,9 @@
 #ifndef _ALA_DETAIL_ALLOCATOR_H
 #define _ALA_DETAIL_ALLOCATOR_H
 
-#include <new>
-
 #include <ala/type_traits.h>
 #include <ala/detail/macro.h>
+#include <ala/detail/memory_base.h>
 
 #ifdef _ALA_MSVC
     #pragma warning(push)
@@ -12,19 +11,6 @@
 #endif
 
 namespace ala {
-#if _ALA_ENABLE_ALIGNED_NEW
-using ::std::align_val_t;
-#endif
-
-using ::std::bad_array_new_length;
-
-template<class T>
-const T *addressof(const T &&) = delete;
-
-template<class T>
-constexpr T *addressof(T &arg) noexcept {
-    return __builtin_addressof(arg);
-}
 
 template<typename Ptr>
 struct pointer_traits {
