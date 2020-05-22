@@ -6,21 +6,24 @@
 
 namespace ala {
 
+// llvm D28222
+
 template<typename T>
 struct tuple_size;
 
 template<typename Tuple, typename = void>
-struct _tuple_size_sfinae;
+struct _tuple_size_sfinae {};
 
 template<typename Tuple>
 struct _tuple_size_sfinae<Tuple, void_t<decltype(tuple_size<Tuple>::value)>>
     : integral_constant<size_t, tuple_size<Tuple>::value> {};
 
 template<typename Tuple, typename = void>
-struct _tuple_size_helper;
+struct _tuple_size_helper {};
 
 template<typename Tuple>
-struct _tuple_size_helper<Tuple, void_t<decltype(sizeof(tuple_size<Tuple>))>>
+struct _tuple_size_helper<
+    Tuple, void_t<integral_constant<size_t, sizeof(tuple_size<Tuple>)>>>
     : _tuple_size_sfinae<Tuple> {};
 
 template<typename T>

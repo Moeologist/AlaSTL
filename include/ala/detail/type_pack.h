@@ -5,7 +5,8 @@
 
 namespace ala {
 
-#if defined(_ALA_CLANG) && ALA_HAS_BUILTIN(__type_pack_element)
+#if 0
+// #if defined(_ALA_CLANG) && ALA_HAS_BUILTIN(__type_pack_element)
 
 template<size_t I, typename... Ts>
 using type_pack_element_t = __type_pack_element<I, Ts...>;

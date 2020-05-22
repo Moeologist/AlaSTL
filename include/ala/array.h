@@ -3,7 +3,7 @@
 
 #include <ala/detail/algorithm_base.h>
 #include <ala/detail/tuple_operator.h>
-#include <array>
+
 namespace ala {
 
 template<class T, size_t N>
@@ -66,19 +66,19 @@ struct array {
     }
 
     constexpr const_iterator cbegin() const noexcept {
-        return const_cast<array *>(this)->begin();
+        return const_iterator(const_cast<array *>(this)->begin());
     }
 
     constexpr const_iterator cend() const noexcept {
-        return const_cast<array *>(this)->end();
+        return const_iterator(const_cast<array *>(this)->end());
     }
 
     constexpr const_reverse_iterator crbegin() const noexcept {
-        return const_cast<array *>(this)->rbegin();
+        return const_reverse_iterator(cend());
     }
 
     constexpr const_reverse_iterator crend() const noexcept {
-        return const_cast<array *>(this)->rend();
+        return const_reverse_iterator(cbegin());
     }
 
     // capacity:
@@ -211,20 +211,20 @@ struct array<T, 0> {
         return crend();
     }
 
-    constexpr const_iterator cbegin() const noexcept {
-        return const_cast<array *>(this)->begin();
+    const_iterator cbegin() const noexcept {
+        return const_iterator(const_cast<array *>(this)->begin());
     }
 
-    constexpr const_iterator cend() const noexcept {
-        return const_cast<array *>(this)->end();
+    const_iterator cend() const noexcept {
+        return const_iterator(const_cast<array *>(this)->end());
     }
 
-    constexpr const_reverse_iterator crbegin() const noexcept {
-        return const_cast<array *>(this)->rbegin();
+    const_reverse_iterator crbegin() const noexcept {
+        return const_reverse_iterator(cend());
     }
 
-    constexpr const_reverse_iterator crend() const noexcept {
-        return const_cast<array *>(this)->rend();
+    const_reverse_iterator crend() const noexcept {
+        return const_reverse_iterator(cbegin());
     }
 
     // capacity:
@@ -325,18 +325,19 @@ swap(array<T, N> &lhs, array<T, N> &rhs) noexcept(noexcept(lhs.swap(rhs))) {
 }
 
 #if _ALA_ENABLE_DEDUCTION_GUIDES
-template<class T, class... U>
-array(T, U...) -> array<T, 1 + sizeof...(U)>;
-#endif
-
-template<class T, size_t N>
-struct tuple_size<array<T, N>>: integral_constant<size_t, N> {};
-
-template<size_t I, class T, size_t N>
-struct tuple_element<I, array<T, N>> {
-    static_assert(I < N, "ala::array index out of range");
-    typedef T type;
+template<class T, class... Rest>
+struct _is_all_same {
+    static_assert(_and_<is_same<T, Rest>...>::value,
+                  "N4687 26.3.7.2 [array.cons]/2: "
+                  "Requires: (is_same_v<T, U> && ...) is true. Otherwise the "
+                  "program is ill-formed.");
+    using type = T;
 };
+
+template<class T, class... Rest>
+array(T, Rest...)
+    -> array<typename _is_all_same<T, Rest...>::type, 1 + sizeof...(Rest)>;
+#endif
 
 template<size_t I, class T, size_t N>
 constexpr T &get(array<T, N> &a) noexcept {

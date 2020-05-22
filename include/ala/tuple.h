@@ -2,7 +2,6 @@
 #define _ALA_TUPLE_H
 
 #include <ala/detail/pair.h>
-#include <ala/detail/type_pack.h>
 
 namespace ala {
 
@@ -26,7 +25,7 @@ struct _tuple_base<I, T, false> {
         return *this;
     }
 
-    constexpr _tuple_base() = default;
+    constexpr _tuple_base(): value() {}
 
     constexpr const T &get() const noexcept {
         return value;
@@ -52,7 +51,7 @@ struct _tuple_base<I, T, true>: private T {
         return *this;
     }
 
-    constexpr _tuple_base() = default;
+    constexpr _tuple_base(){};
 
     constexpr const T &get() const noexcept {
         return static_cast<const T &>(*this);
@@ -62,12 +61,6 @@ struct _tuple_base<I, T, true>: private T {
         ala::swap(get(), tb.get());
     }
 };
-
-template<typename... Ts>
-struct tuple_size<tuple<Ts...>>: integral_constant<size_t, sizeof...(Ts)> {};
-
-template<size_t I, typename... Ts>
-struct tuple_element<I, tuple<Ts...>>: type_pack_element<I, Ts...> {};
 
 template<size_t I, typename... Ts>
 constexpr tuple_element_t<I, tuple<Ts...>> &get(tuple<Ts...> &tp) noexcept {
@@ -100,28 +93,37 @@ get(const tuple<Ts...> &&tp) noexcept {
 
 // _tuple_impl
 
-template<typename Tuple>
-struct _is_tuple: false_type {};
-template<typename... TArgs>
-struct _is_tuple<tuple<TArgs...>>: true_type {};
-template<typename First, typename Second>
-struct _is_tuple<pair<First, Second>>: true_type {};
-
 template<typename Seq, typename... Ts>
 struct _tuple_impl;
 
+template<typename... Ts>
+struct tuple;
+
+template<size_t N, typename Tuple>
+struct _is_n_tuple: false_type {};
+
+template<size_t N, typename Seq, typename... Ts>
+struct _is_n_tuple<N, _tuple_impl<Seq, Ts...>>
+    : bool_constant<N == sizeof...(Ts)> {};
+
+template<size_t N, typename... Ts>
+struct _is_n_tuple<N, tuple<Ts...>>: bool_constant<N == sizeof...(Ts)> {};
+
+template<size_t N, typename T, size_t Size>
+struct _is_n_tuple<N, array<T, Size>>: bool_constant<N == Size> {};
+
+template<size_t N, typename T1, typename T2>
+struct _is_n_tuple<N, pair<T1, T2>>: bool_constant<N == 2> {};
+
 template<size_t... Ids, typename... Ts>
 struct _tuple_impl<index_sequence<Ids...>, Ts...>: _tuple_base<Ids, Ts>... {
-    template<typename... Us,
-             typename = enable_if_t<(sizeof...(Us) > 1) ||
-                                    !_and_<_is_tuple<remove_cvref_t<Us>>...>::value>>
-    explicit constexpr _tuple_impl(Us &&... us) noexcept(
+    template<typename... Us>
+    explicit constexpr _tuple_impl(true_type, Us &&... us) noexcept(
         _and_<is_nothrow_constructible<Ts, Us>...>::value)
         : _tuple_base<Ids, Ts>(ala::forward<Us>(us))... {}
 
-    template<typename Tuple,
-             typename = enable_if_t<_is_tuple<remove_cvref_t<Tuple>>::value>>
-    constexpr _tuple_impl(Tuple &&tp) noexcept(
+    template<typename Tuple>
+    constexpr _tuple_impl(false_type, Tuple &&tp) noexcept(
         _and_<is_nothrow_constructible<
             Ts, conditional_t<is_lvalue_reference<Tuple>::value,
                               tuple_element_t<Ids, remove_reference_t<Tuple>> &,
@@ -132,7 +134,8 @@ struct _tuple_impl<index_sequence<Ids...>, Ts...>: _tuple_base<Ids, Ts>... {
     constexpr void _packer(Dummy &&...) {}
 
     template<typename Tuple,
-             typename = enable_if_t<_is_tuple<remove_cvref_t<Tuple>>::value>>
+             typename =
+                 enable_if_t<_is_n_tuple<sizeof...(Ts), remove_cvref_t<Tuple>>::value>>
     constexpr _tuple_impl &operator=(Tuple &&tp) noexcept(
         _and_<is_nothrow_assignable<
             Ts &, conditional_t<is_lvalue_reference<Tuple>::value,
@@ -145,10 +148,30 @@ struct _tuple_impl<index_sequence<Ids...>, Ts...>: _tuple_base<Ids, Ts>... {
 
     constexpr _tuple_impl() = default;
 
+    template<int>
+    struct _dummy {};
+
+    constexpr _tuple_impl &
+    operator=(conditional_t<_and_<is_copy_assignable<Ts>...>::value,
+                            const tuple<Ts...> &, _dummy<0>>
+                  tp) noexcept(_and_<is_nothrow_copy_assignable<Ts>...>::value) {
+        _packer(_tuple_base<Ids, Ts>::operator=(ala::get<Ids>(tp))...);
+        return *this;
+    }
+
+    constexpr _tuple_impl &
+    operator=(conditional_t<_and_<is_move_assignable<Ts>...>::value,
+                            tuple<Ts...> &&, _dummy<1>>
+                  tp) noexcept(_and_<is_nothrow_move_assignable<Ts>...>::value) {
+        _packer(_tuple_base<Ids, Ts>::operator=(ala::get<Ids>(ala::move(tp)))...);
+        return *this;
+    }
+
     constexpr void
     swap(_tuple_impl &tpl) noexcept(_and_<is_nothrow_swappable<Ts>...>::value) {
-        _packer(_tuple_base<Ids, Ts>::swap(
-            static_cast<_tuple_base<Ids, Ts> &>(tpl))...);
+        _packer(
+            (_tuple_base<Ids, Ts>::swap(static_cast<_tuple_base<Ids, Ts> &>(tpl)),
+             0)...);
     }
 };
 
@@ -174,6 +197,28 @@ public:
     tuple(tuple const &) = default;
     tuple(tuple &&) = default;
 
+    // See PR22806  and LWG issue #2549 for more information.
+    // (https://bugs.llvm.org/show_bug.cgi?id=22806)
+
+    template<class Tuple, class Tlike,
+             bool = tuple_size<Tuple>::value == 1 && tuple_size<Tlike>::value == 1>
+    struct _disable_tuple_like_ctor: false_type {};
+
+    // template<class Tuple, class Tlike>
+    // struct _disable_tuple_like_ctor<Tuple, Tlike, true>
+    //     : bool_constant<
+    //           is_reference<tuple_element_t<0, Tuple>>::value &&
+    //           !is_base_of<remove_reference_t<tuple_element_t<0, Tuple>>,
+    //                       remove_reference_t<tuple_element_t<0, Tlike>>>::value> {
+    // };
+
+    template<class Tuple, class... Args>
+    struct _disable_tuple_args_ctor: false_type {};
+
+    template<class Tuple, class Args1>
+    struct _disable_tuple_args_ctor<Tuple, Args1>
+        : is_same<Tuple, remove_cvref_t<Args1>> {};
+
     // Dummy make template not specialization immediately (msvc not need this)
     template<typename Dummy = true_type,
              typename = enable_if_t<
@@ -196,7 +241,7 @@ public:
                                           _and_<is_convertible<const Ts &, Ts>...>>::value>>
     constexpr tuple(const Ts &... ts) noexcept(
         _and_<is_nothrow_copy_constructible<Ts>...>::value)
-        : _impl(ts...) {}
+        : _impl(true_type{}, ts...) {}
 
     template<typename Dummy = true_type, bool = true, typename = void,
              typename = enable_if_t<
@@ -205,27 +250,29 @@ public:
                        _not_<_and_<is_convertible<const Ts &, Ts>...>>>::value>>
     explicit constexpr tuple(const Ts &... ts) noexcept(
         _and_<is_nothrow_copy_constructible<Ts>...>::value)
-        : _impl(ts...) {}
+        : _impl(true_type{}, ts...) {}
 
     template<typename... Us,
              typename =
                  enable_if_t<_and_<bool_constant<sizeof...(Ts) >= 1>,
                                    bool_constant<sizeof...(Ts) == sizeof...(Us)>,
-                                   _and_<is_constructible<Ts, Us &&>...>,
-                                   _and_<is_convertible<Ts, Us &&>...>>::value>>
+                                   _not_<_disable_tuple_args_ctor<tuple, Us...>>,
+                                   _and_<is_constructible<Ts, Us>...>,
+                                   _and_<is_convertible<Us, Ts>...>>::value>>
     constexpr tuple(Us &&... us) noexcept(
         is_nothrow_constructible<impl_type, Us...>::value)
-        : _impl(ala::forward<Us>(us)...) {}
+        : _impl(true_type{}, ala::forward<Us>(us)...) {}
 
     template<typename... Us, typename = void,
              typename =
                  enable_if_t<_and_<bool_constant<sizeof...(Ts) >= 1>,
                                    bool_constant<sizeof...(Ts) == sizeof...(Us)>,
-                                   _and_<is_constructible<Ts, Us &&>...>,
-                                   _not_<_and_<is_convertible<Ts, Us &&>...>>>::value>>
+                                   _not_<_disable_tuple_args_ctor<tuple, Us...>>,
+                                   _and_<is_constructible<Ts, Us>...>,
+                                   _not_<_and_<is_convertible<Us, Ts>...>>>::value>>
     explicit constexpr tuple(Us &&... us) noexcept(
         is_nothrow_constructible<impl_type, Us...>::value)
-        : _impl(ala::forward<Us>(us)...) {}
+        : _impl(true_type{}, ala::forward<Us>(us)...) {}
 
     template<typename Tuple>
     struct _copy_ctor_check {
@@ -258,36 +305,37 @@ public:
     struct _move_ctor_check<TupleTemplt<Us...>> {
         static constexpr bool ok = _and_<
             bool_constant<sizeof...(Ts) == sizeof...(Us)>,
-            _and_<is_constructible<Ts, Us &&>...>,
+            _and_<is_constructible<Ts, Us>...>,
             _or_<bool_constant<sizeof...(Ts) != 1>,
                  _not_<_or_<is_convertible<tuple<Us>, Ts>...,
                             is_constructible<Ts, tuple<Us>>..., is_same<Ts, Us>...>>>>::value;
-        static constexpr bool imp = ok &&
-                                    _and_<is_convertible<Us &&, Ts>...>::value;
+        static constexpr bool imp = ok && _and_<is_convertible<Us, Ts>...>::value;
         static constexpr bool exp = ok &&
-                                    !_and_<is_convertible<Us &&, Ts>...>::value;
+                                    !_and_<is_convertible<Us, Ts>...>::value;
     };
 
     template<typename Tuple, typename T1 = remove_cvref_t<Tuple>,
              typename = enable_if_t<!is_same<T1, tuple>::value>,
-             typename = enable_if_t<_is_tuple<T1>::value>,
+             typename = enable_if_t<_is_n_tuple<sizeof...(Ts), T1>::value>,
+             typename = enable_if_t<!_disable_tuple_like_ctor<tuple, T1>::value>,
              typename = enable_if_t<
                  conditional_t<is_lvalue_reference<Tuple>::value,
                                _copy_ctor_check<T1>, _move_ctor_check<T1>>::imp>>
     constexpr tuple(Tuple &&tp) noexcept(
         is_nothrow_constructible<impl_type, Tuple &&>::value)
-        : _impl(ala::forward<Tuple>(tp)) {}
+        : _impl(false_type{}, ala::forward<Tuple>(tp)) {}
 
     template<typename Tuple, typename T1 = remove_cvref_t<Tuple>,
              typename = enable_if_t<!is_same<T1, tuple>::value>,
-             typename = enable_if_t<_is_tuple<T1>::value>,
+             typename = enable_if_t<_is_n_tuple<sizeof...(Ts), T1>::value>,
+             typename = enable_if_t<!_disable_tuple_like_ctor<tuple, T1>::value>,
              typename = enable_if_t<
                  conditional_t<is_lvalue_reference<Tuple>::value,
                                _copy_ctor_check<T1>, _move_ctor_check<T1>>::exp>,
              typename = void>
     explicit constexpr tuple(Tuple &&tp) noexcept(
         is_nothrow_constructible<impl_type, Tuple &&>::value)
-        : _impl(ala::forward<Tuple>(tp)) {}
+        : _impl(false_type{}, ala::forward<Tuple>(tp)) {}
 
     template<typename Tuple>
     struct _copy_asgn_check {
@@ -310,12 +358,12 @@ public:
     struct _move_asgn_check<TupleTemplt<Us...>> {
         static constexpr bool ok =
             _and_<bool_constant<sizeof...(Ts) == sizeof...(Us)>,
-                  _and_<is_assignable<Ts &, Us &&>...>>::value;
+                  _and_<is_assignable<Ts &, Us>...>>::value;
     };
 
     template<typename Tuple, typename T1 = remove_cvref_t<Tuple>,
              typename = enable_if_t<!is_same<T1, tuple>::value>,
-             typename = enable_if_t<_is_tuple<T1>::value>,
+             typename = enable_if_t<_is_n_tuple<sizeof...(Ts), T1>::value>,
              typename = enable_if_t<
                  conditional_t<is_lvalue_reference<Tuple>::value,
                                _copy_asgn_check<T1>, _move_asgn_check<T1>>::ok>>
@@ -325,18 +373,21 @@ public:
         return *this;
     }
 
-    template<typename Dummy = true_type,
-             typename = enable_if_t<_and_<Dummy, is_copy_assignable<Ts>...>::value>>
-    constexpr tuple &operator=(const tuple &tp) noexcept(
-        _and_<is_nothrow_copy_assignable<Ts>...>::value) {
-        _impl.operator=(tp._impl);
+    template<int>
+    struct _dummy {};
+
+    constexpr tuple &
+    operator=(conditional_t<_and_<is_copy_assignable<Ts>...>::value,
+                            const tuple &, _dummy<0>>
+                  tp) noexcept(_and_<is_nothrow_copy_assignable<Ts>...>::value) {
+        _impl.operator=(tp);
         return *this;
     }
 
-    template<typename Dummy = true_type,
-             typename = enable_if_t<_and_<Dummy, is_move_assignable<Ts>...>::value>>
-    constexpr tuple &operator=(tuple &&tp) {
-        _impl.operator=(ala::move(tp._impl));
+    constexpr tuple &operator=(
+        conditional_t<_and_<is_move_assignable<Ts>...>::value, tuple &&, _dummy<1>>
+            tp) noexcept(_and_<is_nothrow_move_assignable<Ts>...>::value) {
+        _impl.operator=(ala::move(tp));
         return *this;
     }
 
@@ -372,37 +423,24 @@ struct _tuple_equal_impl<Size, false> {
     }
 };
 
-template<size_t I, bool>
+template<size_t N, size_t I>
 struct _tuple_less_impl {
     template<typename T, typename U>
     constexpr bool operator()(const T &lhs, const U &rhs) {
-        constexpr size_t idx = tuple_size<T>::value - I;
-        if (ala::get<idx>(lhs) < ala::get<idx>(rhs))
+        if (ala::get<I>(lhs) < ala::get<I>(rhs))
             return true;
-        if (ala::get<idx>(rhs) < ala::get<idx>(lhs))
+        if (ala::get<I>(rhs) < ala::get<I>(lhs))
             return false;
-        return _tuple_less_impl<I - 1, true>()(lhs, rhs);
+        return _tuple_less_impl<N, I + 1>()(lhs, rhs);
     }
 };
 
-template<>
-struct _tuple_less_impl<0, true> {
+template<size_t N>
+struct _tuple_less_impl<N, N> {
     template<typename T, typename U>
     constexpr bool operator()(const T &, const U &) {
-        return false;
-    }
-    template<typename... Ts, typename... Us,
-             typename = enable_if_t<(sizeof...(Ts) < sizeof...(Us))>>
-    constexpr bool operator()(const tuple<Ts...> &, const tuple<Us...> &) {
-        return true;
-    }
-};
-
-template<size_t Size>
-struct _tuple_less_impl<Size, false> {
-    template<typename T, typename U>
-    constexpr bool operator()(const T &lhs, const U &rhs) {
-        return _tuple_less_impl<Size, true>()(rhs, lhs);
+        return tuple_size<remove_reference_t<T>>::value <
+               tuple_size<remove_reference_t<U>>::value;
     }
 };
 
@@ -421,7 +459,7 @@ template<typename... Ts, typename... Us>
 constexpr bool operator<(const tuple<Ts...> &lhs, const tuple<Us...> &rhs) {
     constexpr size_t Size = sizeof...(Ts) < sizeof...(Us) ? sizeof...(Ts) :
                                                             sizeof...(Us);
-    return _tuple_less_impl<Size, sizeof...(Ts) < sizeof...(Us)>()(lhs, rhs);
+    return _tuple_less_impl<Size, 0>()(lhs, rhs);
 }
 
 template<typename... Ts, typename... Us>
@@ -449,6 +487,36 @@ constexpr tuple<Ts &&...> forward_as_tuple(Ts &&... args) noexcept {
     return tuple<Ts &&...>(ala::forward<Ts>(args)...);
 }
 
+template<typename Tuple>
+struct _to_true_tuple {};
+
+template<typename T, size_t N>
+struct _to_true_tuple<array<T, N>> {
+    template<typename Seq>
+    struct _repeat {};
+
+    template<size_t... Id>
+    struct _repeat<index_sequence<Id...>> {
+        template<size_t>
+        using _id_t = T;
+        using type = tuple<_id_t<Id>...>;
+    };
+    using type = typename _repeat<make_index_sequence<N>>::type;
+};
+
+template<typename... Ts>
+struct _to_true_tuple<tuple<Ts...>> {
+    using type = tuple<Ts...>;
+};
+
+template<typename T1, typename T2>
+struct _to_true_tuple<pair<T1, T2>> {
+    using type = tuple<T1, T2>;
+};
+
+template<typename T>
+using _to_true_tuple_t = typename _to_true_tuple<T>::type;
+
 template<typename EmptyTuple, typename... Tuples>
 struct _tuple_cat_type;
 
@@ -464,47 +532,60 @@ struct _tuple_cat_type<tuple<Ts...>> {
 
 template<typename... Tuples>
 using _tuple_cat_t =
-    typename _tuple_cat_type<tuple<>, remove_cvref_t<Tuples>...>::type;
+    typename _tuple_cat_type<tuple<>, _to_true_tuple_t<remove_cvref_t<Tuples>>...>::type;
 
-template<typename CatTuple, typename TmpTuple, typename TmpSeq, typename T1Is>
+template<typename IdxSeq, typename Ret>
 struct _tuple_cat_impl;
-// TODO: rewrite
-template<typename CatTuple, typename... TmpTs, size_t... TmpIs, size_t... T1Is>
-struct _tuple_cat_impl<CatTuple, tuple<TmpTs...>, index_sequence<TmpIs...>,
-                       index_sequence<T1Is...>> {
-    template<typename Tuple1>
-    static constexpr CatTuple _cat(tuple<TmpTs...> &&tmp, Tuple1 &&t1) {
-        return CatTuple(static_cast<TmpTs>(ala::get<TmpIs>(tmp))...,
-                        ala::get<T1Is>(ala::forward<Tuple1>(t1))...);
+
+template<size_t... Is, typename Ret>
+struct _tuple_cat_impl<index_sequence<Is...>, Ret> {
+    template<size_t Idx, typename Tuple1, typename... Tuples>
+    static constexpr decltype(auto) _deep_get(true_type, Tuple1 &&t1,
+                                              Tuples &&... ts) {
+        return ala::get<Idx>(ala::forward<Tuple1>(t1));
     }
 
-    template<typename Tuple1, typename Tuple2, typename... Tuples>
-    static constexpr CatTuple _cat(tuple<TmpTs...> &&tmp, Tuple1 &&t1,
-                                   Tuple2 &&t2, Tuples &&... ts) {
-        typedef remove_reference_t<Tuple1> T1;
-        typedef remove_reference_t<Tuple2> T2;
+    template<size_t Idx, typename Tuple1, typename... Tuples>
+    static constexpr decltype(auto) _deep_get(false_type, Tuple1 &&t1,
+                                              Tuples &&... ts) {
+        using T1 = remove_reference_t<Tuple1>;
+        return _tuple_cat_impl::_deep_get_helper<Idx - tuple_size<T1>::value>(
+            ala::forward<Tuples>(ts)...);
+    }
 
-        typedef _tuple_cat_impl<
-            CatTuple, tuple<TmpTs..., tuple_element_t<T1Is, T1> &&...>,
-            make_index_sequence<sizeof...(TmpTs) + tuple_size<T1>::value>,
-            make_index_sequence<tuple_size<T2>::value>>
-            next_t;
+    template<size_t Idx, typename Tuple1, typename... Tuples>
+    static constexpr decltype(auto) _deep_get_helper(Tuple1 &&t1,
+                                                     Tuples &&... ts) {
+        using T1 = remove_reference_t<Tuple1>;
+        return _tuple_cat_impl::_deep_get<Idx>(
+            bool_constant<(Idx < tuple_size<T1>::value)>{},
+            ala::forward<Tuple1>(t1), ala::forward<Tuples>(ts)...);
+    }
 
-        return next_t::_cat(
-            forward_as_tuple(static_cast<TmpTs>(ala::get<TmpIs>(tmp))...,
-                             ala::get<T1Is>(ala::forward<Tuple1>(t1))...),
-            ala::forward<Tuple2>(t2), ala::forward<Tuples>(ts)...);
+    template<typename... Tuples>
+    static constexpr Ret _cat(Tuples &&... ts) {
+        return Ret(_tuple_cat_impl::_deep_get_helper<Is>(
+            ala::forward<Tuples>(ts)...)...);
     }
 };
 
-template<typename Tuple1, typename... Tuples>
-constexpr _tuple_cat_t<Tuple1, Tuples...> tuple_cat(Tuple1 &&t1, Tuples &&... ts) {
-    typedef _tuple_cat_impl<
-        _tuple_cat_t<Tuple1, Tuples...>, tuple<>, index_sequence<>,
-        make_index_sequence<tuple_size<remove_reference_t<Tuple1>>::value>>
-        impl_t;
-    return impl_t::_cat(tuple<>(), ala::forward<Tuple1>(t1),
-                        ala::forward<Tuples>(ts)...);
+template<typename...>
+struct _sum_;
+template<>
+struct _sum_<>: integral_constant<size_t, 0> {};
+template<typename I>
+struct _sum_<I>: integral_constant<size_t, I::value> {};
+template<typename I, typename... Is>
+struct _sum_<I, Is...>
+    : integral_constant<size_t, I::value + _sum_<Is...>::value> {};
+
+template<typename... Tuples>
+constexpr _tuple_cat_t<Tuples...> tuple_cat(Tuples &&... ts) {
+    using Size = _sum_<tuple_size<remove_reference_t<Tuples>>...>;
+    using Idx = make_index_sequence<Size::value>;
+    using Ret = _tuple_cat_t<remove_cvref_t<Tuples>...>;
+    using impl_t = _tuple_cat_impl<Idx, Ret>;
+    return impl_t::_cat(ala::forward<Tuples>(ts)...);
 }
 
 constexpr tuple<> tuple_cat() {
@@ -530,14 +611,13 @@ const _ignore_t ignore;
 #endif
 
 template<typename F, typename Tuple, size_t... I>
-constexpr invoke_result_t<F, Tuple> _apply_impl(F &&f, Tuple &&tpl,
-                                                index_sequence<I...>) {
+constexpr decltype(auto) _apply_impl(F &&f, Tuple &&tpl, index_sequence<I...>) {
     return ala::invoke(ala::forward<F>(f),
                        ala::get<I>(ala::forward<Tuple>(tpl))...);
 }
 
 template<typename F, typename Tuple>
-constexpr invoke_result_t<F, Tuple> apply(F &&f, Tuple &&tpl) {
+constexpr decltype(auto) apply(F &&f, Tuple &&tpl) {
     return _apply_impl(
         ala::forward<F>(f), ala::forward<Tuple>(tpl),
         make_index_sequence<tuple_size<remove_reference_t<Tuple>>::value>());
@@ -590,37 +670,41 @@ using _type_pick_same_t = typename _type_pick_impl<
 template<typename T, typename... Ts>
 constexpr T &get(tuple<Ts...> &t) noexcept {
     typedef _type_pick_same_t<T, Ts...> Index;
-    static_assert(Index::size() == 1, "No specified type or more than one type");
+    static_assert(Index::size() == 1,
+                  "No specified type or more than one type");
     return get<Index::get(0)>(t);
 }
 
 template<typename T, typename... Ts>
 constexpr T &&get(tuple<Ts...> &&t) noexcept {
     typedef _type_pick_same_t<T, Ts...> Index;
-    static_assert(Index::size() == 1, "No specified type or more than one type");
+    static_assert(Index::size() == 1,
+                  "No specified type or more than one type");
     return get<Index::get(0)>(ala::move(t));
 }
 
 template<typename T, typename... Ts>
 constexpr const T &get(const tuple<Ts...> &t) noexcept {
     typedef _type_pick_same_t<T, Ts...> Index;
-    static_assert(Index::size() == 1, "No specified type or more than one type");
+    static_assert(Index::size() == 1,
+                  "No specified type or more than one type");
     return get<Index::get(0)>(t);
 }
 
 template<typename T, typename... Ts>
 constexpr const T &&get(const tuple<Ts...> &&t) noexcept {
     typedef _type_pick_same_t<T, Ts...> Index;
-    static_assert(Index::size() == 1, "No specified type or more than one type");
+    static_assert(Index::size() == 1,
+                  "No specified type or more than one type");
     return get<Index::get(0)>(ala::move(t));
 }
 
 #if _ALA_ENABLE_DEDUCTION_GUIDES
 template<typename... Ts>
-tuple(Ts...)->tuple<Ts...>;
+tuple(Ts...) -> tuple<Ts...>;
 
 template<typename T1, typename T2>
-tuple(pair<T1, T2>)->tuple<T1, T2>;
+tuple(pair<T1, T2>) -> tuple<T1, T2>;
 #endif
 
 template<typename T1, typename T2>
