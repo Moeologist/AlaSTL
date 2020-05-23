@@ -2,209 +2,177 @@
 #define _ALA_OPTIONAL_H
 
 #include <ala/utility.h>
+#include <ala/detail/memory_base.h>
+#include <ala/detail/controller.h>
 
 namespace ala {
 
-struct bad_optional_access: logic_error {
-    explicit bad_optional_access(const char *what_arg): logic_error(what_arg) {}
+struct bad_optional_access: exception {
+    virtual ~bad_optional_access() noexcept = default;
+    virtual const char *what() const noexcept {
+        return "bad_optional_access";
+    };
 };
 
 struct nullopt_t {
-    explicit constexpr nullopt_t(int) {}
+    struct _dummy {};
+    explicit constexpr nullopt_t(_dummy) {}
 };
 
-template<class T>
-struct _optional_base {
-    aligned_storage_t<sizeof(T), alignof(T)> _data; // exposition only
-    bool _valid = false; // maybe is_trivially_default_constructible?
-};
+#ifdef _ALA_ENABLE_INLINE_VAR
+inline constexpr nullopt_t nullopt{nullopt_t::_dummy{}};
+#endif
 
 template<class T, bool = is_trivially_destructible<T>::value>
-struct _optional_destroy: _optional_base<T> {};
-
-template<class T>
-struct _optional_destroy<T, false>: _optional_base<T> {
-    ~_optional_destroy() {
-        if (this->_valid)
-            (*(T *)&(this->_data)).~T();
+struct _optional_destroy {
+    union {
+        aligned_storage_t<sizeof(T), alignof(T)> _placehold;
+        T _value;
+    };
+    bool _valid = false;
+    ~_optional_destroy() = default;
+    constexpr void _reset() {
+        _valid = false;
     }
-    constexpr _optional_destroy() = default;
-    constexpr _optional_destroy(const _optional_destroy &other) = default;
+    void *_address() {
+        return &_placehold;
+    }
+    constexpr bool _has_value() const {
+        return _valid;
+    }
+    template<class... Args>
+    constexpr _optional_destroy(in_place_t, Args &&... args)
+        : _value(ala::forward<Args>(args)...), _valid{true} {}
+    constexpr _optional_destroy(): _placehold{} {}
     constexpr _optional_destroy(_optional_destroy &&) = default;
-    _optional_destroy &operator=(const _optional_destroy &) = default;
-    _optional_destroy &operator=(_optional_destroy &&) = default;
-};
-
-template<class T, bool = is_copy_constructible<T>::value,
-         bool = is_trivially_copy_constructible<T>::value>
-struct _optional_copy: _optional_destroy<T> {};
-
-template<class T>
-struct _optional_copy<T, false, false>: _optional_destroy<T> {
-    ~_optional_copy() = default;
-    constexpr _optional_copy() = default;
-    constexpr _optional_copy(const _optional_copy &other) = delete;
-    constexpr _optional_copy(_optional_copy &&) = default;
-    _optional_copy &operator=(const _optional_copy &) = default;
-    _optional_copy &operator=(_optional_copy &&) = default;
+    constexpr _optional_destroy(const _optional_destroy &) = default;
+    constexpr _optional_destroy &operator=(const _optional_destroy &) = default;
+    constexpr _optional_destroy &operator=(_optional_destroy &&other) = default;
 };
 
 template<class T>
-struct _optional_copy<T, true, false>: _optional_destroy<T> {
-    ~_optional_copy() = default;
-    constexpr _optional_copy() = default;
-    constexpr _optional_copy(const _optional_copy &other) {
-        if (other._valid)
-            ::new ((void *)&(this->_data)) T(*(T *)&(other._data));
-        this->_valid = other._valid;
+struct _optional_destroy<T, false> {
+    union {
+        aligned_storage_t<sizeof(T), alignof(T)> _placehold;
+        T _value;
+    };
+    bool _valid = false;
+    ~_optional_destroy() {
+        this->_reset();
     }
-    constexpr _optional_copy(_optional_copy &&) = default;
-    _optional_copy &operator=(const _optional_copy &) = default;
-    _optional_copy &operator=(_optional_copy &&) = default;
-};
-
-template<class T, bool = is_move_constructible<T>::value,
-         bool = is_trivially_move_constructible<T>::value>
-struct _optional_move: _optional_copy<T> {};
-
-template<class T>
-struct _optional_move<T, false, false>: _optional_copy<T> {
-    ~_optional_move() = default;
-    constexpr _optional_move() = default;
-    constexpr _optional_move(const _optional_move &) = default;
-    constexpr _optional_move(_optional_move &&other) = delete;
-    _optional_move &operator=(const _optional_move &) = default;
-    _optional_move &operator=(_optional_move &&) = default;
-};
-
-template<class T>
-struct _optional_move<T, true, false>: _optional_copy<T> {
-    ~_optional_move() = default;
-    constexpr _optional_move() = default;
-    constexpr _optional_move(const _optional_move &) = default;
-    constexpr _optional_move(_optional_move &&other) {
-        if (other._valid)
-            ::new ((void *)&(this->_data)) T(ala::move(*(T *)&(other._data)));
-        this->_valid = other._valid;
-    }
-    _optional_move &operator=(const _optional_move &) = default;
-    _optional_move &operator=(_optional_move &&) = default;
-};
-
-template<class T, bool = is_copy_constructible<T>::value &&is_copy_assignable<T>::value,
-         bool = is_trivially_copy_constructible<T>::value &&
-             is_trivially_copy_assignable<T>::value &&is_trivially_destructible<T>::value>
-struct _optional_copy_asgn: _optional_move<T> {};
-
-template<class T>
-struct _optional_copy_asgn<T, false, false>: _optional_move<T> {
-    ~_optional_copy_asgn() = default;
-    constexpr _optional_copy_asgn() = default;
-    constexpr _optional_copy_asgn(_optional_copy_asgn &&) = default;
-    constexpr _optional_copy_asgn(const _optional_copy_asgn &) = default;
-    _optional_copy_asgn &operator=(const _optional_copy_asgn &other) = delete;
-    _optional_copy_asgn &operator=(_optional_copy_asgn &&) = default;
-};
-
-template<class T>
-struct _optional_copy_asgn<T, true, false>: _optional_move<T> {
-    ~_optional_copy_asgn() = default;
-    constexpr _optional_copy_asgn() = default;
-    constexpr _optional_copy_asgn(_optional_copy_asgn &&) = default;
-    constexpr _optional_copy_asgn(const _optional_copy_asgn &) = default;
-    _optional_copy_asgn &operator=(const _optional_copy_asgn &other) {
-        if (this->_valid && other._valid) {
-            *(T *)&(this->_data) = *(T *)&(other._data);
-        } else if (other._valid) {
-            ::new ((void *)&(this->_data)) T(*(T *)&(other._data));
-            this->_valid = true;
-        } else if (this->_valid) {
-            (*(T *)&(this->_data)).~T();
+    constexpr void _reset() {
+        if (this->_has_value()) {
+            this->_value.~T();
+            this->_valid = false;
         }
     }
-    _optional_copy_asgn &operator=(_optional_copy_asgn &&) = default;
-};
-
-template<class T, bool = is_move_constructible<T>::value &&is_move_assignable<T>::value,
-         bool = is_trivially_move_constructible<T>::value &&
-             is_trivially_move_assignable<T>::value &&is_trivially_destructible<T>::value>
-struct _optional_move_asgn: _optional_copy_asgn<T> {};
-
-template<class T>
-struct _optional_move_asgn<T, false, false>: _optional_copy_asgn<T> {
-    ~_optional_move_asgn() = default;
-    constexpr _optional_move_asgn() = default;
-    constexpr _optional_move_asgn(_optional_move_asgn &&) = default;
-    constexpr _optional_move_asgn(const _optional_move_asgn &) = default;
-    _optional_move_asgn &operator=(const _optional_move_asgn &) = default;
-    _optional_move_asgn &operator=(_optional_move_asgn &&other) = delete;
-};
-
-template<class T>
-struct _optional_move_asgn<T, true, false>: _optional_copy_asgn<T> {
-    ~_optional_move_asgn() = default;
-    constexpr _optional_move_asgn() = default;
-    constexpr _optional_move_asgn(_optional_move_asgn &&) = default;
-    constexpr _optional_move_asgn(const _optional_move_asgn &) = default;
-    _optional_move_asgn &operator=(const _optional_move_asgn &) = default;
-    _optional_move_asgn &operator=(_optional_move_asgn &&other) noexcept(
-        is_nothrow_move_assignable<T>::value &&is_nothrow_move_constructible<T>::value) {
-        if (this->_valid && other._valid) {
-            *(T *)&(this->_data) = ala::move(*(T *)&(other._data));
-        } else if (other._valid) {
-            ::new ((void *)&(this->_data)) T(ala::move(*(T *)&(other._data)));
-            this->_valid = true;
-        } else if (this->_valid) {
-            (*(T *)&(this->_data)).~T();
-        }
-        return *this;
+    void *_address() {
+        return &_placehold;
     }
+    constexpr bool _has_value() const {
+        return _valid;
+    }
+    template<class... Args>
+    constexpr _optional_destroy(in_place_t, Args &&... args)
+        : _value(ala::forward<Args>(args)...), _valid{true} {}
+    constexpr _optional_destroy(): _placehold{} {}
+    constexpr _optional_destroy(_optional_destroy &&) = default;
+    constexpr _optional_destroy(const _optional_destroy &) = default;
+    constexpr _optional_destroy &operator=(const _optional_destroy &) = default;
+    constexpr _optional_destroy &operator=(_optional_destroy &&other) = default;
 };
 
 template<class T>
-class optional: _optional_move_asgn<T> {
+struct _optional_base: _optional_destroy<T> {
+    using _base_t = _optional_destroy<T>;
+    using _base_t::_base_t;
+    using _base_t::_address;
+    using _base_t::_has_value;
+    using _base_t::_reset;
+
+    template<class... Args>
+    void _ctor_v(Args &&... args) {
+        assert(!this->_has_value());
+        try {
+            ::new (this->_address()) T(ala::forward<Args>(args)...);
+        } catch (...) { throw; }
+        this->_valid = true;
+    }
+    template<class OptBase>
+    void _ctor(OptBase &&other) noexcept(
+        is_nothrow_constructible<T, decltype((declval<OptBase>()._value))>::value) {
+        if (other._has_value())
+            this->_ctor_v(ala::forward<OptBase>(other)._value);
+    }
+    template<class Arg>
+    void _asgn_v(Arg &&arg) {
+        if (this->_has_value()) {
+            try {
+                this->_value = ala::forward<Arg>(arg);
+            } catch (...) { throw; }
+        } else {
+            this->_ctor_v(ala::forward<Arg>(arg));
+        }
+    }
+    template<class OptBase>
+    void _asgn(OptBase &&other) noexcept(
+        is_nothrow_constructible<T, decltype((declval<OptBase>()._value))>::value &&
+            is_nothrow_assignable<T &, decltype((declval<OptBase>()._value))>::value) {
+        if (other._has_value()) {
+            this->_asgn_v(ala::forward<OptBase>(other)._value);
+        } else {
+            this->_reset();
+        }
+    }
+    constexpr _optional_base(): _base_t{} {}
+    constexpr _optional_base(_optional_base &&) = default;
+    constexpr _optional_base(const _optional_base &) = default;
+    constexpr _optional_base &operator=(const _optional_base &) = default;
+    constexpr _optional_base &operator=(_optional_base &&other) = default;
+};
+
+template<class T>
+class optional: _make_controller_t<_optional_base<T>, T> {
 public:
-    using value_type = T;
+    static_assert(is_same<remove_cvref_t<T>, in_place_t>::value &&
+                      is_same<remove_cvref_t<T>, nullopt_t>::value &&
+                      is_destructible<T>::value,
+                  "N4860 [20.6.3/3]")
+
+        using value_type = T;
+    using _base_t = _make_controller_t<_optional_base<T>, T>;
     // constructors
-    constexpr optional() = default;
+    constexpr optional() noexcept: _base_t{} {}
     constexpr optional(nullopt_t) noexcept: optional() {}
     optional(const optional &) = default;
     optional(optional &&) = default;
 
-    template<class... Args, class = enable_if_t<is_constructible<T, Args...>::value>>
-    constexpr explicit optional(in_place_t, Args &&... args) {
-        ::new ((void *)&(this->_data)) T(ala::forward<Args>(args)...);
-        this->_valid = true;
-    }
+    // enable_if_t make Clang's is_constructible failed
+    template<class... Args /*, class = enable_if_t<is_constructible<T, Args...>::value>*/>
+    constexpr explicit optional(in_place_t, Args &&... args)
+        : _base_t(in_place_t(), ala::forward<Args>(args)...) {}
 
-    template<class U, class... Args,
+    template<class U, class... Args/*,
              class = enable_if_t<
-                 is_constructible<T, initializer_list<U> &, Args &&...>::value>>
+                 is_constructible<T, initializer_list<U> &, Args &&...>::value>*/>
     constexpr explicit optional(in_place_t, initializer_list<U> il,
-                                Args &&... args) {
-        ::new ((void *)&(this->_data)) T(il, ala::forward<Args>(args)...);
-        this->_valid = true;
-    }
+                                Args &&... args)
+        : _base_t(in_place_t(), il, ala::forward<Args>(args)...) {}
 
-    template<class U = value_type,
+    template<class U,
              class = enable_if_t<is_constructible<T, U &&>::value &&
                                  !is_same<remove_cvref_t<U>, in_place_t>::value &&
                                  !is_same<remove_cvref_t<U>, optional>::value &&
                                  is_convertible<U &&, T>::value>>
-    constexpr optional(U &&u) {
-        ::new ((void *)&(this->_data)) T(ala::forward<U>(u));
-        this->_valid = true;
-    }
+    constexpr optional(U &&u): _base_t(in_place_t(), ala::forward<U>(u)) {}
 
-    template<class U = value_type, class = void,
+    template<class U, class = void,
              class = enable_if_t<is_constructible<T, U &&>::value &&
                                  !is_same<remove_cvref_t<U>, in_place_t>::value &&
                                  !is_same<remove_cvref_t<U>, optional>::value &&
                                  !is_convertible<U &&, T>::value>>
-    explicit constexpr optional(U &&u) {
-        ::new ((void *)&(this->_data)) T(ala::forward<U>(u));
-        this->_valid = true;
-    }
+    explicit constexpr optional(U &&u)
+        : _base_t(in_place_t(), ala::forward<U>(u)) {}
 
     template<class U>
     using _check = _not_<_or_<
@@ -216,28 +184,41 @@ public:
     template<class U, class = enable_if_t<is_constructible<T, const U &>::value &&
                                           _check<U>::value &&
                                           is_convertible<const U &, T>::value>>
-    optional(const optional<U> &other): optional(*other) {}
+    optional(const optional<U> &other) {
+        if (other)
+            this->_ctor_v(*other);
+    }
 
     template<class U, class = void,
              class = enable_if_t<is_constructible<T, const U &>::value && _check<U>::value &&
                                  !is_convertible<const U &, T>::value>>
-    explicit optional(const optional<U> &other): optional(*other) {}
+    explicit optional(const optional<U> &other) {
+        if (other)
+            this->_ctor_v(*other);
+    }
 
     template<class U,
              class = enable_if_t<is_constructible<T, U &&>::value &&
                                  _check<U>::value && is_convertible<U &&, T>::value>>
-    optional(optional<U> &&other): optional(ala::move(*other)) {}
+    optional(optional<U> &&other) {
+        if (other)
+            this->_ctor_v(ala::move(*other));
+    }
 
     template<class U, class = void,
              class = enable_if_t<is_constructible<T, U &&>::value && _check<U>::value &&
                                  !is_convertible<U &&, T>::value>>
-    explicit optional(optional<U> &&other): optional(ala::move(*other)) {}
+    explicit optional(optional<U> &&other) {
+        if (other)
+            this->_ctor_v(ala::move(*other));
+    }
 
     // destructor
     ~optional() = default;
     // assignment
     optional &operator=(nullopt_t) noexcept {
         reset();
+        return *this;
     }
 
     optional &operator=(const optional &) = default;
@@ -247,9 +228,10 @@ public:
     enable_if_t<!is_same<optional, remove_cvref_t<U>>::value &&
                     is_constructible<T, U>::value && is_assignable<T &, U>::value &&
                     (!is_scalar<T>::value || !is_same<decay_t<U>, T>::value),
-                optional> &
+                optional &>
     operator=(U &&u) {
-        this->emplace(forward<U>(u));
+        this->_asgn_v(ala::forward<U>(u));
+        return *this;
     }
 
     template<class U>
@@ -266,13 +248,10 @@ public:
                     is_assignable_v<T &, const U &>,
                 optional> &
     operator=(const optional<U> &other) {
-        if (this->_valid && other._valid) {
-            *(T *)&(this->_data) = *other;
-        } else if (other._valid) {
-            ::new ((void *)&(this->_data)) T(*other);
-            this->_valid = true;
-        } else if (this->_valid) {
-            (*(T *)&(this->_data)).~T();
+        if (other.has_value()) {
+            this->_asgn_v(*other);
+        } else {
+            this->_reset();
         }
         return *this;
     }
@@ -282,67 +261,67 @@ public:
                     is_assignable_v<T &, U>,
                 optional> &
     operator=(optional<U> &&other) {
-        if (this->_valid && other._valid) {
-            *(T *)&(this->_data) = ala::move(*other);
-        } else if (other._valid) {
-            ::new ((void *)&(this->_data)) T(ala::move(*other));
-            this->_valid = true;
-        } else if (this->_valid) {
-            (*(T *)&(this->_data)).~T();
+        if (other.has_value()) {
+            this->_asgn_v(ala::move(*other));
+        } else {
+            this->_reset();
         }
         return *this;
     }
 
     template<class... Args>
-    enable_if_t<is_constructible<T, Args...>::value> emplace(Args &&... args) {
+    enable_if_t<is_constructible<T, Args...>::value, T &> emplace(Args &&... args) {
         reset();
-        ::new ((void *)&(this->_data)) T(ala::forward<Args>(args)...);
-        this->_valid = true;
+        this->_ctor_v(ala::forward<Args>(args)...);
+        return **this;
     }
 
     template<class U, class... Args>
-    enable_if_t<is_constructible<T, initializer_list<U> &, Args...>::value>
+    enable_if_t<is_constructible<T, initializer_list<U> &, Args...>::value, T &>
     emplace(initializer_list<U> il, Args &&... args) {
         reset();
-        ::new ((void *)&(this->_data)) T(il, ala::forward<Args>(args)...);
-        this->_valid = true;
+        this->_ctor_v(il, ala::forward<Args>(args)...);
+        return **this;
     }
     // swap
     void swap(optional &other) noexcept(
         is_nothrow_move_constructible<T>::value &&is_nothrow_swappable<T>::value) {
+        static_assert(is_move_constructible<T>::value && is_swappable<T>::value,
+                      "optional<T>::swap requires T to be move_constructible "
+                      "and swappable");
         if (!*this && !other)
             return;
-        else if (!*this && other)
+        else if (!*this && other) {
+            this->_ctor_v(ala::move(*other));
+            other.reset();
+        } else if (*this && !other)
             return other.swap(*this);
-        else if (*this && !other)
-            other = ala::move(*this);
         else
-            ala::swap(**this, *other);
-        swap(this->_valid, other._valid);
+            ala::_swap_adl(**this, *other);
     }
     // observers
     constexpr const T *operator->() const {
-        return (const T *)&(this->_data);
+        return ala::addressof(**this);
     }
 
     constexpr T *operator->() {
-        return (T *)&(this->_data);
-    }
-
-    constexpr const T &operator*() const & {
-        return static_cast<const T &>(*(T *)&(this->_data));
+        return ala::addressof(**this);
     }
 
     constexpr T &operator*() & {
-        return static_cast<T &>(*(T *)&(this->_data));
+        return this->_value;
+    }
+
+    constexpr const T &operator*() const & {
+        return this->_value;
     }
 
     constexpr T &&operator*() && {
-        return static_cast<T &&>(*(T *)&(this->_data));
+        return ala::move(this->_value);
     }
 
     constexpr const T &&operator*() const && {
-        return static_cast<const T &&>(*(T *)&(this->_data));
+        return ala::move(this->_value);
     }
 
     constexpr explicit operator bool() const noexcept {
@@ -350,103 +329,89 @@ public:
     }
 
     constexpr bool has_value() const noexcept {
-        return this->_valid;
-    }
-
-    constexpr const T &value() const & {
-        if (!*this)
-            throw bad_optional_access("ala::optional has no value");
-        return static_cast<const T &>(*(T *)&(this->_data));
+        return this->_has_value();
     }
 
     constexpr T &value() & {
         if (!*this)
-            throw bad_optional_access("ala::optional has no value");
-        return static_cast<T &>(*(T *)&(this->_data));
+            throw bad_optional_access();
+        return **this;
+    }
+
+    constexpr const T &value() const & {
+        if (!*this)
+            throw bad_optional_access();
+        return **this;
     }
 
     constexpr T &&value() && {
         if (!*this)
-            throw bad_optional_access("ala::optional has no value");
-        return static_cast<T &&>(*(T *)&(this->_data));
+            throw bad_optional_access();
+        return ala::move(**this);
     }
 
     constexpr const T &&value() const && {
         if (!*this)
-            throw bad_optional_access("ala::optional has no value");
-        return static_cast<const T &&>(*(T *)&(this->_data));
+            throw bad_optional_access();
+        return ala::move(**this);
     }
 
     template<class U>
     constexpr T value_or(U &&def_value) const & {
-        return bool(*this) ? **this : static_cast<T>(ala::forward<U>(def_value));
+        if (bool(*this))
+            return **this;
+        else
+            return static_cast<T>(ala::forward<U>(def_value));
     }
 
     template<class U>
     constexpr T value_or(U &&def_value) && {
-        return bool(*this) ? ala::move(**this) :
-                             static_cast<T>(ala::forward<U>(def_value));
+        if (bool(*this))
+            return ala::move(**this);
+        else
+            return static_cast<T>(ala::forward<U>(def_value));
     }
     // modifiers
     void reset() noexcept {
-        if (*this)
-            (**this).~T();
-        this->_valid = false;
+        this->_reset();
     }
 };
 
+#ifdef _ALA_ENABLE_DEDUCTION_GUIDES
+template<class T>
+optional(T) -> optional<T>;
+#endif
+
 template<class T, class U>
 constexpr bool operator==(const optional<T> &lhs, const optional<U> &rhs) {
-    if (bool(lhs) != bool(rhs))
-        return false;
-    else if (bool(lhs) || bool(rhs))
-        return true;
-    return *lhs == *rhs;
+    return lhs.has_value() == rhs.has_value() &&
+           (!rhs.has_value() || *lhs == *rhs);
 }
 
 template<class T, class U>
 constexpr bool operator!=(const optional<T> &lhs, const optional<U> &rhs) {
-    if (bool(lhs) != bool(rhs))
-        return true;
-    else if (bool(lhs) || bool(rhs))
-        return false;
-    return *lhs != *rhs;
+    return lhs.has_value() != rhs.has_value() ||
+           (lhs.has_value() && *lhs != *rhs);
 }
 
 template<class T, class U>
 constexpr bool operator<(const optional<T> &lhs, const optional<U> &rhs) {
-    if (bool(rhs) == false)
-        return false;
-    else if (bool(lhs) == false)
-        return true;
-    return *lhs < *rhs;
+    return rhs.has_value() && (!lhs.has_value() || *lhs < *rhs);
 }
 
 template<class T, class U>
 constexpr bool operator<=(const optional<T> &lhs, const optional<U> &rhs) {
-    if (bool(lhs) == false)
-        return true;
-    else if (bool(rhs) == false)
-        return false;
-    return *lhs <= *rhs;
+    return !lhs.has_value() || (rhs.has_value() && *lhs <= *rhs);
 }
 
 template<class T, class U>
 constexpr bool operator>(const optional<T> &lhs, const optional<U> &rhs) {
-    if (bool(lhs) == false)
-        return false;
-    else if (bool(rhs) == false)
-        return true;
-    return *lhs > *rhs;
+    return lhs.has_value() && (!rhs.has_value() || *lhs > *rhs);
 }
 
 template<class T, class U>
 constexpr bool operator>=(const optional<T> &lhs, const optional<U> &rhs) {
-    if (bool(rhs) == false)
-        return true;
-    else if (bool(lhs) == false)
-        return false;
-    return *lhs >= *rhs;
+    return !rhs.has_value() || (lhs.has_value() && *lhs >= *rhs);
 }
 // comparison with nullopt
 
@@ -511,84 +476,97 @@ constexpr bool operator>=(nullopt_t, const optional<T> &opt) noexcept {
 }
 // comparison with T
 
-template<class T>
-constexpr bool operator==(const optional<T> &opt, const T &value) {
-    return bool(opt) ? *opt == value : false;
+template<class T, class U>
+constexpr enable_if_t<true, decltype(declval<const T &>() == declval<const U &>())>
+operator==(const optional<T> &opt, const U &value) {
+    return opt.has_value() && *opt == value;
+}
+
+template<class T, class U>
+constexpr enable_if_t<true, decltype(declval<const T &>() == declval<const U &>())>
+operator==(const T &value, const optional<U> &opt) {
+    return opt.has_value() && value == *opt;
+}
+
+template<class T, class U>
+constexpr enable_if_t<true, decltype(declval<const T &>() != declval<const U &>())>
+operator!=(const optional<T> &opt, const U &value) {
+    return !opt.has_value() || *opt != value;
+}
+
+template<class T, class U>
+constexpr enable_if_t<true, decltype(declval<const T &>() != declval<const U &>())>
+operator!=(const T &value, const optional<U> &opt) {
+    return !opt.has_value() || value != *opt;
+}
+
+template<class T, class U>
+constexpr enable_if_t<true, decltype(declval<const T &>() < declval<const U &>())>
+operator<(const optional<T> &opt, const U &value) {
+    return !opt.has_value() || *opt < value;
+}
+
+template<class T, class U>
+constexpr enable_if_t<true, decltype(declval<const T &>() < declval<const U &>())>
+operator<(const T &value, const optional<U> &opt) {
+    return opt.has_value() && value < *opt;
+}
+
+template<class T, class U>
+constexpr enable_if_t<true, decltype(declval<const T &>() <= declval<const U &>())>
+operator<=(const optional<T> &opt, const U &value) {
+    return !opt.has_value() || *opt <= value;
+}
+
+template<class T, class U>
+constexpr enable_if_t<true, decltype(declval<const T &>() <= declval<const U &>())>
+operator<=(const T &value, const optional<U> &opt) {
+    return opt.has_value() && value <= *opt;
+}
+
+template<class T, class U>
+constexpr enable_if_t<true, decltype(declval<const T &>() > declval<const U &>())>
+operator>(const optional<T> &opt, const U &value) {
+    return opt.has_value() && *opt > value;
+}
+
+template<class T, class U>
+constexpr enable_if_t<true, decltype(declval<const T &>() > declval<const U &>())>
+operator>(const T &value, const optional<U> &opt) {
+    return !opt.has_value() || value > *opt;
+}
+
+template<class T, class U>
+constexpr enable_if_t<true, decltype(declval<const T &>() >= declval<const U &>())>
+operator>=(const optional<T> &opt, const U &value) {
+    return opt.has_value() && *opt >= value;
+}
+
+template<class T, class U>
+constexpr enable_if_t<true, decltype(declval<const T &>() >= declval<const U &>())>
+operator>=(const T &value, const optional<U> &opt) {
+    return !opt.has_value() || value >= *opt;
 }
 
 template<class T>
-constexpr bool operator==(const T &value, const optional<T> &opt) {
-    return bool(opt) ? value == *opt : false;
-}
-
-template<class T>
-constexpr bool operator!=(const optional<T> &opt, const T &value) {
-    return bool(opt) ? *opt != value : true;
-}
-
-template<class T>
-constexpr bool operator!=(const T &value, const optional<T> &opt) {
-    return bool(opt) ? value != *opt : true;
-}
-
-template<class T>
-constexpr bool operator<(const optional<T> &opt, const T &value) {
-    return bool(opt) ? *opt < value : true;
-}
-
-template<class T>
-constexpr bool operator<(const T &value, const optional<T> &opt) {
-    return bool(opt) ? value < *opt : false;
-}
-
-template<class T>
-constexpr bool operator<=(const optional<T> &opt, const T &value) {
-    return bool(opt) ? *opt <= value : true;
-}
-
-template<class T>
-constexpr bool operator<=(const T &value, const optional<T> &opt) {
-    return bool(opt) ? value <= *opt : false;
-}
-
-template<class T>
-constexpr bool operator>(const optional<T> &opt, const T &value) {
-    return bool(opt) ? *opt > value : false;
-}
-
-template<class T>
-constexpr bool operator>(const T &value, const optional<T> &opt) {
-    return bool(opt) ? value > *opt : true;
-}
-
-template<class T>
-constexpr bool operator>=(const optional<T> &opt, const T &value) {
-    return bool(opt) ? *opt >= value : false;
-}
-
-template<class T>
-constexpr bool operator>=(const T &value, const optional<T> &opt) {
-    return bool(opt) ? value >= *opt : true;
-}
-
-template<class T>
-void swap(optional<T> &lhs, optional<T> &rhs) noexcept(noexcept(lhs.swap(rhs))) {
+enable_if_t<is_move_constructible<T>::value && is_swappable<T>::value>
+swap(optional<T> &lhs, optional<T> &rhs) noexcept(noexcept(lhs.swap(rhs))) {
     lhs.swap(rhs);
 }
 
 template<class T>
 constexpr optional<decay_t<T>> make_optional(T &&value) {
-    return optional<decay_t<T>>(forward<T>(value));
+    return ala::optional<decay_t<T>>(ala::forward<T>(value));
 }
 
 template<class T, class... Args>
 constexpr optional<T> make_optional(Args &&... args) {
-    return optional<T>(in_place, forward<Args>(args)...);
+    return ala::optional<T>(in_place_t(), ala::forward<Args>(args)...);
 }
 
 template<class T, class U, class... Args>
 constexpr optional<T> make_optional(initializer_list<U> il, Args &&... args) {
-    return optional<T>(in_place, il, forward<Args>(args)...);
+    return ala::optional<T>(in_place_t(), il, ala::forward<Args>(args)...);
 }
 
 } // namespace ala

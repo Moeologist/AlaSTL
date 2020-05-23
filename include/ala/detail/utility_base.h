@@ -2,7 +2,7 @@
 #define _ALA_DETAIL_UTILITY_BASE_H
 
 #ifndef _ALA_DETAIL_TRAITS_DECLARE_H
-#error Never use this directly
+    #error Never use this directly
 #endif
 
 namespace ala {
@@ -25,9 +25,8 @@ constexpr T &&forward(remove_reference_t<T> &t) noexcept {
 
 template<typename T>
 constexpr T &&forward(remove_reference_t<T> &&t) noexcept {
-    static_assert(
-        !is_lvalue_reference<T>::value,
-        "T can not be lvalue reference type");
+    static_assert(!is_lvalue_reference<T>::value,
+                  "T can not be lvalue reference type");
     return static_cast<T &&>(t);
 }
 
@@ -52,8 +51,14 @@ swap(T (&lhs)[N], T (&rhs)[N]) noexcept(is_nothrow_swappable<T>::value) {
     }
 }
 
+template<class T>
+void _swap_adl(T &lhs, T &rhs) noexcept(is_nothrow_swappable<T>::value) {
+    swap(lhs, rhs);
+}
+
 template<class Base, class T, class Derived, class... Args>
-constexpr auto _invoke_helper(T Base::*pmf, Derived &&ref, Args &&... args) -> enable_if_t<
+constexpr auto
+_invoke_helper(T Base::*pmf, Derived &&ref, Args &&... args) -> enable_if_t<
     is_function<T>::value && !is_reference_wrapper<decay_t<Derived>>::value &&
         is_base_of<Base, decay_t<Derived>>::value,
     decltype((ala::forward<Derived>(ref).*pmf)(ala::forward<Args>(args)...))> {
@@ -61,10 +66,11 @@ constexpr auto _invoke_helper(T Base::*pmf, Derived &&ref, Args &&... args) -> e
 }
 
 template<class Base, class T, class Ptr, class... Args>
-constexpr auto _invoke_helper(T Base::*pmf, Ptr &&ptr, Args &&... args) -> enable_if_t<
-    is_function<T>::value && !is_reference_wrapper<decay_t<Ptr>>::value &&
-        !is_base_of<Base, decay_t<Ptr>>::value,
-    decltype(((*ala::forward<Ptr>(ptr)).*pmf)(ala::forward<Args>(args)...))> {
+constexpr auto _invoke_helper(T Base::*pmf, Ptr &&ptr, Args &&... args)
+    -> enable_if_t<
+        is_function<T>::value && !is_reference_wrapper<decay_t<Ptr>>::value &&
+            !is_base_of<Base, decay_t<Ptr>>::value,
+        decltype(((*ala::forward<Ptr>(ptr)).*pmf)(ala::forward<Args>(args)...))> {
     return ((*ala::forward<Ptr>(ptr)).*pmf)(ala::forward<Args>(args)...);
 }
 
