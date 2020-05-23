@@ -6,7 +6,7 @@
 #include <ala/tuple.h>
 
 #if ALA_USE_RTTI
-#include <typeinfo>
+    #include <typeinfo>
 #endif
 
 namespace ala {
@@ -54,7 +54,7 @@ struct reference_wrapper {
 
 #if _ALA_ENABLE_DEDUCTION_GUIDES
 template<class T>
-reference_wrapper(T &)->reference_wrapper<T>;
+reference_wrapper(T &) -> reference_wrapper<T>;
 #endif
 
 template<class T>
@@ -255,17 +255,15 @@ struct _function_handle<R(Args...), Functor> {
     }
 
     static void *operate(void *dst, void *src, Operation op) {
-        Functor &dstRef = *(Functor *)dst;
-        Functor &srcRef = *(Functor *)src;
         switch (op) {
             case Copy:
-                ::new (dst) Functor(srcRef);
+                ::new (dst) Functor(*(Functor *)src);
                 break;
             case Move:
-                ::new (dst) Functor(ala::move(srcRef));
+                ::new (dst) Functor(ala::move(*(Functor *)src));
                 break;
             case Destroy:
-                dstRef.~Functor();
+                (*(Functor *)src).~Functor();
                 break;
             case TypeID:
                 return (void *)&typeid(Functor);
@@ -579,7 +577,7 @@ struct callable_traits: _callable_traits<remove_reference_t<Callable>> {};
 // function(MemPtr)->function<typename _memptr_helper<MemPtr>::type>;
 
 template<class Callable>
-function(Callable)->function<typename callable_traits<Callable>::type>;
+function(Callable) -> function<typename callable_traits<Callable>::type>;
 #endif
 
 template<class MemPtr>

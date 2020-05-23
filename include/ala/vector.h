@@ -71,37 +71,17 @@ protected:
         return first;
     }
 
-    // template<class InputIter, class Dummy = value_type>
-    // enable_if_t<is_move_constructible<Dummy>::value>
     template<class InputIter>
     void mv(InputIter first, InputIter last, pointer out) {
         for (; first != last; ++first, (void)++out)
             this->construct(out, ala::move(*first));
     }
 
-    // template<class InputIter, class Dummy = value_type>
-    // enable_if_t<!is_move_constructible<Dummy>::value>
-    // mv(InputIter first, InputIter last, pointer out) {
-    //     for (; first != last; ++first, (void)++out) {
-    //         this->construct(out);
-    //         *out = ala::move(*first);
-    //     }
-    // }
-
     template<class InputIter>
     void cp(InputIter first, InputIter last, pointer out) {
         for (; first != last; ++first, (void)++out)
             this->construct(out, *first);
     }
-
-    // template<class InputIter, class Dummy = value_type>
-    // enable_if_t<!is_copy_constructible<Dummy>::value>
-    // cp(InputIter first, InputIter last, pointer out) {
-    //     for (; first != last; ++first, (void)++out) {
-    //         this->construct(out);
-    //         *out = *first;
-    //     }
-    // }
 
     template<class InputIter, class Dummy = value_type>
     enable_if_t<(is_nothrow_move_constructible<Dummy>::value ||
