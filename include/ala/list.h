@@ -200,6 +200,7 @@ public:
 
     ~list() {
         clear();
+        //FIXME deinie guard
     }
 
 protected:
@@ -338,11 +339,11 @@ public:
     }
 
     const_reverse_iterator crbegin() const noexcept {
-        return const_iterator(const_cast<list *>(this)->rbegin());
+        return const_reverse_iterator(cend());
     }
 
     const_reverse_iterator crend() const noexcept {
-        return const_iterator(const_cast<list *>(this)->rend());
+        return const_reverse_iterator(cbegin());
     }
 
     // capacity:

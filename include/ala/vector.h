@@ -489,19 +489,19 @@ public:
     }
 
     constexpr const_iterator cbegin() const noexcept {
-        return const_cast<vector *>(this)->begin();
+        return const_iterator(const_cast<vector *>(this)->begin());
     }
 
     constexpr const_iterator cend() const noexcept {
-        return const_cast<vector *>(this)->end();
+        return const_iterator(const_cast<vector *>(this)->end());
     }
 
     constexpr const_reverse_iterator crbegin() const noexcept {
-        return const_cast<vector *>(this)->rbegin();
+        return const_reverse_iterator(cend());
     }
 
     constexpr const_reverse_iterator crend() const noexcept {
-        return const_cast<vector *>(this)->rend();
+        return const_reverse_iterator(cbegin());
     }
 
     // capacity:
