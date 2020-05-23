@@ -145,7 +145,7 @@ protected:
         ::new ((void *)&_am) allocator_type(ala::forward<Args>(args)...);
     }
 
-    allocator_type &_alloc() {
+    allocator_type &_alloc() const {
         return *(allocator_type *)&_am;
     }
 

@@ -284,8 +284,8 @@ struct allocator_traits {
     template<typename Pointer, typename... Args>
     static enable_if_t<_has_construct<void, allocator_type &, Pointer, Args...>::value>
     construct(allocator_type &a, Pointer p, Args &&... args) {
-        using T = typename pointer_traits<Pointer>::element_type;
-        static_assert(is_same<remove_cv_t<T>, value_type>::value,
+        using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
+        static_assert(is_same<T, value_type>::value,
                       "Can not process incompatible type");
         a.construct(p, ala::forward<Args>(args)...);
     }
@@ -293,11 +293,11 @@ struct allocator_traits {
     template<typename Pointer, typename... Args>
     static enable_if_t<!_has_construct<void, allocator_type &, Pointer, Args...>::value>
     construct(allocator_type &a, Pointer p, Args &&... args) {
-        using T = typename pointer_traits<Pointer>::element_type;
-        // static_assert(is_same<remove_cv_t<T>, value_type>::value,
-        //               "Can not process incompatible type");
+        using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
+        static_assert(is_same<remove_cv_t<T>, value_type>::value,
+                      "Can not process incompatible type");
         void *raw = static_cast<void *>(ala::to_address(p));
-        ::new (raw) T(ala::forward<Args>(args)...);
+        ::new (raw) value_type(ala::forward<Args>(args)...);
     }
 
     template<typename Pointer>
@@ -313,8 +313,8 @@ struct allocator_traits {
     static enable_if_t<!_has_destroy<void, allocator_type &, Pointer>::value>
     destroy(allocator_type &a, Pointer p) {
         using T = typename pointer_traits<Pointer>::element_type;
-        // static_assert(is_same<remove_cv_t<T>, value_type>::value,
-        //               "Can not process incompatible type");
+        static_assert(is_same<remove_cv_t<T>, value_type>::value,
+                      "Can not process incompatible type");
         (*p).~T();
     }
 
@@ -425,9 +425,17 @@ struct allocator_traits {
     template<typename Dummy = allocator_type>
     static enable_if_t<!_has_max_size<void, Dummy>::value, size_type>
     max_size(const allocator_type &a) {
-        return numeric_limits<difference_type>::max();
+        return numeric_limits<difference_type>::max() / sizeof(value_type);
     }
 };
+
+template<typename T, typename = void>
+struct _is_allocator: false_type {};
+
+template<typename Alloc>
+struct _is_allocator<Alloc, void_t<typename Alloc::value_type,
+                                   decltype(declval<Alloc &>().allocate(size_t{}))>>
+    : true_type {};
 
 } // namespace ala
 

@@ -92,17 +92,17 @@ constexpr rb_node<Data> *prev_node(rb_node<Data> *_ptr) {
     }
 }
 
-template<class Ptr, bool IsConst = false>
+template<class Value, class Ptr, bool IsConst = false>
 struct rb_iterator {
     typedef bidirectional_iterator_tag iterator_category;
-    typedef decltype(declval<Ptr>()->_data) value_type;
+    typedef Value value_type;
     typedef typename pointer_traits<Ptr>::difference_type difference_type;
     typedef conditional_t<IsConst, const value_type, value_type> *pointer;
     typedef conditional_t<IsConst, const value_type, value_type> &reference;
 
     constexpr rb_iterator() {}
     constexpr rb_iterator(const rb_iterator &other): _ptr(other._ptr) {}
-    constexpr rb_iterator(const rb_iterator<Ptr, !IsConst> &other)
+    constexpr rb_iterator(const rb_iterator<Value, Ptr, !IsConst> &other)
         : _ptr(other._ptr) {}
     constexpr rb_iterator(const Ptr &ptr): _ptr(ptr) {}
 
@@ -122,11 +122,11 @@ struct rb_iterator {
         return !(_ptr == rhs._ptr);
     }
 
-    constexpr bool operator==(const rb_iterator<Ptr, !IsConst> &rhs) const {
+    constexpr bool operator==(const rb_iterator<Value, Ptr, !IsConst> &rhs) const {
         return (_ptr == rhs._ptr);
     }
 
-    constexpr bool operator!=(const rb_iterator<Ptr, !IsConst> &rhs) const {
+    constexpr bool operator!=(const rb_iterator<Value, Ptr, !IsConst> &rhs) const {
         return !(_ptr == rhs._ptr);
     }
 
@@ -153,7 +153,7 @@ struct rb_iterator {
     }
 
 protected:
-    friend class rb_iterator<Ptr, !IsConst>;
+    friend class rb_iterator<Value, Ptr, !IsConst>;
     template<class, class, class, class>
     friend class map;
     template<class, class, class, class>
@@ -165,7 +165,7 @@ protected:
     Ptr _ptr = nullptr;
 };
 
-template<class Data, class Comp, class Alloc, bool Uniq>
+template<class Data, class Comp, class Alloc, bool IsMap, bool IsUniq>
 class rb_tree {
 public:
     typedef Data value_type;
@@ -173,18 +173,20 @@ public:
     typedef Alloc allocator_type;
     typedef rb_node<Data> _node_t;
     typedef allocator_traits<allocator_type> _alloc_traits;
+    typedef typename _alloc_traits::size_type size_type;
     typedef _node_t *_hdle_t;
-    static constexpr bool is_uniq = Uniq;
+    static constexpr bool is_uniq = IsUniq;
 
 protected:
-    template<class, class, class, bool>
+    template<class, class, class, bool, bool>
     friend class rb_tree;
 
     _hdle_t _root = nullptr;
     _hdle_t _guard = nullptr;
 
-    size_t _size = 0;
+    size_type _size = 0;
     allocator_type _alloc;
+    allocator_type _galloc = _alloc;
     value_compare _comp;
 
     _hdle_t left_nil() const noexcept {
@@ -195,38 +197,58 @@ protected:
         return _guard + 1;
     }
 
-    ALA_HAS_MEM(first)
-    ALA_HAS_MEM(comp)
+    template<typename T>
+    struct _is_pair: false_type {};
 
-    static_assert(_has_first<value_type>::value == _has_comp<value_compare>::value,
-                  "Key compare check failed");
+    template<typename T1, typename T2>
+    struct _is_pair<pair<T1, T2>>: true_type {
+        using key = T1;
+        using mapped = T2;
+    };
 
-    template<typename Dummy = value_type,
-             typename = enable_if_t<_has_first<Dummy>::value>>
-    auto _key(const value_type &v) const noexcept -> decltype(v.first) {
+    template<typename P, bool Dummy = IsMap, typename = enable_if_t<Dummy>>
+    const auto &_key(const P &v) const noexcept {
+        static_assert(_is_pair<P>::value == IsMap, "Internal error");
         return v.first;
     }
 
-    template<typename Dummy = value_type,
-             typename = enable_if_t<!_has_first<Dummy>::value>>
-    const value_type &_key(const value_type &v) const noexcept {
+    template<typename P, bool Dummy = IsMap, typename = enable_if_t<!Dummy>>
+    const value_type &_key(const P &v) const noexcept {
+        static_assert(_is_pair<P>::value == IsMap, "Internal error");
         return v;
     }
 
-    template<typename Dummy = value_compare,
-             typename = enable_if_t<_has_comp<Dummy>::value>>
+    template<bool Dummy = IsMap, typename = enable_if_t<Dummy>>
     auto key_comp() const noexcept -> decltype(_comp.comp) {
         return _comp.comp;
     }
 
-    template<typename Dummy = value_compare,
-             typename = enable_if_t<!_has_comp<Dummy>::value>>
+    template<bool Dummy = IsMap, typename = enable_if_t<!Dummy>>
     const value_compare &key_comp() const noexcept {
         return _comp;
     }
 
+    template<typename P, typename P1 = remove_cvref_t<P>,
+             typename = enable_if_t<!is_lvalue_reference<P>::value>>
+    auto pair_ref(P &&pr) const noexcept {
+        using k = remove_const_t<typename P1::first_type>;
+        using m = typename P1::second_type;
+        using refp = pair<k &&, m &&>;
+        return refp(ala::move(const_cast<k &>(pr.first)),
+                    ala::move(const_cast<m &>(pr.second)));
+    }
+
+    template<typename P, typename P1 = remove_cvref_t<P>,
+             enable_if_t<is_lvalue_reference<P>::value, int> = 0>
+    auto pair_ref(P &&pr) const noexcept {
+        using k = remove_const_t<typename P1::first_type>;
+        using m = typename P1::second_type;
+        using refp = pair<k &, m &>;
+        return refp(const_cast<k &>(pr.first), const_cast<m &>(pr.second));
+    }
+
     template<class T1, class T2>
-    bool chk_cmp(const T1 &lhs, const T2 &rhs) const {
+    bool kcmp(const T1 &lhs, const T2 &rhs) const {
         const auto &comp = key_comp();
         bool result = comp(lhs, rhs);
         if (result)
@@ -237,12 +259,22 @@ protected:
     void clone(const rb_tree &other) {
         _root = copy_tree(other._root);
         _size = other._size;
+        _comp = other._comp;
         fix_nil();
+    }
+
+    void clone(rb_tree &&other) {
+        _root = copy_tree_mv(other._root);
+        _size = other._size;
+        _comp = other._comp;
+        fix_nil();
+        other.clear();
     }
 
     void possess(rb_tree &&other) noexcept {
         _root = other._root;
         _size = other._size;
+        _comp = ala::move(other._comp);
         fix_nil();
         other._root = nullptr;
         other._size = 0;
@@ -281,12 +313,12 @@ public:
         if (_alloc == other._alloc)
             this->possess(ala::move(other));
         else
-            this->clone(other);
+            this->clone(ala::move(other));
     }
 
     ~rb_tree() {
         clear();
-        _alloc_traits::template deallocate_object<_node_t>(_alloc, left_nil(), 2);
+        deinitialize();
     }
 
 protected:
@@ -319,7 +351,7 @@ protected:
             this->possess(ala::move(other));
         } else {
             clear();
-            this->clone(other);
+            this->clone(ala::move(other));
         }
     }
 
@@ -353,7 +385,7 @@ public:
         fix_nil();
     }
 
-    size_t size() const noexcept {
+    size_type size() const noexcept {
         return _size;
     }
 
@@ -363,7 +395,8 @@ public:
     }
 
     _hdle_t extract(_hdle_t position) noexcept {
-        assert(!is_nil(position));
+        if (is_nil(position))
+            return nullptr;
         detach(position);
         position->_left = position->_rght = position->_parent = nullptr;
         return position;
@@ -377,8 +410,12 @@ public:
         return _comp;
     }
 
+    size_type max_size() const noexcept {
+        return _alloc_traits::max_size(_alloc);
+    }
+
     template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
-    enable_if_t<Dummy> swap_helper(rb_tree other) {
+    enable_if_t<Dummy> swap_helper(rb_tree &other) {
         ala::swap(_alloc, other._alloc);
     }
 
@@ -394,34 +431,50 @@ public:
         ala::swap(_comp, other._comp);
         ala::swap(_root, other._root);
         ala::swap(_size, other._size);
-        ala::swap(_guard, other._guard);
+        this->fix_nil();
+        other.fix_nil();
     }
 
-    template<class RBTree>
-    void merge_helper(RBTree &src, _hdle_t root) {
-        if (is_nil(root))
-            return;
-        pair<_hdle_t, bool> pr = this->locate(nullptr, src._key(root->_data));
-        _hdle_t left = root->_left, rght = root->_rght;
-        if (!pr.second)
-            this->attach_to(pr.first, src.detach(root));
-        merge_helper(src, left);
-        merge_helper(src, rght);
-    }
+    struct locate_states {
+        _hdle_t postion;
+        bool found;
+        bool lr;
+    };
 
     template<class RBTree>
     void merge(RBTree &src) {
         assert(_alloc == src._alloc);
-        return this->merge_helper(src, src._root);
+        auto next = src.begin();
+        for (auto i = src.begin(); i != src.end(); i = next) {
+            next = next_node(i);
+            locate_states ls = this->locate(nullptr, src._key(i->_data));
+            if (!ls.found || !is_uniq)
+                this->attach_to(ls, src.detach(i));
+        }
+    }
+
+    template<class K>
+    size_type erase(const K &k) {
+        _hdle_t next = begin();
+        size_type n = 0;
+        for (_hdle_t i = begin(); i != end(); i = next) {
+            next = next_node(i);
+            if (!this->kcmp(k, this->_key(i->_data)) &&
+                !this->kcmp(this->_key(i->_data), k)) {
+                this->remove(i);
+                ++n;
+            }
+        }
+        return n;
     }
 
     template<class K, class F>
     auto traverse(const K &k, _hdle_t current, F f) const {
         while (!is_nil(current)) {
             const auto &ck = this->_key(current->_data);
-            if (this->chk_cmp(k, ck))
+            if (this->kcmp(k, ck))
                 current = current->_left;
-            else if (this->chk_cmp(ck, k))
+            else if (this->kcmp(ck, k))
                 current = current->_rght;
             else
                 return f(true, current);
@@ -430,10 +483,26 @@ public:
     }
 
     template<class K>
+    _hdle_t find_helper(const K &k, _hdle_t root) const {
+        if (is_uniq)
+            return this->traverse(k, root, [&](bool exist, _hdle_t cur) {
+                return exist ? cur : end();
+            });
+        else
+            return this->traverse(k, root, [&](bool exist, _hdle_t cur) {
+                if (exist) {
+                    _hdle_t l = this->find_helper(k, cur->_left);
+                    if (l != end())
+                        return l;
+                    return cur;
+                }
+                return end();
+            });
+    }
+
+    template<class K>
     _hdle_t find(const K &k) const {
-        return this->traverse(k, _root, [&](bool exist, _hdle_t cur) {
-            return exist ? cur : end();
-        });
+        return this->find_helper(k, _root);
     }
 
     template<class K>
@@ -444,123 +513,192 @@ public:
     }
 
     template<class K>
-    size_t count_helper(const K &k, _hdle_t root) const {
+    size_type count_helper(const K &k, _hdle_t root) const {
         return this->traverse(k, root, [&](bool exist, _hdle_t cur) {
-            return exist ? 1 + _count_helper(k, cur->_left) +
-                               _count_helper(k, cur->_rght) :
+            return exist ? 1 + this->count_helper(k, cur->_left) +
+                               this->count_helper(k, cur->_rght) :
                            0;
         });
     }
 
     template<class K>
-    size_t count(const K &k) const {
+    size_type count(const K &k) const {
         return this->count_helper(k, _root);
-    }
-
-    template<class K>
-    size_t erase_helper(const K &k, _hdle_t root) {
-        return this->traverse(k, root, [&](bool exist, _hdle_t cur) {
-            return exist ? (remove(cur), 1) + _erase_helper(k, cur->_left) +
-                               _erase_helper(k, cur->_rght) :
-                           0;
-        });
-    }
-
-    template<class K>
-    size_t erase(const K &k) {
-        return this->erase_helper(k, _root);
     }
 
     pair<_hdle_t, bool> insert(_hdle_t hint, _hdle_t p) {
         if (is_nil(p))
             return pair<_hdle_t, bool>(end(), false);
-        pair<_hdle_t, bool> pr = locate(hint, this->_key(p->_data));
-        if (is_uniq && pr.second) {
-            return pair<_hdle_t, bool>(pr.first, false);
+        locate_states ls = locate(hint, this->_key(p->_data));
+        if (is_uniq && ls.found) {
+            return pair<_hdle_t, bool>(ls.postion, false);
         } else {
-            attach_to(pr.first, p);
+            attach_to(ls, p);
             return pair<_hdle_t, bool>(p, true);
         }
     }
 
-    template<class... Args>
-    pair<_hdle_t, bool> emplace(_hdle_t hint, Args &&... args) {
-        _hdle_t node = construct_node(ala::forward<Args>(args)...);
-        pair<_hdle_t, bool> pr = locate(hint, this->_key(node->_data));
-        if (is_uniq && pr.second) {
-            destruct_node(node);
-            return pair<_hdle_t, bool>(pr.first, false);
+    template<bool, class K, class M>
+    struct _is_km_emp_helper: false_type {};
+
+    template<class K, class M>
+    struct _is_km_emp_helper<true, K, M>
+        : _and_<is_same<remove_cvref_t<K>, remove_cvref_t<typename _is_pair<Data>::key>>> {
+    };
+
+    template<class... Ts>
+    struct _is_km_emp: false_type {};
+
+    template<class K, class M>
+    struct _is_km_emp<K, M>: _is_km_emp_helper<IsMap, K, M> {};
+
+    template<class... Ts>
+    struct _is_v_emp: false_type {};
+
+    template<class T>
+    struct _is_v_emp<T>
+        : _or_<is_same<remove_cvref_t<T>, value_type>,
+               _and_<bool_constant<IsMap>, _is_pair<remove_cvref_t<T>>>> {};
+
+    template<class K, class M>
+    pair<_hdle_t, bool> insert_or_assign(_hdle_t hint, K &&k, M &&m) {
+        static_assert(IsMap, "Internal error");
+        locate_states ls = locate(hint, k);
+        if (ls.found) {
+            ls.postion->_data.second = ala::move(m);
+            return pair<_hdle_t, bool>(ls.postion, false);
         } else {
-            attach_to(pr.first, node);
+            _hdle_t node = construct_node(ala::forward<K>(k), ala::forward<M>(m));
+            attach_to(ls, node);
             return pair<_hdle_t, bool>(node, true);
         }
+    }
+
+    template<class... Args>
+    enable_if_t<!_is_v_emp<Args...>::value && !_is_km_emp<Args...>::value,
+                pair<_hdle_t, bool>>
+    emplace(_hdle_t hint, Args &&... args) {
+        _hdle_t node = construct_node(ala::forward<Args>(args)...);
+        locate_states ls = locate(hint, this->_key(node->_data));
+        if (is_uniq && ls.found) {
+            destruct_node(node);
+            return pair<_hdle_t, bool>(ls.postion, false);
+        } else {
+            attach_to(ls, node);
+            return pair<_hdle_t, bool>(node, true);
+        }
+    }
+
+    template<class V>
+    enable_if_t<_is_v_emp<V>::value, pair<_hdle_t, bool>> emplace(_hdle_t hint,
+                                                                  V &&v) {
+        return this->emplace_v(hint, ala::forward<V>(v));
+    }
+
+    template<class K, class M>
+    enable_if_t<_is_km_emp<K, M>::value, pair<_hdle_t, bool>>
+    emplace(_hdle_t hint, K &&k, M &&m) {
+        return this->emplace_k(k, hint, ala::forward<K>(k), ala::forward<M>(m));
+    }
+
+    template<class V>
+    pair<_hdle_t, bool> emplace_v(_hdle_t hint, V &&v) {
+        return this->emplace_k(this->_key(v), hint, ala::forward<V>(v));
     }
 
     template<class K, class... Args>
     pair<_hdle_t, bool> emplace_k(const K &k, _hdle_t hint, Args &&... args) {
-        pair<_hdle_t, bool> pr = locate(hint, k);
-        if (is_uniq && pr.second) {
-            return pair<_hdle_t, bool>(pr.first, false);
+        locate_states ls = locate(hint, k);
+        if (is_uniq && ls.found) {
+            return pair<_hdle_t, bool>(ls.postion, false);
         } else {
             _hdle_t node = construct_node(ala::forward<Args>(args)...);
-            attach_to(pr.first, node);
+            attach_to(ls, node);
             return pair<_hdle_t, bool>(node, true);
         }
     }
 
-    template<class V, class... Args>
-    pair<_hdle_t, bool> emplace_v(const V &v, _hdle_t hint, Args &&... args) {
-        return emplace_k(this->_key(v), hint, ala::forward<Args>(args)...);
-    }
-
     template<class K>
-    int check_hint(_hdle_t hint, const K &k) {
+    locate_states check_hint(_hdle_t hint, const K &k) {
+        if (hint == nullptr || !is_nil(hint->_left) || size() == 0)
+            return locate_states{nullptr, false, ALA_LEFT};
         _hdle_t prev = prev_node(hint);
-        const auto &hk = this->_key(hint->_data);
-        const auto &pk = this->_key(prev->_data);
-        if (!this->chk_cmp(k, hk) && !this->chk_cmp(hk, k))
-            return 1;
-        else if (this->chk_cmp(k, hk) && this->chk_cmp(pk, k))
-            return 0;
-        return -1;
+        bool p = !is_nil(prev), h = !is_nil(hint);
+        bool kh = false, hk = false, kp = false, pk = false;
+        if (h) {
+            kh = this->kcmp(k, this->_key(hint->_data));
+            hk = this->kcmp(this->_key(hint->_data), k);
+            if (!kh && !hk)
+                return locate_states{hint, true, ALA_LEFT};
+        }
+        if (p) {
+            pk = this->kcmp(this->_key(prev->_data), k);
+            kp = this->kcmp(k, this->_key(prev->_data));
+            if (h && pk && kh)
+                return locate_states{hint, false, ALA_LEFT};
+            else if (!h && !pk && !kp)
+                return locate_states{prev, true, ALA_RGHT};
+            else if (!h && !kp)
+                return locate_states{prev, false, ALA_RGHT};
+        } else if (kh)
+            return locate_states{hint, false, ALA_LEFT};
+        return locate_states{nullptr, false, ALA_LEFT};
     }
 
     template<class K>
-    pair<_hdle_t, bool> locate(_hdle_t hint, const K &k) {
+    locate_states locate(_hdle_t hint, const K &k) {
         _hdle_t guard = _root, current = nullptr;
         bool found = false;
-        if (!is_nil(hint) && is_nil(hint->_left)) {
-            switch (check_hint(hint, k)) {
-                case 1:
-                    return pair<_hdle_t, bool>(hint, true);
-                case 0:
-                    return pair<_hdle_t, bool>(hint, false);
-            }
-        }
+        bool lr = ALA_LEFT;
+        locate_states checked = check_hint(hint, k);
+        if (checked.postion != nullptr)
+            return checked;
         while (!is_nil(guard)) {
             current = guard;
             const auto &ck = this->_key(current->_data);
-            if (this->chk_cmp(k, ck)) {
+            if (this->kcmp(k, ck)) {
                 guard = guard->_left;
-            } else if (this->chk_cmp(ck, k)) {
+                lr = ALA_LEFT;
+            } else if (this->kcmp(ck, k)) {
                 guard = guard->_rght;
+                lr = ALA_RGHT;
             } else {
                 found = true;
                 if (is_uniq)
                     break;
+                lr = ALA_RGHT;
                 guard = guard->_rght;
             }
         }
-        return pair<_hdle_t, bool>(current, found);
+        return locate_states{current, found, lr};
     }
 
 protected:
+    template<class... Ts>
+    struct _use_pair_ref: false_type {};
+
+    template<class T>
+    struct _use_pair_ref<T>
+        : _and_<_is_pair<remove_cvref_t<T>>, bool_constant<IsMap>,
+                _not_<is_constructible<value_type, T>>> {};
+
     template<class... Args>
-    _hdle_t construct_node(Args &&... args) {
+    enable_if_t<sizeof...(Args) != 1 || !_use_pair_ref<Args...>::value, _hdle_t>
+    construct_node(Args &&... args) {
         _hdle_t node = _alloc_traits::template allocate_object<_node_t>(_alloc,
                                                                         1);
         _alloc_traits::construct(_alloc, ala::addressof(node->_data),
                                  ala::forward<Args>(args)...);
+        node->_is_nil = false;
+        return node;
+    }
+
+    template<class P>
+    enable_if_t<_use_pair_ref<P>::value, _hdle_t> construct_node(P &&pr) {
+        _hdle_t node = _alloc_traits::template allocate_object<_node_t>(_alloc,
+                                                                        1);
+        _alloc_traits::construct(_alloc, ala::addressof(node->_data),
+                                 this->pair_ref(ala::forward<P>(pr)));
         node->_is_nil = false;
         return node;
     }
@@ -592,8 +730,19 @@ protected:
         return node;
     }
 
+    _hdle_t copy_tree_mv(_hdle_t other, _hdle_t parent = nullptr) {
+        if (is_nil(other))
+            return nullptr;
+        _hdle_t node = construct_node(ala::move(other->_data));
+        node->_color = other->_color;
+        node->_parent = parent;
+        node->_left = copy_tree_mv(other->_left, node);
+        node->_rght = copy_tree_mv(other->_rght, node);
+        return node;
+    }
+
     void initialize() {
-        _guard = _alloc_traits::template allocate_object<_node_t>(_alloc, 2);
+        _guard = _alloc_traits::template allocate_object<_node_t>(_galloc, 2);
         left_nil()->_is_nil = true;
         left_nil()->_parent = rght_nil();
         left_nil()->_color = ALA_BLACK;
@@ -606,6 +755,11 @@ protected:
         rght_nil()->_nflag = ALA_RGHT;
         rght_nil()->_left = nullptr;
         rght_nil()->_rght = nullptr;
+    }
+
+    void deinitialize() {
+        _alloc_traits::template deallocate_object<_node_t>(_galloc, left_nil(),
+                                                           2);
     }
 
     // rotate
@@ -680,7 +834,8 @@ protected:
         }
     }
 
-    void attach_to(_hdle_t pos, _hdle_t p) noexcept {
+    void attach_to(locate_states states, _hdle_t p) noexcept {
+        _hdle_t pos = states.postion;
         p->_color = ALA_RED;
         p->_left = p->_rght = nullptr;
         p->_parent = pos;
@@ -689,7 +844,7 @@ protected:
             left_nil()->_parent = rght_nil()->_parent = p;
             p->_left = left_nil();
             p->_rght = rght_nil();
-        } else if (_comp(p->_data, pos->_data)) {
+        } else if (states.lr == ALA_LEFT) {
             if (pos->_left == left_nil()) { // fix nil
                 p->_left = left_nil();
                 left_nil()->_parent = p;
