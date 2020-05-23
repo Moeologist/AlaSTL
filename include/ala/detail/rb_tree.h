@@ -214,12 +214,12 @@ protected:
 
     template<typename P, bool Dummy = IsMap, typename = enable_if_t<!Dummy>>
     const value_type &_key(const P &v) const noexcept {
-        static_assert(_is_pair<P>::value == IsMap, "Internal error");
+        // static_assert(_is_pair<P>::value == IsMap, "Internal error");
         return v;
     }
 
     template<bool Dummy = IsMap, typename = enable_if_t<Dummy>>
-    auto key_comp() const noexcept -> decltype(_comp.comp) {
+    decltype(auto) key_comp() const noexcept {
         return _comp.comp;
     }
 
@@ -227,15 +227,14 @@ protected:
     const value_compare &key_comp() const noexcept {
         return _comp;
     }
-
+    //TODO
     template<typename P, typename P1 = remove_cvref_t<P>,
              typename = enable_if_t<!is_lvalue_reference<P>::value>>
     auto pair_ref(P &&pr) const noexcept {
         using k = remove_const_t<typename P1::first_type>;
         using m = typename P1::second_type;
-        using refp = pair<k &&, m &&>;
-        return refp(ala::move(const_cast<k &>(pr.first)),
-                    ala::move(const_cast<m &>(pr.second)));
+        return ala::pair<k &&, m &&>(ala::move(const_cast<k &>(pr.first)),
+                                     ala::move(const_cast<m &>(pr.second)));
     }
 
     template<typename P, typename P1 = remove_cvref_t<P>,
@@ -243,8 +242,8 @@ protected:
     auto pair_ref(P &&pr) const noexcept {
         using k = remove_const_t<typename P1::first_type>;
         using m = typename P1::second_type;
-        using refp = pair<k &, m &>;
-        return refp(const_cast<k &>(pr.first), const_cast<m &>(pr.second));
+        return ala::pair<k &, m &>(const_cast<k &>(pr.first),
+                                   const_cast<m &>(pr.second));
     }
 
     template<class T1, class T2>
