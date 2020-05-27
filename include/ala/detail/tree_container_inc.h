@@ -347,11 +347,10 @@ public:
         return tree.emplace_v(position._ptr, ala::forward<P>(p)).first;
     }
 #endif
-
     template<class InputIter>
     void insert(InputIter first, InputIter last) {
         for (InputIter i = first; i != last; ++i)
-            this->insert(*i);
+            tree.emplace_v(nullptr, *i);
     }
 
     void insert(initializer_list<value_type> il) {

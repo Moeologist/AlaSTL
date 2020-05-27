@@ -8,7 +8,7 @@ namespace ala {
 template<typename... T>
 struct tuple;
 
-struct piecewise_construct_t {};
+struct piecewise_construct_t { explicit piecewise_construct_t() = default; };
 
 #if _ALA_ENABLE_INLINE_VAR
 inline constexpr piecewise_construct_t piecewise_construct{};

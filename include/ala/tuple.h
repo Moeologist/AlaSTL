@@ -102,15 +102,8 @@ struct tuple;
 template<size_t N, typename Tuple>
 struct _is_n_tuple: false_type {};
 
-template<size_t N, typename Seq, typename... Ts>
-struct _is_n_tuple<N, _tuple_impl<Seq, Ts...>>
-    : bool_constant<N == sizeof...(Ts)> {};
-
 template<size_t N, typename... Ts>
 struct _is_n_tuple<N, tuple<Ts...>>: bool_constant<N == sizeof...(Ts)> {};
-
-template<size_t N, typename T, size_t Size>
-struct _is_n_tuple<N, array<T, Size>>: bool_constant<N == Size> {};
 
 template<size_t N, typename T1, typename T2>
 struct _is_n_tuple<N, pair<T1, T2>>: bool_constant<N == 2> {};
@@ -133,9 +126,7 @@ struct _tuple_impl<index_sequence<Ids...>, Ts...>: _tuple_base<Ids, Ts>... {
     template<typename... Dummy>
     constexpr void _packer(Dummy &&...) {}
 
-    template<typename Tuple,
-             typename =
-                 enable_if_t<_is_n_tuple<sizeof...(Ts), remove_cvref_t<Tuple>>::value>>
+    template<typename Tuple>
     constexpr _tuple_impl &operator=(Tuple &&tp) noexcept(
         _and_<is_nothrow_assignable<
             Ts &, conditional_t<is_lvalue_reference<Tuple>::value,
@@ -147,25 +138,6 @@ struct _tuple_impl<index_sequence<Ids...>, Ts...>: _tuple_base<Ids, Ts>... {
     }
 
     constexpr _tuple_impl() = default;
-
-    template<int>
-    struct _dummy {};
-
-    constexpr _tuple_impl &
-    operator=(conditional_t<_and_<is_copy_assignable<Ts>...>::value,
-                            const tuple<Ts...> &, _dummy<0>>
-                  tp) noexcept(_and_<is_nothrow_copy_assignable<Ts>...>::value) {
-        _packer(_tuple_base<Ids, Ts>::operator=(ala::get<Ids>(tp))...);
-        return *this;
-    }
-
-    constexpr _tuple_impl &
-    operator=(conditional_t<_and_<is_move_assignable<Ts>...>::value,
-                            tuple<Ts...> &&, _dummy<1>>
-                  tp) noexcept(_and_<is_nothrow_move_assignable<Ts>...>::value) {
-        _packer(_tuple_base<Ids, Ts>::operator=(ala::get<Ids>(ala::move(tp)))...);
-        return *this;
-    }
 
     constexpr void
     swap(_tuple_impl &tpl) noexcept(_and_<is_nothrow_swappable<Ts>...>::value) {
@@ -197,26 +169,12 @@ public:
     tuple(tuple const &) = default;
     tuple(tuple &&) = default;
 
-    // See PR22806  and LWG issue #2549 for more information.
-    // (https://bugs.llvm.org/show_bug.cgi?id=22806)
-
-    template<class Tuple, class Tlike,
-             bool = tuple_size<Tuple>::value == 1 && tuple_size<Tlike>::value == 1>
-    struct _disable_tuple_like_ctor: false_type {};
-
-    // template<class Tuple, class Tlike>
-    // struct _disable_tuple_like_ctor<Tuple, Tlike, true>
-    //     : bool_constant<
-    //           is_reference<tuple_element_t<0, Tuple>>::value &&
-    //           !is_base_of<remove_reference_t<tuple_element_t<0, Tuple>>,
-    //                       remove_reference_t<tuple_element_t<0, Tlike>>>::value> {
-    // };
-
+    // Fix libc++ PR23256
     template<class Tuple, class... Args>
-    struct _disable_tuple_args_ctor: false_type {};
+    struct _is_copy_move_ctor: false_type {};
 
     template<class Tuple, class Args1>
-    struct _disable_tuple_args_ctor<Tuple, Args1>
+    struct _is_copy_move_ctor<Tuple, Args1>
         : is_same<Tuple, remove_cvref_t<Args1>> {};
 
     // Dummy make template not specialization immediately (msvc not need this)
@@ -256,7 +214,7 @@ public:
              typename =
                  enable_if_t<_and_<bool_constant<sizeof...(Ts) >= 1>,
                                    bool_constant<sizeof...(Ts) == sizeof...(Us)>,
-                                   _not_<_disable_tuple_args_ctor<tuple, Us...>>,
+                                   _not_<_is_copy_move_ctor<tuple, Us...>>,
                                    _and_<is_constructible<Ts, Us>...>,
                                    _and_<is_convertible<Us, Ts>...>>::value>>
     constexpr tuple(Us &&... us) noexcept(
@@ -267,7 +225,7 @@ public:
              typename =
                  enable_if_t<_and_<bool_constant<sizeof...(Ts) >= 1>,
                                    bool_constant<sizeof...(Ts) == sizeof...(Us)>,
-                                   _not_<_disable_tuple_args_ctor<tuple, Us...>>,
+                                   _not_<_is_copy_move_ctor<tuple, Us...>>,
                                    _and_<is_constructible<Ts, Us>...>,
                                    _not_<_and_<is_convertible<Us, Ts>...>>>::value>>
     explicit constexpr tuple(Us &&... us) noexcept(
@@ -317,7 +275,6 @@ public:
     template<typename Tuple, typename T1 = remove_cvref_t<Tuple>,
              typename = enable_if_t<!is_same<T1, tuple>::value>,
              typename = enable_if_t<_is_n_tuple<sizeof...(Ts), T1>::value>,
-             typename = enable_if_t<!_disable_tuple_like_ctor<tuple, T1>::value>,
              typename = enable_if_t<
                  conditional_t<is_lvalue_reference<Tuple>::value,
                                _copy_ctor_check<T1>, _move_ctor_check<T1>>::imp>>
@@ -328,7 +285,6 @@ public:
     template<typename Tuple, typename T1 = remove_cvref_t<Tuple>,
              typename = enable_if_t<!is_same<T1, tuple>::value>,
              typename = enable_if_t<_is_n_tuple<sizeof...(Ts), T1>::value>,
-             typename = enable_if_t<!_disable_tuple_like_ctor<tuple, T1>::value>,
              typename = enable_if_t<
                  conditional_t<is_lvalue_reference<Tuple>::value,
                                _copy_ctor_check<T1>, _move_ctor_check<T1>>::exp>,

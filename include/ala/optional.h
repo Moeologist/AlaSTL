@@ -134,12 +134,12 @@ struct _optional_base: _optional_destroy<T> {
 template<class T>
 class optional: _make_controller_t<_optional_base<T>, T> {
 public:
-    static_assert(is_same<remove_cvref_t<T>, in_place_t>::value &&
-                      is_same<remove_cvref_t<T>, nullopt_t>::value &&
-                      is_destructible<T>::value,
-                  "N4860 [20.6.3/3]")
+    static_assert(!is_same<remove_cvref_t<T>, in_place_t>::value &&
+                      !is_same<remove_cvref_t<T>, nullopt_t>::value &&
+                      !is_array<remove_cvref_t<T>>::value && is_destructible<T>::value,
+                  "N4860 [20.6.3/3]");
 
-        using value_type = T;
+    using value_type = T;
     using _base_t = _make_controller_t<_optional_base<T>, T>;
     // constructors
     constexpr optional() noexcept: _base_t{} {}
