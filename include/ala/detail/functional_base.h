@@ -3,12 +3,12 @@
 
 #include <ala/type_traits.h>
 
-#define ALA_MAKE_BASE_FUNCTION_UNARY(_name_, _op_) \
+#define ALA_MAKE_BASE_FUNCTION_UNARY(_name_, _op_, _res_) \
     template<class T = void> \
     struct _name_ { \
-        using result_type = bool; \
-        using first_argument_type = T; \
-        constexpr bool operator()(const T &rhs) const { \
+        using result_type = _res_; \
+        using argument_type = T; \
+        constexpr _res_ operator()(const T &rhs) const { \
             return _op_ rhs; \
         } \
     }; \
@@ -23,13 +23,13 @@
         } \
     };
 
-#define ALA_MAKE_BASE_FUNCTION(_name_, _op_) \
+#define ALA_MAKE_BASE_FUNCTION(_name_, _op_, _res_) \
     template<class T = void> \
     struct _name_ { \
-        using result_type = bool; \
+        using result_type = _res_; \
         using first_argument_type = T; \
         using second_argument_type = T; \
-        constexpr bool operator()(const T &lhs, const T &rhs) const { \
+        constexpr _res_ operator()(const T &lhs, const T &rhs) const { \
             return lhs _op_ rhs; \
         } \
     }; \
@@ -46,28 +46,28 @@
 
 namespace ala {
 
-ALA_MAKE_BASE_FUNCTION(plus, +)
-ALA_MAKE_BASE_FUNCTION(minus, -)
-ALA_MAKE_BASE_FUNCTION(multiplies, *)
-ALA_MAKE_BASE_FUNCTION(divides, /)
-ALA_MAKE_BASE_FUNCTION(modulus, %)
-ALA_MAKE_BASE_FUNCTION(negate, -)
+ALA_MAKE_BASE_FUNCTION(plus, +, T)
+ALA_MAKE_BASE_FUNCTION(minus, -, T)
+ALA_MAKE_BASE_FUNCTION(multiplies, *, T)
+ALA_MAKE_BASE_FUNCTION(divides, /, T)
+ALA_MAKE_BASE_FUNCTION(modulus, %, T)
+ALA_MAKE_BASE_FUNCTION_UNARY(negate, -, T)
 
-ALA_MAKE_BASE_FUNCTION(equal_to, ==)
-ALA_MAKE_BASE_FUNCTION(not_equal_to, !=)
-ALA_MAKE_BASE_FUNCTION(less, <)
-ALA_MAKE_BASE_FUNCTION(less_equal, <=)
-ALA_MAKE_BASE_FUNCTION(greater, >)
-ALA_MAKE_BASE_FUNCTION(greater_equal, >=)
+ALA_MAKE_BASE_FUNCTION(equal_to, ==, bool)
+ALA_MAKE_BASE_FUNCTION(not_equal_to, !=, bool)
+ALA_MAKE_BASE_FUNCTION(less, <, bool)
+ALA_MAKE_BASE_FUNCTION(less_equal, <=, bool)
+ALA_MAKE_BASE_FUNCTION(greater, >, bool)
+ALA_MAKE_BASE_FUNCTION(greater_equal, >=, bool)
 
-ALA_MAKE_BASE_FUNCTION(logical_and, &&)
-ALA_MAKE_BASE_FUNCTION(logical_or, ||)
-ALA_MAKE_BASE_FUNCTION_UNARY(logical_not, !)
+ALA_MAKE_BASE_FUNCTION(logical_and, &&, bool)
+ALA_MAKE_BASE_FUNCTION(logical_or, ||, bool)
+ALA_MAKE_BASE_FUNCTION_UNARY(logical_not, !, bool)
 
-ALA_MAKE_BASE_FUNCTION(bit_and, &)
-ALA_MAKE_BASE_FUNCTION(bit_or, |)
-ALA_MAKE_BASE_FUNCTION(bit_xor, ^)
-ALA_MAKE_BASE_FUNCTION_UNARY(bit_not, ~)
+ALA_MAKE_BASE_FUNCTION(bit_and, &, T)
+ALA_MAKE_BASE_FUNCTION(bit_or, |, T)
+ALA_MAKE_BASE_FUNCTION(bit_xor, ^, T)
+ALA_MAKE_BASE_FUNCTION_UNARY(bit_not, ~, T)
 
 } // namespace ala
 
