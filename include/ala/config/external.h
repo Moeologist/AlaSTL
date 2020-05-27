@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cstdint>
 #include <cstddef>
+#include <cstring>
 
 namespace ala {
 using ::std::exception;
@@ -18,6 +19,9 @@ using ::std::logic_error;
 using ::std::initializer_list;
 
 using ::std::numeric_limits;
+
+using ::std::memmove;
+using ::std::memcpy;
 
 using ::std::nullptr_t;
 

@@ -8,9 +8,6 @@
 namespace ala {
 
 template<typename T>
-struct reference_wrapper;
-
-template<typename T>
 add_rvalue_reference_t<T> declval() noexcept;
 
 template<typename T>
@@ -124,6 +121,76 @@ invoke(Fn &&f,
         "invoke_result not compatible with invoke");
     return _invoke_helper(ala::forward<Fn>(f), ala::forward<Args>(args)...);
 }
+
+
+template<class T>
+const T *addressof(const T &&) = delete;
+
+template<class T>
+constexpr T *addressof(T &arg) noexcept {
+    return __builtin_addressof(arg);
+}
+
+template<class T>
+struct reference_wrapper {
+    using type = T;
+    T *_ptr;
+
+    static void _test(T &t) noexcept;
+    static void _test(T &&) = delete;
+
+    template<class U, class = decltype(_test(declval<U>())),
+             class = enable_if_t<!is_same<remove_cvref_t<U>, reference_wrapper>::value>>
+    reference_wrapper(U &&u) noexcept(noexcept(_test(declval<U>())))
+        : _ptr(ala::addressof(ala::forward<U>(u))) {}
+    reference_wrapper(const reference_wrapper &) noexcept = default;
+    reference_wrapper &operator=(const reference_wrapper &) noexcept = default;
+    operator T &() const noexcept {
+        return *_ptr;
+    }
+
+    T &get() const noexcept {
+        return *_ptr;
+    }
+
+    template<class... Args>
+    enable_if_t<is_invocable<T &, Args...>::value, invoke_result_t<T &, Args...>>
+    operator()(Args &&... args) const {
+        return ala::invoke(get(), ala::forward<Args>(args)...);
+    }
+};
+
+
+#if _ALA_ENABLE_DEDUCTION_GUIDES
+template<class T>
+reference_wrapper(T &) -> reference_wrapper<T>;
+#endif
+
+template<class T>
+reference_wrapper<T> ref(T &t) noexcept {
+    return reference_wrapper<T>(t);
+}
+
+template<class T>
+reference_wrapper<T> ref(reference_wrapper<T> t) noexcept {
+    return ref(t.get());
+}
+
+template<class T>
+void ref(const T &&) = delete;
+
+template<class T>
+reference_wrapper<const T> cref(const T &t) noexcept {
+    return reference_wrapper<const T>(t);
+}
+
+template<class T>
+reference_wrapper<const T> cref(reference_wrapper<T> t) noexcept {
+    return cref(t.get());
+}
+
+template<class T>
+void cref(const T &&) = delete;
 
 } // namespace ala
 

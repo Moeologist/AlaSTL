@@ -1,15 +1,11 @@
 #ifndef _ALA_DETAIL_ALGORITHM_BASE_H
 #define _ALA_DETAIL_ALGORITHM_BASE_H
 
-#include <cstring>
-
 #include <ala/detail/functional_base.h>
 #include <ala/detail/pair.h>
 #include <ala/iterator.h>
 
 namespace ala {
-
-using ::std::memmove;
 
 // Minimum/maximum operations
 #ifdef min

@@ -11,14 +11,6 @@ using ::std::align_val_t;
 
 using ::std::bad_array_new_length;
 
-template<class T>
-const T *addressof(const T &&) = delete;
-
-template<class T>
-constexpr T *addressof(T &arg) noexcept {
-    return __builtin_addressof(arg);
-}
-
 } // namespace ala
 
 #endif // HEAD

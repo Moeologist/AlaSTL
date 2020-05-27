@@ -139,8 +139,8 @@ template<typename T> using remove_pointer_t = typename remove_pointer<T>::type;
 template<typename T> using add_pointer_t    = typename add_pointer<T>::type;
 
 // other transformations:
-template<size_t Len, size_t Align>     struct aligned_storage;
-template<size_t Len, typename... Ts>   struct aligned_union;
+template<size_t Size, size_t Align>    struct aligned_storage;
+template<size_t Size, typename... Ts>  struct aligned_union;
 template<typename T>                   struct decay;
 template<typename T>                   struct remove_cvref;
 template<bool, typename T = void>      struct enable_if;
@@ -150,16 +150,17 @@ template<typename T>                   struct underlying_type;
 template<typename>                     struct result_of;
 template<typename F, typename... Args> struct invoke_result;
 
-template<size_t Len, size_t Align = alignof(max_align_t)> using aligned_storage_t = typename aligned_storage<Len, Align>::type;
-template<size_t Len, typename... Ts>                      using aligned_union_t   = typename aligned_union<Len, Ts...>::type;
-template<typename T>                                      using decay_t           = typename decay<T>::type;
-template<typename T>                                      using remove_cvref_t    = typename remove_cvref<T>::type;
-template<bool b, typename T = void>                       using enable_if_t       = typename enable_if<b, T>::type;
-template<bool b, typename T, typename F>                  using conditional_t     = typename conditional<b, T, F>::type;
-template<typename... T>                                   using common_type_t     = typename common_type<T...>::type;
-template<typename T>                                      using underlying_type_t = typename underlying_type<T>::type;
-template<typename T>                                      using result_of_t       = typename result_of<T>::type;
-template<typename F, typename... Args>                    using invoke_result_t   = typename invoke_result<F, Args...>::type;
+template<size_t Size> struct _maxalign;
+template<size_t Size, size_t Align = _maxalign<Size>::value> using aligned_storage_t = typename aligned_storage<Size, Align>::type;
+template<size_t Size, typename... Ts>                        using aligned_union_t   = typename aligned_union<Size, Ts...>::type;
+template<typename T>                                         using decay_t           = typename decay<T>::type;
+template<typename T>                                         using remove_cvref_t    = typename remove_cvref<T>::type;
+template<bool b, typename T = void>                          using enable_if_t       = typename enable_if<b, T>::type;
+template<bool b, typename T, typename F>                     using conditional_t     = typename conditional<b, T, F>::type;
+template<typename... T>                                      using common_type_t     = typename common_type<T...>::type;
+template<typename T>                                         using underlying_type_t = typename underlying_type<T>::type;
+template<typename T>                                         using result_of_t       = typename result_of<T>::type;
+template<typename F, typename... Args>                       using invoke_result_t   = typename invoke_result<F, Args...>::type;
 
 #if _ALA_LANG >= 201703L
 template<typename...> using void_t = void;
@@ -287,6 +288,11 @@ template<typename... Bs> inline constexpr bool disjunction_v = disjunction<Bs...
 template<typename B>     inline constexpr bool negation_v    = negation<B>::value;
 #endif
 
+// C++20
+
+template<typename From, typename To>
+struct is_nothrow_convertible;
+
 template<typename T> struct type_identity;
 template<typename T> using type_identity_t = typename type_identity<T>::type;
 
@@ -303,10 +309,9 @@ template<typename T>
 struct is_unbounded_array;
 
 #if _ALA_ENABLE_INLINE_VAR
-template<typename T>
-inline constexpr bool is_bounded_array_v = is_bounded_array<T>::value;
-template<typename T>
-inline constexpr bool is_unbounded_array_v = is_bounded_array<T>::value;
+template<typename From, typename To> inline constexpr bool is_nothrow_convertible_v = is_nothrow_convertible<From, To>::value;
+template<typename T>                 inline constexpr bool is_bounded_array_v = is_bounded_array<T>::value;
+template<typename T>                 inline constexpr bool is_unbounded_array_v = is_unbounded_array<T>::value;
 #endif
 
 template<typename...>
@@ -318,6 +323,16 @@ using common_reference_t = typename common_reference<T...>::type;
 template<typename, typename, template<typename> class, template<typename> class>
 struct basic_common_reference;
 
+// Extra
+template<class T>                                 struct is_reference_wrapper;
+template<class T>                                 struct is_implicitly_default_constructible;
+template<typename T, template<typename...> class> struct is_specification;
+#if _ALA_ENABLE_INLINE_VAR
+template<typename T> inline constexpr bool is_reference_wrapper_v = is_reference_wrapper<T>::value;
+// template<typename T> inline constexpr bool is_implicitly_default_constructible_v = is_implicitly_default_constructible<T>::value;
+template<typename T, template<typename...> class Templt>
+inline constexpr bool is_specification_v = is_specification<T, Templt>::value;
+#endif
 // clang-format on
 
 } // namespace ala

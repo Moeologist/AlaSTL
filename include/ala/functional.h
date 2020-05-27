@@ -22,67 +22,6 @@ struct identity {
     }
 };
 
-template<class T>
-struct reference_wrapper {
-    using type = T;
-
-    static void _test(T &t) noexcept;
-    static void _test(T &&) = delete;
-
-    template<class U, class = decltype(_test(declval<U>())),
-             class = enable_if_t<!is_same<remove_cvref_t<U>, reference_wrapper>::value>>
-    reference_wrapper(U &&u) noexcept(noexcept(_test(declval<U>())))
-        : _ptr(ala::addressof(ala::forward<U>(u))) {}
-    reference_wrapper(const reference_wrapper &) noexcept = default;
-    reference_wrapper &operator=(const reference_wrapper &) noexcept = default;
-    operator T &() const noexcept {
-        return *_ptr;
-    }
-
-    T &get() const noexcept {
-        return *_ptr;
-    }
-
-    template<class... Args>
-    enable_if_t<is_invocable<T &, Args...>::value, invoke_result_t<T &, Args...>>
-    operator()(Args &&... args) const {
-        return ala::invoke(get(), ala::forward<Args>(args)...);
-    }
-
-    T *_ptr;
-};
-
-#if _ALA_ENABLE_DEDUCTION_GUIDES
-template<class T>
-reference_wrapper(T &) -> reference_wrapper<T>;
-#endif
-
-template<class T>
-reference_wrapper<T> ref(T &t) noexcept {
-    return reference_wrapper<T>(t);
-}
-
-template<class T>
-reference_wrapper<T> ref(reference_wrapper<T> t) noexcept {
-    return ref(t.get());
-}
-
-template<class T>
-void ref(const T &&) = delete;
-
-template<class T>
-reference_wrapper<const T> cref(const T &t) noexcept {
-    return reference_wrapper<const T>(t);
-}
-
-template<class T>
-reference_wrapper<const T> cref(reference_wrapper<T> t) noexcept {
-    return cref(t.get());
-}
-
-template<class T>
-void cref(const T &&) = delete;
-
 template<class Fn>
 struct _not_fn_t {
     typedef decay_t<Fn> _fn_t;
