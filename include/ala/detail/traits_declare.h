@@ -259,7 +259,7 @@ template<typename T> inline constexpr bool has_unique_object_representations_v =
 #endif
 
 #if (defined(_ALA_CLANG) && !ALA_IS_IDENTIFIER(__is_aggregate)) || \
-    (defined(_ALA_GCC) && __GNUC__ * 1000 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__ >= 7001) || \
+    (defined(_ALA_GCC) && _ALA_GCC_VER >= 7001) || \
     (defined(_ALA_MSVC) && MSC_VER >= 1915)
 template<typename T> struct is_aggregate;
 #if _ALA_ENABLE_INLINE_VAR

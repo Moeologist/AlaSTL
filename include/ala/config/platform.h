@@ -2,14 +2,21 @@
 #define _ALA_CONFIG_PLATFORM_H
 
 #if defined(_MSC_VER) // msvc or clang (msvc target)
-    #if defined(__clang__) && defined(__clang_major__) && \
-        defined(__clang_patchlevel__)
+    #if defined(__clang__)
 
         #define _ALA_CLANG
         #define _ALA_CLANG_MSVC
 
-        #if (__clang_major__ * 100 + __clang_minor * 10 + \
-             __clang_patchlevel__) < 350
+        #ifdef __clang_patchlevel__
+            #define _ALA_CLANG_VER \
+                (__clang_major__ * 10000 + __clang_minor * 100 + \
+                 __clang_patchlevel__)
+        #else
+            #define _ALA_CLANG_VER \
+                (__clang_major__ * 10000 + __clang_minor * 100)
+        #endif
+
+        #if _ALA_CLANG_VER < 30500
             #error Unsupported compiler; ala needs clang 3.5 at least
         #endif
 
@@ -23,14 +30,21 @@
     #endif // __clang__
 
 #elif defined(__GNUC__) // gcc or clang (gnu target)
-    #if defined(__clang__) && defined(__clang_major__) && \
-        defined(__clang_patchlevel__)
+    #if defined(__clang__)
 
         #define _ALA_CLANG
         #define _ALA_CLANG_GNU
 
-        #if (__clang_major__ * 100 + __clang_minor * 10 + \
-             __clang_patchlevel__) < 350
+        #ifdef __clang_patchlevel__
+            #define _ALA_CLANG_VER \
+                (__clang_major__ * 10000 + __clang_minor * 100 + \
+                 __clang_patchlevel__)
+        #else
+            #define _ALA_CLANG_VER \
+                (__clang_major__ * 10000 + __clang_minor * 100)
+        #endif
+
+        #if _ALA_CLANG_VER < 30500
             #error Unsupported compiler; ala needs clang 3.5 at least
         #endif
 
@@ -38,7 +52,14 @@
 
         #define _ALA_GCC
 
-        #if (__GNUC__ * 1000 + __GNUC_MINOR__ * 10 + __GNUC_PATCHLEVEL__) < 5000
+        #ifdef __GNUC_PATCHLEVEL__
+            #define _ALA_GCC_VER \
+                (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+        #else
+            #define _ALA_GCC_VER (__GNUC__ * 10000 + __GNUC_MINOR__ * 100)
+        #endif
+
+        #if _ALA_GCC_VER < 50000
             #error Unsupported compiler; ala needs gcc 5 at least
         #endif
 
@@ -61,7 +82,7 @@
         #define _ALA_ARM64
     #endif
 #else
-// #error Unsupported arch; ala support arm and X86 (both 32bit and 64bit)
+    #warning Unsupported architecture, some features are disabled
 #endif // Architectures
 
 #ifdef _WIN32
