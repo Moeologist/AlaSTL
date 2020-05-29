@@ -237,7 +237,7 @@ struct _bind_t: _function_base<R> {
     }
 };
 
-enum Operation { Copy, Move, Destroy, TypeInfo, Invoke };
+enum Operation { Copy, Move, Destroy, TypeInfo, Invoke, Local };
 
 template<class Function, class Functor>
 struct _function_handle;
@@ -265,6 +265,11 @@ struct _function_handle<R(Args...), Functor> {
             ala::invoke(*(Functor *)f, ala::forward<Args>(args)...));
     }
 
+    static bool local() {
+        return sizeof(Functor) <= 2 * sizeof(size_t) &&
+               is_nothrow_move_constructible<Functor>::value;
+    }
+
     static void *operate(Operation op) {
         switch (op) {
             case Copy:
@@ -277,6 +282,8 @@ struct _function_handle<R(Args...), Functor> {
                 return reinterpret_cast<void *>(&_function_handle::typeinfo);
             case Invoke:
                 return reinterpret_cast<void *>(&_function_handle::invoke);
+            case Local:
+                return reinterpret_cast<void *>(&_function_handle::local);
         }
         return nullptr;
     };
@@ -304,35 +311,45 @@ struct function<R(Args...)>: _function_base<R> {
     typedef void (*op_move_t)(void *, const void *);
     typedef void (*op_destroy_t)(void *);
     typedef const type_info &(*op_typeinfo_t)();
+    typedef bool (*op_local_t)();
 
     void *(*_op_handle)(Operation) = nullptr;
     size_t _placehold[2] = {};
-    bool _local = true;
+
+    op_local_t _op_local() const noexcept {
+        return reinterpret_cast<op_local_t>(_op_handle(Local));
+    }
+
+    bool is_local() const noexcept {
+        if (_op_handle == nullptr)
+            return true;
+        return _op_local()();
+    }
 
     const void *_address() const noexcept {
-        if (_local)
+        if (is_local())
             return reinterpret_cast<const void *>(&_placehold);
         return reinterpret_cast<const void *>(_placehold[0]);
     }
 
     void *_address() noexcept {
-        if (_local)
+        if (is_local())
             return reinterpret_cast<void *>(&_placehold);
         return reinterpret_cast<void *>(_placehold[0]);
     }
 
     size_t &_size() noexcept {
-        assert(!_local);
+        assert(!is_local() || !*this);
         return _placehold[1];
     }
 
     const size_t &_size() const noexcept {
-        assert(!_local);
+        assert(!is_local() || !*this);
         return _placehold[1];
     }
 
     void *&_addref() noexcept {
-        assert(!_local);
+        assert(!is_local() || !*this);
         return *reinterpret_cast<void **>(_placehold);
     }
 
@@ -358,24 +375,22 @@ struct function<R(Args...)>: _function_base<R> {
 
     void *_alloc(size_t sz) {
         void *p = ::operator new(sz);
-        this->_local = false;
         this->_addref() = p;
         this->_size() = sz;
         return p;
     }
 
     void _dealloc() {
-        if (!_local) {
+        if (!is_local()) {
             void *p = this->_address();
             ::operator delete(p);
-            this->_local = true;
         }
     }
 
     void _copy(const function &other) {
         _op_handle = other._op_handle;
         if (other) {
-            if (other._local) {
+            if (other.is_local()) {
                 _op_copy()(this->_address(), other._address());
             } else {
                 this->_alloc(other._size());
@@ -385,15 +400,14 @@ struct function<R(Args...)>: _function_base<R> {
     }
 
     void _move(function &&other) {
-        _op_handle = other._op_handle;
         if (other) {
-            if (other._local) {
+            if (other.is_local()) {
+                _op_handle = other._op_handle;
                 _op_move()(this->_address(), other._address());
             } else {
-                _local = false;
                 ala::swap(_addref(), other._addref());
                 ala::swap(_size(), other._size());
-                other._local = true;
+                _op_handle = other._op_handle;
             }
             other._op_handle = nullptr;
         }
@@ -483,7 +497,7 @@ struct function<R(Args...)>: _function_base<R> {
     }
 
     void swap(function &other) noexcept {
-        if (!this->_local && !other._local) {
+        if (!this->is_local() && !other.is_local()) {
             ala::swap(this->_addref(), other._addref());
             ala::swap(this->_size(), other._size());
             ala::swap(this->_op_handle, other._op_handle);
