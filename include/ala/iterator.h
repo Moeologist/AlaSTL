@@ -5,11 +5,17 @@
 #include <ala/detail/memory_base.h>
 
 namespace std {
+#if defined(_LIBCPP_ABI_NAMESPACE)
+inline namespace _LIBCPP_ABI_NAMESPACE {
+#endif
 class input_iterator_tag;
 class output_iterator_tag;
 class forward_iterator_tag;
 class bidirectional_iterator_tag;
 class random_access_iterator_tag;
+#if defined(_LIBCPP_ABI_NAMESPACE)
+}
+#endif
 } // namespace std
 
 namespace ala {
