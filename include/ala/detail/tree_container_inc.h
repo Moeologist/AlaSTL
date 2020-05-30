@@ -116,12 +116,8 @@ protected:
 #endif
 
 public:
-#if _ALA_IS_MAP
-    typedef rb_iterator<value_type, typename tree_type::_hdle_t> iterator;
-#else
-    typedef rb_iterator<value_type, typename tree_type::_hdle_t, false> iterator;
-#endif
-    typedef rb_iterator<value_type, typename tree_type::_hdle_t, true> const_iterator;
+    typedef typename tree_type::iterator iterator;
+    typedef typename tree_type::const_iterator const_iterator;
     typedef ala::reverse_iterator<iterator> reverse_iterator;
     typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
 #if _ALA_IS_MAP

@@ -6,21 +6,15 @@
 
 namespace ala {
 
-template<class T>
+template<class Derived>
 struct l_node {
-    T _data;
-    l_node *_pre, *_suc;
+    Derived *_pre = nullptr, *_suc = nullptr;
 };
 
-template<class Data>
-constexpr l_node<Data> *next_node(l_node<Data> *_ptr) {
-    return _ptr->_suc;
-}
-
-template<class Data>
-constexpr l_node<Data> *prev_node(l_node<Data> *_ptr) {
-    return _ptr->_pre;
-}
+template<class T>
+struct l_vnode: l_node<l_vnode<T>> {
+    T _data;
+};
 
 template<class Value, class Ptr, bool IsConst = false>
 struct l_iterator {
@@ -61,7 +55,7 @@ struct l_iterator {
     }
 
     constexpr l_iterator &operator++() {
-        _ptr = next_node(_ptr);
+        _ptr = _ptr->_suc;
         return *this;
     }
 
@@ -72,7 +66,7 @@ struct l_iterator {
     }
 
     constexpr l_iterator &operator--() {
-        _ptr = prev_node(_ptr);
+        _ptr = _ptr->_pre;
         return *this;
     }
 

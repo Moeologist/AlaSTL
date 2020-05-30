@@ -13,8 +13,8 @@ public:
     typedef T value_type;
     typedef value_type &reference;
     typedef const value_type &const_reference;
-    typedef l_iterator<value_type, l_node<value_type> *, false> iterator;
-    typedef l_iterator<value_type, l_node<value_type> *, true> const_iterator;
+    typedef l_iterator<value_type, l_vnode<value_type> *, false> iterator;
+    typedef l_iterator<value_type, l_vnode<value_type> *, true> const_iterator;
     typedef Alloc allocator_type;
     typedef allocator_traits<Alloc> _alloc_traits;
     typedef typename _alloc_traits::size_type size_type;
@@ -27,18 +27,20 @@ public:
                   "allocator::value_type mismatch");
 
 protected:
-    typedef l_node<value_type> _node_t;
-    typedef _node_t *_hdle_t; // node handle type
-    _hdle_t _guard = nullptr;
+    typedef l_vnode<value_type> _node_t;
+    typedef _node_t *_hdle_t;
+    l_node<_node_t> _guard[2];
     size_type _size = 0;
     allocator_type _alloc;
 
     _hdle_t head() {
-        return _guard;
+        l_node<_node_t> *p = _guard;
+        return static_cast<_hdle_t>(p);
     }
 
     _hdle_t tail() {
-        return _guard + 1;
+        l_node<_node_t> *p = _guard;
+        return static_cast<_hdle_t>(p + 1);
     }
 
     void link(_hdle_t a, _hdle_t b) {
@@ -93,10 +95,7 @@ protected:
     }
 
     void initialize() {
-        _guard = _alloc_traits::template allocate_object<_node_t>(_alloc, 2);
-        head()->_pre = nullptr;
         link(head(), tail());
-        tail()->_suc = nullptr;
     };
 
     template<class... Args>
@@ -200,7 +199,6 @@ public:
 
     ~list() {
         clear();
-        //FIXME deinie guard
     }
 
 protected:
@@ -266,8 +264,14 @@ public:
 
     void swap(list &other) noexcept(_alloc_traits::is_always_equal::value) {
         this->swap_helper(other);
-        ala::swap(_guard, other._guard);
-        ala::swap(_size, other._size);
+        size_type n = _size;
+        _hdle_t bgn = head()->_suc;
+        _hdle_t end = tail()->_pre;
+        if (n != 0)
+            this->detach_range(bgn, end, n);
+        this->possess(ala::move(other));
+        if (n != 0)
+            other.attach_range(other.tail(), bgn, end, n);
     }
 
     template<class InputIter>
@@ -624,23 +628,13 @@ protected:
         return first;
     }
 
-    iterator middle(iterator first, iterator last) {
-        iterator tmp = last++;
-        for (iterator _guard = first; _guard != tmp && _guard != last;
-             ++first, ++++_guard)
-            ;
-        return first;
-    }
-
     template<class Compare>
-    iterator sort_range(iterator first, iterator last, Compare comp) {
-        iterator tmp = first++;
-        if (tmp == last || first == last)
-            return tmp;
-        first = tmp;
-        iterator mid = middle(first, last);
-        first = sort_range(first, mid, comp);
-        mid = sort_range(mid, last, comp);
+    iterator sort_range(iterator first, iterator last, Compare comp, size_type n) {
+        if (n < 2)
+            return first;
+        iterator mid = ala::next(first, n >> 1);
+        first = sort_range(first, mid, comp, n >> 1);
+        mid = sort_range(mid, last, comp, n - (n >> 1));
         return merge_range(first, mid, last, comp);
     }
 
@@ -661,7 +655,7 @@ public:
 
     template<class Compare>
     void merge(list &&other, Compare comp) {
-        this.merge(other, comp);
+        this->merge(other, comp);
     }
 
     void sort() {
@@ -670,7 +664,7 @@ public:
 
     template<class Compare>
     void sort(Compare comp) {
-        this->sort_range(begin(), end(), comp);
+        this->sort_range(begin(), end(), comp, size());
     }
 
     void reverse() noexcept {

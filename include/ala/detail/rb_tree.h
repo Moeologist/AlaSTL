@@ -8,38 +8,40 @@
 #include <ala/detail/macro.h>
 #include <ala/iterator.h>
 
-#define ALA_RED true
-#define ALA_BLACK false
-
-#define ALA_RGHT true
-#define ALA_LEFT false
-
 namespace ala {
 
-template<class Data>
+enum class Color : bool { Black, Red };
+enum class Dir : bool { Left, Right };
+
+template<class Derived>
 struct rb_node {
-    Data _data;
-    rb_node *_left, *_rght, *_parent;
-    bool _color, _is_nil, _nflag;
+    Derived *_left = nullptr, *_rght = nullptr, *_parent = nullptr;
+    Color _color = Color::Black;
+    bool _is_nil = true;
 };
 
-template<class Data>
-constexpr bool is_black(rb_node<Data> *node) {
-    return node == nullptr || !node->_color;
+template<class T>
+struct rb_vnode: rb_node<rb_vnode<T>> {
+    T _data;
+};
+
+template<class T>
+constexpr bool is_black(rb_vnode<T> *node) {
+    return node == nullptr || (node->_color == Color::Black);
 }
 
-template<class Data>
-constexpr bool is_red(rb_node<Data> *node) {
-    return node != nullptr && node->_color;
+template<class T>
+constexpr bool is_red(rb_vnode<T> *node) {
+    return node != nullptr && (node->_color == Color::Red);
 }
 
-template<class Data>
-constexpr bool is_nil(rb_node<Data> *node) {
+template<class T>
+constexpr bool is_nil(rb_vnode<T> *node) {
     return node == nullptr || node->_is_nil;
 }
 
-template<class Data>
-constexpr rb_node<Data> *left_leaf(rb_node<Data> *node) {
+template<class T>
+constexpr rb_vnode<T> *left_leaf(rb_vnode<T> *node) {
     if (is_nil(node))
         return node;
     while (!is_nil(node->_left))
@@ -47,8 +49,8 @@ constexpr rb_node<Data> *left_leaf(rb_node<Data> *node) {
     return node;
 }
 
-template<class Data>
-constexpr rb_node<Data> *rght_leaf(rb_node<Data> *node) {
+template<class T>
+constexpr rb_vnode<T> *rght_leaf(rb_vnode<T> *node) {
     if (is_nil(node))
         return node;
     while (!is_nil(node->_rght))
@@ -56,11 +58,9 @@ constexpr rb_node<Data> *rght_leaf(rb_node<Data> *node) {
     return node;
 }
 
-template<class Data>
-constexpr rb_node<Data> *next_node(rb_node<Data> *_ptr) {
-    if (_ptr->_is_nil)
-        return _ptr->_nflag ? _ptr : _ptr->_parent;
-    else if (_ptr->_rght != nullptr)
+template<class T>
+constexpr rb_vnode<T> *next_node(rb_vnode<T> *_ptr) {
+    if (_ptr->_rght != nullptr)
         return left_leaf(_ptr->_rght);
     else {
         while (true) {
@@ -74,11 +74,9 @@ constexpr rb_node<Data> *next_node(rb_node<Data> *_ptr) {
     }
 }
 
-template<class Data>
-constexpr rb_node<Data> *prev_node(rb_node<Data> *_ptr) {
-    if (_ptr->_is_nil)
-        return !_ptr->_nflag ? _ptr : _ptr->_parent;
-    else if (_ptr->_left != nullptr)
+template<class T>
+constexpr rb_vnode<T> *prev_node(rb_vnode<T> *_ptr) {
+    if (_ptr->_left != nullptr)
         return rght_leaf(_ptr->_left);
     else {
         while (true) {
@@ -165,36 +163,38 @@ protected:
     Ptr _ptr = nullptr;
 };
 
-template<class Data, class Comp, class Alloc, bool IsMap, bool IsUniq>
+template<class Value, class Comp, class Alloc, bool IsMap, bool IsUniq>
 class rb_tree {
 public:
-    typedef Data value_type;
+    typedef Value value_type;
     typedef Comp value_compare;
     typedef Alloc allocator_type;
-    typedef rb_node<Data> _node_t;
+    typedef rb_vnode<value_type> _node_t;
     typedef allocator_traits<allocator_type> _alloc_traits;
     typedef typename _alloc_traits::size_type size_type;
     typedef _node_t *_hdle_t;
-    static constexpr bool is_uniq = IsUniq;
+    typedef rb_iterator<value_type, _hdle_t, false> iterator;
+    typedef rb_iterator<value_type, _hdle_t, true> const_iterator;
 
 protected:
     template<class, class, class, bool, bool>
     friend class rb_tree;
 
     _hdle_t _root = nullptr;
-    _hdle_t _guard = nullptr;
+    rb_node<_node_t> _guard[2];
 
     size_type _size = 0;
     allocator_type _alloc;
-    allocator_type _galloc = _alloc;
     value_compare _comp;
 
-    _hdle_t left_nil() const noexcept {
-        return _guard;
+    _hdle_t left_nil() noexcept {
+        rb_node<_node_t> *p = _guard;
+        return static_cast<_hdle_t>(p);
     }
 
-    _hdle_t rght_nil() const noexcept {
-        return _guard + 1;
+    _hdle_t rght_nil() noexcept {
+        rb_node<_node_t> *p = _guard;
+        return static_cast<_hdle_t>(p + 1);
     }
 
     template<typename T>
@@ -317,7 +317,6 @@ public:
 
     ~rb_tree() {
         clear();
-        deinitialize();
     }
 
 protected:
@@ -370,11 +369,11 @@ public:
     }
 
     _hdle_t begin() const noexcept {
-        return left_nil()->_parent;
+        return const_cast<rb_tree *>(this)->left_nil()->_parent;
     }
 
     _hdle_t end() const noexcept {
-        return rght_nil();
+        return const_cast<rb_tree *>(this)->rght_nil();
     }
 
     void clear() {
@@ -437,7 +436,7 @@ public:
     struct locate_states {
         _hdle_t postion;
         bool found;
-        bool lr;
+        Dir lr;
     };
 
     template<class RBTree>
@@ -447,8 +446,8 @@ public:
         for (auto i = src.begin(); i != src.end(); i = next) {
             next = next_node(i);
             locate_states ls = this->locate(nullptr, src._key(i->_data));
-            if (!ls.found || !is_uniq)
-                this->attach_to(ls, src.detach(i));
+            if (!ls.found || !IsUniq)
+                this->attach(ls, src.detach(i));
         }
     }
 
@@ -483,7 +482,7 @@ public:
 
     template<class K>
     _hdle_t find_helper(const K &k, _hdle_t root) const {
-        if (is_uniq)
+        if (IsUniq)
             return this->traverse(k, root, [&](bool exist, _hdle_t cur) {
                 return exist ? cur : end();
             });
@@ -529,10 +528,10 @@ public:
         if (is_nil(p))
             return pair<_hdle_t, bool>(end(), false);
         locate_states ls = locate(hint, this->_key(p->_data));
-        if (is_uniq && ls.found) {
+        if (IsUniq && ls.found) {
             return pair<_hdle_t, bool>(ls.postion, false);
         } else {
-            attach_to(ls, p);
+            attach(ls, p);
             return pair<_hdle_t, bool>(p, true);
         }
     }
@@ -542,8 +541,8 @@ public:
 
     template<class K, class M>
     struct _is_km_emp_helper<true, K, M>
-        : _and_<is_same<remove_cvref_t<K>, remove_cvref_t<typename _is_pair<Data>::key>>> {
-    };
+        : _and_<is_same<remove_cvref_t<K>,
+                        remove_cvref_t<typename _is_pair<value_type>::key>>> {};
 
     template<class... Ts>
     struct _is_km_emp: false_type {};
@@ -568,7 +567,7 @@ public:
             return pair<_hdle_t, bool>(ls.postion, false);
         } else {
             _hdle_t node = construct_node(ala::forward<K>(k), ala::forward<M>(m));
-            attach_to(ls, node);
+            attach(ls, node);
             return pair<_hdle_t, bool>(node, true);
         }
     }
@@ -579,11 +578,11 @@ public:
     emplace(_hdle_t hint, Args &&... args) {
         _hdle_t node = construct_node(ala::forward<Args>(args)...);
         locate_states ls = locate(hint, this->_key(node->_data));
-        if (is_uniq && ls.found) {
+        if (IsUniq && ls.found) {
             destruct_node(node);
             return pair<_hdle_t, bool>(ls.postion, false);
         } else {
-            attach_to(ls, node);
+            attach(ls, node);
             return pair<_hdle_t, bool>(node, true);
         }
     }
@@ -608,11 +607,11 @@ public:
     template<class K, class... Args>
     pair<_hdle_t, bool> emplace_k(const K &k, _hdle_t hint, Args &&... args) {
         locate_states ls = locate(hint, k);
-        if (is_uniq && ls.found) {
+        if (IsUniq && ls.found) {
             return pair<_hdle_t, bool>(ls.postion, false);
         } else {
             _hdle_t node = construct_node(ala::forward<Args>(args)...);
-            attach_to(ls, node);
+            attach(ls, node);
             return pair<_hdle_t, bool>(node, true);
         }
     }
@@ -620,7 +619,7 @@ public:
     template<class K>
     locate_states check_hint(_hdle_t hint, const K &k) {
         if (hint == nullptr || !is_nil(hint->_left) || size() == 0)
-            return locate_states{nullptr, false, ALA_LEFT};
+            return locate_states{nullptr, false, Dir::Left};
         _hdle_t prev = prev_node(hint);
         bool p = !is_nil(prev), h = !is_nil(hint);
         bool kh = false, hk = false, kp = false, pk = false;
@@ -628,27 +627,27 @@ public:
             kh = this->kcmp(k, this->_key(hint->_data));
             hk = this->kcmp(this->_key(hint->_data), k);
             if (!kh && !hk)
-                return locate_states{hint, true, ALA_LEFT};
+                return locate_states{hint, true, Dir::Left};
         }
         if (p) {
             pk = this->kcmp(this->_key(prev->_data), k);
             kp = this->kcmp(k, this->_key(prev->_data));
             if (h && pk && kh)
-                return locate_states{hint, false, ALA_LEFT};
+                return locate_states{hint, false, Dir::Left};
             else if (!h && !pk && !kp)
-                return locate_states{prev, true, ALA_RGHT};
+                return locate_states{prev, true, Dir::Right};
             else if (!h && !kp)
-                return locate_states{prev, false, ALA_RGHT};
+                return locate_states{prev, false, Dir::Right};
         } else if (kh)
-            return locate_states{hint, false, ALA_LEFT};
-        return locate_states{nullptr, false, ALA_LEFT};
+            return locate_states{hint, false, Dir::Left};
+        return locate_states{nullptr, false, Dir::Left};
     }
 
     template<class K>
     locate_states locate(_hdle_t hint, const K &k) {
         _hdle_t guard = _root, current = nullptr;
         bool found = false;
-        bool lr = ALA_LEFT;
+        Dir lr = Dir::Left;
         locate_states checked = check_hint(hint, k);
         if (checked.postion != nullptr)
             return checked;
@@ -657,15 +656,15 @@ public:
             const auto &ck = this->_key(current->_data);
             if (this->kcmp(k, ck)) {
                 guard = guard->_left;
-                lr = ALA_LEFT;
+                lr = Dir::Left;
             } else if (this->kcmp(ck, k)) {
                 guard = guard->_rght;
-                lr = ALA_RGHT;
+                lr = Dir::Right;
             } else {
                 found = true;
-                if (is_uniq)
+                if (IsUniq)
                     break;
-                lr = ALA_RGHT;
+                lr = Dir::Right;
                 guard = guard->_rght;
             }
         }
@@ -741,24 +740,11 @@ protected:
     }
 
     void initialize() {
-        _guard = _alloc_traits::template allocate_object<_node_t>(_galloc, 2);
-        left_nil()->_is_nil = true;
         left_nil()->_parent = rght_nil();
-        left_nil()->_color = ALA_BLACK;
-        left_nil()->_nflag = ALA_LEFT;
-        left_nil()->_left = nullptr;
-        left_nil()->_rght = nullptr;
-        rght_nil()->_is_nil = true;
+        left_nil()->_rght = rght_nil();
         rght_nil()->_parent = left_nil();
-        rght_nil()->_color = ALA_BLACK;
-        rght_nil()->_nflag = ALA_RGHT;
-        rght_nil()->_left = nullptr;
-        rght_nil()->_rght = nullptr;
-    }
-
-    void deinitialize() {
-        _alloc_traits::template deallocate_object<_node_t>(_galloc, left_nil(),
-                                                           2);
+        rght_nil()->_left = left_nil();
+        _root = nullptr;
     }
 
     // rotate
@@ -821,8 +807,7 @@ protected:
 
     void fix_nil() noexcept {
         if (_root == nullptr) {
-            left_nil()->_parent = rght_nil();
-            rght_nil()->_parent = left_nil();
+            initialize();
         } else {
             _hdle_t lleaf = left_leaf(_root);
             _hdle_t rleaf = rght_leaf(_root);
@@ -830,20 +815,22 @@ protected:
             rleaf->_rght = rght_nil();
             left_nil()->_parent = lleaf;
             rght_nil()->_parent = rleaf;
+            left_nil()->_rght = rght_nil()->_left = nullptr;
         }
     }
 
-    void attach_to(locate_states states, _hdle_t p) noexcept {
+    void attach(locate_states states, _hdle_t p) noexcept {
         _hdle_t pos = states.postion;
-        p->_color = ALA_RED;
+        p->_color = Color::Red;
         p->_left = p->_rght = nullptr;
         p->_parent = pos;
         if (pos == nullptr) { // empty tree
             _root = p;
             left_nil()->_parent = rght_nil()->_parent = p;
+            left_nil()->_rght = rght_nil()->_left = nullptr;
             p->_left = left_nil();
             p->_rght = rght_nil();
-        } else if (states.lr == ALA_LEFT) {
+        } else if (states.lr == Dir::Left) {
             if (pos->_left == left_nil()) { // fix nil
                 p->_left = left_nil();
                 left_nil()->_parent = p;
@@ -880,37 +867,37 @@ protected:
             if (parent == grandp->_left) { // see graph
                 uncle = grandp->_rght;
                 if (is_red(uncle)) {
-                    parent->_color = uncle->_color = ALA_BLACK;
-                    grandp->_color = ALA_RED;
+                    parent->_color = uncle->_color = Color::Black;
+                    grandp->_color = Color::Red;
                     current = grandp;
                 } else {
                     if (parent->_rght == current)
                         parent = rotate_left(current = parent);
-                    parent->_color = ALA_BLACK;
-                    grandp->_color = ALA_RED;
+                    parent->_color = Color::Black;
+                    grandp->_color = Color::Red;
                     rotate_rght(grandp);
                 }
             } else { // symmetrical
                 uncle = grandp->_left;
                 if (is_red(uncle)) {
-                    parent->_color = uncle->_color = ALA_BLACK;
-                    grandp->_color = ALA_RED;
+                    parent->_color = uncle->_color = Color::Black;
+                    grandp->_color = Color::Red;
                     current = grandp;
                 } else {
                     if (parent->_left == current)
                         parent = rotate_rght(current = parent);
-                    parent->_color = ALA_BLACK;
-                    grandp->_color = ALA_RED;
+                    parent->_color = Color::Black;
+                    grandp->_color = Color::Red;
                     rotate_left(grandp);
                 }
             }
         }
-        _root->_color = ALA_BLACK;
+        _root->_color = Color::Black;
     }
 
     _hdle_t detach(_hdle_t current) noexcept {
         _hdle_t child, parent, subs, fix = nullptr;
-        bool color;
+        Color color;
         if (is_nil(current->_left)) {
             color = current->_color;
             child = current->_rght;
@@ -942,7 +929,7 @@ protected:
             fix = subs;
         }
         --_size;
-        if (_root != nullptr && color == ALA_BLACK)
+        if (_root != nullptr && color == Color::Black)
             rebalance_for_detach(child, parent);
         if (fix)
             fix_nil_detach(current, fix);
@@ -965,56 +952,56 @@ protected:
             if (parent->_left == current) {
                 brother = parent->_rght;
                 assert(!is_nil(brother));
-                if (brother->_color == ALA_RED) {
-                    brother->_color = ALA_BLACK;
-                    parent->_color = ALA_RED;
+                if (brother->_color == Color::Red) {
+                    brother->_color = Color::Black;
+                    parent->_color = Color::Red;
                     rotate_left(parent);
                     brother = parent->_rght;
                 }
                 if (is_black(brother->_left) && is_black(brother->_rght)) {
-                    brother->_color = ALA_RED;
+                    brother->_color = Color::Red;
                     current = parent;
                     parent = current->_parent;
                 } else {
                     if (is_black(brother->_rght)) {
                         if (!is_nil(brother->_left))
-                            brother->_left->_color = ALA_BLACK;
-                        brother->_color = ALA_RED;
+                            brother->_left->_color = Color::Black;
+                        brother->_color = Color::Red;
                         rotate_rght(brother);
                         brother = parent->_rght;
                     }
                     brother->_color = parent->_color;
-                    parent->_color = ALA_BLACK;
+                    parent->_color = Color::Black;
                     if (!is_nil(brother->_rght))
-                        brother->_rght->_color = ALA_BLACK;
+                        brother->_rght->_color = Color::Black;
                     rotate_left(parent);
                     current = _root; // make root black
                     break;
                 }
             } else {
                 brother = parent->_left;
-                if (brother->_color == ALA_RED) {
-                    brother->_color = ALA_BLACK;
-                    parent->_color = ALA_RED;
+                if (brother->_color == Color::Red) {
+                    brother->_color = Color::Black;
+                    parent->_color = Color::Red;
                     rotate_rght(parent);
                     brother = parent->_left;
                 }
                 if (is_black(brother->_left) && is_black(brother->_rght)) {
-                    brother->_color = ALA_RED;
+                    brother->_color = Color::Red;
                     current = parent;
                     parent = current->_parent;
                 } else {
                     if (is_black(brother->_left)) {
                         if (!is_nil(brother->_rght))
-                            brother->_rght->_color = ALA_BLACK;
-                        brother->_color = ALA_RED;
+                            brother->_rght->_color = Color::Black;
+                        brother->_color = Color::Red;
                         rotate_left(brother);
                         brother = parent->_left;
                     }
                     brother->_color = parent->_color;
-                    parent->_color = ALA_BLACK;
+                    parent->_color = Color::Black;
                     if (!is_nil(brother->_left))
-                        brother->_left->_color = ALA_BLACK;
+                        brother->_left->_color = Color::Black;
                     rotate_rght(parent);
                     current = _root;
                     break;
@@ -1022,15 +1009,13 @@ protected:
             }
         }
         if (!is_nil(current))
-            current->_color = ALA_BLACK;
+            current->_color = Color::Black;
     }
 
     void fix_nil_detach(_hdle_t current, _hdle_t subs) noexcept {
         if (current->_left == left_nil()) {
             if (current->_rght == rght_nil()) {
-                left_nil()->_parent = rght_nil();
-                rght_nil()->_parent = left_nil();
-                _root = nullptr;
+                initialize();
             } else {
                 subs->_left = left_nil();
                 left_nil()->_parent = subs;
@@ -1043,10 +1028,5 @@ protected:
 }; // namespace ala
 
 } // namespace ala
-
-#undef ALA_RED
-#undef ALA_BLACK
-#undef ALA_RGHT
-#undef ALA_LEFT
 
 #endif // HEAD
