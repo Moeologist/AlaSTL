@@ -1,0 +1,537 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+  <Type Name="ala::pair&lt;*&gt;">
+    <DisplayString>({first}, {second})</DisplayString>
+    <Expand>
+      <Item Name="first">first</Item>
+      <Item Name="second">second</Item>
+    </Expand>
+  </Type>
+
+
+  <Type Name="ala::tuple&lt;&gt;">
+    <DisplayString></DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::tuple&lt;*&gt;">
+    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <Expand>
+      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::tuple&lt;*,*&gt;">
+    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <Expand>
+      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::tuple&lt;*,*,*&gt;">
+    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <Expand>
+      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::tuple&lt;*,*,*,*&gt;">
+    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <Expand>
+      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[3]">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::tuple&lt;*,*,*,*,*&gt;">
+    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <Expand>
+      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[3]">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[4]">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::tuple&lt;*,*,*,*,*,*&gt;">
+    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <Expand>
+      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[3]">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[4]">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[5]">((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::tuple&lt;*,*,*,*,*,*,*&gt;">
+    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <Expand>
+      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[3]">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[4]">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[5]">((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[6]">((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::tuple&lt;*,*,*,*,*,*,*,*&gt;">
+    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <Expand>
+      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[3]">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[4]">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[5]">((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[6]">((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[7]">((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::tuple&lt;*,*,*,*,*,*,*,*,*&gt;">
+    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;8,$T9,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <Expand>
+      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[3]">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[4]">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[5]">((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[6]">((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[7]">((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[8]">((ala::_tuple_base&lt;8,$T9,0&gt;*) &amp;_impl)->value</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::tuple&lt;*,*,*,*,*,*,*,*,*,*&gt;">
+    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;8,$T9,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;9,$T10,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <Expand>
+      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[3]">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[4]">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[5]">((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[6]">((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[7]">((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[8]">((ala::_tuple_base&lt;8,$T9,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[9]">((ala::_tuple_base&lt;9,$T10,0&gt;*) &amp;_impl)->value</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::nullopt_t">
+    <DisplayString>nullopt</DisplayString>
+  </Type>
+
+  <Type Name="ala::optional&lt;*&gt;">
+    <Intrinsic Name="has_value" Expression="_valid" />
+    <Intrinsic Name="value" Expression="_value" />
+    <DisplayString Condition="!has_value()">nullopt</DisplayString>
+    <DisplayString Condition="has_value()">{value()}</DisplayString>
+    <Expand>
+      <Item Condition="has_value()" Name="value">value()</Item>
+    </Expand>
+  </Type>
+
+  <!-- VC 2015 -->
+  <Type Name="ala::reference_wrapper&lt;*&gt;">
+    <DisplayString>{*_ptr}</DisplayString>
+    <Expand>
+      <Item Name="[ptr]">_ptr</Item>
+    </Expand>
+  </Type>
+
+
+  <Type Name="ala::plus&lt;void&gt;">
+    <DisplayString>plus&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::minus&lt;void&gt;">
+    <DisplayString>minus&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::multiplies&lt;void&gt;">
+    <DisplayString>multiplies&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::divides&lt;void&gt;">
+    <DisplayString>divides&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::modulus&lt;void&gt;">
+    <DisplayString>modulus&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::negate&lt;void&gt;">
+    <DisplayString>negate&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::equal_to&lt;void&gt;">
+    <DisplayString>equal_to&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::not_equal_to&lt;void&gt;">
+    <DisplayString>not_equal_to&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::greater&lt;void&gt;">
+    <DisplayString>greater&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::less&lt;void&gt;">
+    <DisplayString>less&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::greater_equal&lt;void&gt;">
+    <DisplayString>greater_equal&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::less_equal&lt;void&gt;">
+    <DisplayString>less_equal&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::logical_and&lt;void&gt;">
+    <DisplayString>logical_and&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::logical_or&lt;void&gt;">
+    <DisplayString>logical_or&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::logical_not&lt;void&gt;">
+    <DisplayString>logical_not&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::bit_and&lt;void&gt;">
+    <DisplayString>bit_and&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::bit_or&lt;void&gt;">
+    <DisplayString>bit_or&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::bit_xor&lt;void&gt;">
+    <DisplayString>bit_xor&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+  <Type Name="ala::bit_not&lt;void&gt;">
+    <DisplayString>bit_not&lt;&gt;</DisplayString>
+    <Expand />
+  </Type>
+
+
+  <Type Name="ala::plus&lt;*&gt;">
+    <DisplayString>plus</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::minus&lt;*&gt;">
+    <DisplayString>minus</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::multiplies&lt;*&gt;">
+    <DisplayString>multiplies</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::divides&lt;*&gt;">
+    <DisplayString>divides</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::modulus&lt;*&gt;">
+    <DisplayString>modulus</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::negate&lt;*&gt;">
+    <DisplayString>negate</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::equal_to&lt;*&gt;">
+    <DisplayString>equal_to</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::not_equal_to&lt;*&gt;">
+    <DisplayString>not_equal_to</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::greater&lt;*&gt;">
+    <DisplayString>greater</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::less&lt;*&gt;">
+    <DisplayString>less</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::greater_equal&lt;*&gt;">
+    <DisplayString>greater_equal</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::less_equal&lt;*&gt;">
+    <DisplayString>less_equal</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::logical_and&lt;*&gt;">
+    <DisplayString>logical_and</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::logical_or&lt;*&gt;">
+    <DisplayString>logical_or</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::logical_not&lt;*&gt;">
+    <DisplayString>logical_not</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::bit_and&lt;*&gt;">
+    <DisplayString>bit_and</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::bit_or&lt;*&gt;">
+    <DisplayString>bit_or</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::bit_xor&lt;*&gt;">
+    <DisplayString>bit_xor</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::bit_not&lt;*&gt;">
+    <DisplayString>bit_not</DisplayString>
+    <Expand />
+  </Type>
+
+  <Type Name="ala::_bind_t&lt;*&gt;">
+    <DisplayString>bind({_tuple})</DisplayString>
+    <Expand>
+      <ExpandedItem>_tuple</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::_bind_front_t&lt;*&gt;">
+    <DisplayString>bind_front({_tuple})</DisplayString>
+    <Expand>
+      <ExpandedItem>_tuple</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::_not_fn_t&lt;*&gt;">
+    <DisplayString>{_fn}</DisplayString>
+    <Expand>
+      <Item Name="[functor]">_fn</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::function&lt;*&gt;">
+    <DisplayString Condition="_op_handle == 0">empty</DisplayString>
+    <DisplayString Condition="_op_handle != 0">{_op_handle,na}</DisplayString>
+    <Expand>
+      <Item Name="[handle]" Condition="_op_handle != 0">_op_handle,na</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::array&lt;*,*&gt;">
+    <DisplayString>{{ size={$T2} }}</DisplayString>
+    <Expand>
+      <ArrayItems>
+        <Size>$T2</Size>
+        <ValuePointer>_data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::list&lt;*&gt;">
+    <DisplayString>{{ size={_size} }}</DisplayString>
+    <Expand>
+      <Item Name="[allocator]" ExcludeView="simple">_alloc</Item>
+      <LinkedListItems>
+        <Size>_size</Size>
+        <HeadPointer>_guard-&gt;_suc</HeadPointer>
+        <NextPointer>_suc</NextPointer>
+        <ValueNode>_data</ValueNode>
+      </LinkedListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::l_vnode&lt;*&gt;" IncludeView="LIterHelper">
+    <DisplayString Condition="_pre != 0 &amp;&amp; _suc != 0">{{ value={_data} }}</DisplayString>
+    <DisplayString Condition="_pre == 0">rend</DisplayString>
+    <DisplayString Condition="_suc == 0">end</DisplayString>
+    <Expand>
+      <Item Name="[prev]" Condition="_pre != 0">_pre,view(LIterHelper)</Item>
+      <Item Name="[next]" Condition="_suc != 0">_suc,view(LIterHelper)</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::l_iterator&lt;*&gt;">
+    <SmartPointer Usage="Minimal">_ptr,view(LIterHelper)</SmartPointer>
+  </Type>
+
+  <Type Name="ala::vector&lt;*&gt;">
+    <Intrinsic Name="size" Expression="_size" />
+    <Intrinsic Name="capacity" Expression="_capacity" />
+    <DisplayString>{{ size={size()} capacity={capacity()} }}</DisplayString>
+    <Expand>
+      <Item Name="[allocator]" ExcludeView="simple">_alloc</Item>
+      <ArrayItems>
+        <Size>size()</Size>
+        <ValuePointer>_data</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::map&lt;*&gt;" Priority="Medium">
+    <AlternativeType Name="ala::multimap&lt;*&gt;" />
+    <AlternativeType Name="ala::set&lt;*&gt;" />
+    <AlternativeType Name="ala::multiset&lt;*&gt;" />
+    <DisplayString>{{ size={tree._size} }}</DisplayString>
+    <Expand>
+      <Item Name="[comparator]" ExcludeView="simple">tree._comp</Item>
+      <Item Name="[allocator]" ExcludeView="simple">tree._alloc</Item>
+      <TreeItems>
+        <Size>tree._size</Size>
+        <HeadPointer>tree._root</HeadPointer>
+        <LeftPointer>_left</LeftPointer>
+        <RightPointer>_rght</RightPointer>
+        <ValueNode Condition="_is_nil == 0">_data</ValueNode>
+      </TreeItems>
+    </Expand>
+  </Type>
+
+  <!-- Starting in VS 2015, Update 2, we added a new visualization for ala::map that shows the key in the name column,
+       and the value in the value column.  If desired, the "ShowElementsByIndex" view can be used to fall back to the prior
+       behavior and show the index in the name column and the key-value pair in the value column. -->
+  <Type Name="ala::map&lt;*&gt;" ExcludeView="ShowElementsByIndex" Priority="MediumHigh">
+    <AlternativeType Name="ala::multimap&lt;*&gt;" />
+    <DisplayString>{{ size={tree._size} }}</DisplayString>
+    <Expand>
+      <Item Name="[comparator]" ExcludeView="simple">tree._comp</Item>
+      <Item Name="[allocator]" ExcludeView="simple">tree._alloc</Item>
+      <TreeItems>
+        <Size>tree._size</Size>
+        <HeadPointer>tree._root</HeadPointer>
+        <LeftPointer>_left</LeftPointer>
+        <RightPointer>_rght</RightPointer>
+        <ValueNode Condition="!_is_nil" Name="[{_data.first}]">_data,view(MapHelper)</ValueNode>
+      </TreeItems>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::pair&lt;*, *&gt;" IncludeView="MapHelper">
+    <DisplayString>{second}</DisplayString>
+  </Type>
+
+  <Type Name="ala::rb_vnode&lt;*&gt;" ExcludeView="RBIterHelper">
+    <DisplayString Condition="!_is_nil">{{ value={_data} }</DisplayString>
+    <Expand>
+      <ExpandedItem>*(ala::rb_node&lt;ala::rb_vnode&lt;$T1&gt; &gt; *)this,nd</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::rb_vnode&lt;*&gt;" IncludeView="RBIterHelper">
+    <DisplayString Condition="!_is_nil">{{ value={_data} }</DisplayString>
+    <DisplayString Condition="_is_nil &amp;&amp; this->_parent->_rght == this">end</DisplayString>
+    <DisplayString Condition="_is_nil &amp;&amp; this->_parent->_left == this">rend</DisplayString>
+    <Expand>
+      <CustomListItems MaxItemsPerView="5000" Condition="!_is_nil">
+        <Variable Name="p" InitialValue="this" />
+        <Size>1</Size>
+        <If Condition="p->_left != 0">
+          <Exec>p = p->_left</Exec>
+          <Loop>
+            <Break Condition="p->_rght == 0" />
+            <Break Condition="p->_rght->_is_nil" />
+            <Exec>p = p->_rght</Exec>
+          </Loop>
+          <Item Name="[prev]">p,view(RBIterHelper)</Item>
+        </If>
+        <If Condition="p->_left == 0">
+          <Loop>
+            <If Condition="p->_parent->_rght == p">
+              <Exec>p = p->_parent</Exec>
+              <Break />
+            </If>
+            <Exec>p = p->_parent</Exec>
+          </Loop>
+          <Item Name="[prev]">p,view(RBIterHelper)</Item>
+        </If>
+      </CustomListItems>
+      <CustomListItems MaxItemsPerView="5000" Condition="!_is_nil">
+        <Variable Name="p" InitialValue="this" />
+        <Size>1</Size>
+        <If Condition="p->_rght != 0">
+          <Exec>p = p->_rght</Exec>
+          <Loop>
+            <Break Condition="p->_left == 0" />
+            <Break Condition="p->_left->_is_nil" />
+            <Exec>p = p->_left</Exec>
+          </Loop>
+          <Item Name="[next]">p,view(RBIterHelper)</Item>
+        </If>
+        <If Condition="p->_rght == 0">
+          <Loop>
+            <If Condition="p->_parent->_left == p">
+              <Exec>p = p->_parent</Exec>
+              <Break />
+            </If>
+            <Exec>p = p->_parent</Exec>
+          </Loop>
+          <Item Name="[next]">p,view(RBIterHelper)</Item>
+        </If>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::rb_iterator&lt;*&gt;">
+    <SmartPointer Usage="Minimal">_ptr,view(RBIterHelper)</SmartPointer>
+  </Type>
+
+  <Type Name="ala::reverse_iterator&lt;*&gt;" Priority="Medium">
+    <DisplayString>reverse_iterator {{ base()={current,na} }}</DisplayString>
+    <Expand>
+      <Item Name="base()">current,na</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::reverse_iterator&lt;*&gt;" Priority="MediumHigh">
+    <SmartPointer Usage="Minimal">current - 1</SmartPointer>
+    <DisplayString>reverse_iterator {{ value={current[-1]} }}</DisplayString>
+    <Expand>
+      <ExpandedItem>current - 1</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::move_iterator&lt;*&gt;">
+    <DisplayString>move_iterator {{ base()={current,na} }}</DisplayString>
+    <Expand>
+      <ExpandedItem>current,na</ExpandedItem>
+    </Expand>
+  </Type>
+
+</AutoVisualizer>
