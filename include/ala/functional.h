@@ -95,19 +95,25 @@ const _placeholder_t<10> _10;
 } // namespace placeholders
 
 template<class T>
-struct is_placeholder: integral_constant<int, 0> {};
+struct _is_placeholder_helper: integral_constant<int, 0> {};
 
 template<int N>
-struct is_placeholder<_placeholder_t<N>>: integral_constant<int, N> {};
+struct _is_placeholder_helper<_placeholder_t<N>>: integral_constant<int, N> {};
+
+template<class T>
+struct is_placeholder: _is_placeholder_helper<remove_cv_t<T>> {};
 
 template<class R, class Fn, class... Args>
 struct _bind_t;
 
 template<class T>
-struct is_bind_expression: false_type {};
+struct _is_bind_expression_helper: false_type {};
 
 template<class... Ts>
-struct is_bind_expression<_bind_t<Ts...>>: true_type {};
+struct _is_bind_expression_helper<_bind_t<Ts...>>: true_type {};
+
+template<class T>
+struct is_bind_expression: _is_bind_expression_helper<remove_cv_t<T>> {};
 
 #if _ALA_ENABLE_INLINE_VAR
 template<class T>
@@ -128,67 +134,96 @@ struct _function_base {
 template<>
 struct _function_base<_unknown_result> {};
 
+template<class...>
+struct Fucker;
+
+template<auto...>
+struct FuckerV;
+
+#define DEFER_1(x, y) x##y
+#define DEFER_2(x, y) DEFER_1(x, y)
+#define DEFER_3(x) DEFER_2(x, __COUNTER__)
+
+#define FUCK(x) Fucker<decltype(x)> DEFER_3(fuck)
+#define FUCT(x) Fucker<x> DEFER_3(fuck)
+#define FUCV(x) FuckerV<x> DEFER_3(fuck)
+
 template<class R, class Fn, class... Args>
 struct _bind_t: _function_base<R> {
     typedef tuple<decay_t<Fn>, decay_t<Args>...> _tuple_t;
     _tuple_t _tuple;
 
-    template<class Tuple, class T,
-             class = enable_if_t<!is_bind_expression<remove_cvref_t<T>>::value>>
+    template<class Tuple, class T, class T1 = remove_reference_t<T>,
+             class = enable_if_t<!is_bind_expression<T1>::value &&
+                                 !is_placeholder<T1>::value &&
+                                 !is_reference_wrapper<T1>::value>>
     T &&_select(Tuple &&, T &&val) const {
         return ala::forward<T>(val);
     }
 
-    template<class Tuple, class Bind, class = void,
-             class = enable_if_t<is_bind_expression<remove_cvref_t<Bind>>::value>>
+    template<class Tuple, class Bind,
+             class = enable_if_t<is_bind_expression<remove_reference_t<Bind>>::value>>
     auto _select(Tuple &&tp, Bind &&inner_bind) const
         -> decltype(ala::forward<Bind>(inner_bind)._call(ala::forward<Tuple>(tp))) {
         return ala::forward<Bind>(inner_bind)._call(ala::forward<Tuple>(tp));
     }
 
     template<class Tuple, int N>
-    auto _select(Tuple &&tp, _placeholder_t<N>) const
-        -> decltype(ala::get<N - 1>(ala::forward<Tuple>(tp))) {
+    auto &&_select(Tuple &&tp, _placeholder_t<N>) const {
         static_assert(N > 0 && N <= tuple_size<remove_cvref_t<Tuple>>::value,
                       "Illegal index");
         return ala::get<N - 1>(ala::forward<Tuple>(tp));
     }
 
     template<class Tuple, class T>
-    auto _select(Tuple &&tp, reference_wrapper<T> refwarp) const
-        -> decltype(refwarp.get()) {
+    T &_select(Tuple &&tp, reference_wrapper<T> refwarp) const {
         return refwarp.get();
     }
 
+    template<class Tuple, class Bind>
+    using _select_bind_t = typename Bind::template _call_result_t<Tuple>;
+
+    template<class Tuple, class T, class T1 = remove_reference_t<T>>
+    using _select_t = conditional_t<
+        !is_bind_expression<T1>::value && !is_placeholder<T1>::value &&
+            !is_reference_wrapper<T1>::value,
+        T &&,
+        conditional_t<is_bind_expression<T1>::value, _select_bind_t<Tuple, T1>,
+                      conditional_t<is_placeholder<T1>::value, tuple_element_t<T1::value, Tuple>,
+                                    conditional_t<is_reference_wrapper<T1>::value,
+                                                  typename T1::type &, void>>>>;
+
     template<class Tuple, size_t... N>
     R _call_helper(false_type, Tuple &&tp, index_sequence<N...>) const {
-        return static_cast<R>(ala::invoke(ala::get<0>(_tuple),
-                                          _select(ala::forward<Tuple>(tp),
-                                                  ala::get<N + 1>(_tuple))...));
+        return static_cast<R>(
+            ala::invoke(ala::get<0>(_tuple),
+                        this->_select(ala::forward<Tuple>(tp),
+                                      ala::get<N + 1>(_tuple))...));
     }
 
     template<class Tuple, size_t... N>
     R _call_helper(false_type, Tuple &&tp, index_sequence<N...>) {
-        return static_cast<R>(ala::invoke(ala::get<0>(_tuple),
-                                          _select(ala::forward<Tuple>(tp),
-                                                  ala::get<N + 1>(_tuple))...));
+        return static_cast<R>(
+            ala::invoke(ala::get<0>(_tuple),
+                        this->_select(ala::forward<Tuple>(tp),
+                                      ala::get<N + 1>(_tuple))...));
     }
 
     template<class Tuple, size_t... N>
     auto _call_helper(true_type, Tuple &&tp, index_sequence<N...>) const
         -> decltype(ala::invoke(ala::get<0>(_tuple),
-                                _select(ala::forward<Tuple>(tp),
-                                        ala::get<N + 1>(_tuple))...)) {
+                                this->_select(ala::forward<Tuple>(tp),
+                                              ala::get<N + 1>(_tuple))...)) {
         return ala::invoke(ala::get<0>(_tuple),
-                           _select(ala::forward<Tuple>(tp),
-                                   ala::get<N + 1>(_tuple))...);
+                           this->_select(ala::forward<Tuple>(tp),
+                                         ala::get<N + 1>(_tuple))...);
     }
 
     template<class Tuple, size_t... N>
     auto _call_helper(true_type, Tuple &&tp, index_sequence<N...>)
         -> decltype(ala::invoke(ala::get<0>(_tuple),
-                                _select(ala::forward<Tuple>(tp),
-                                        ala::get<N + 1>(_tuple))...)) {
+                                this->_select(ala::forward<Tuple>(tp),
+                                              ala::get<N + 1>(_tuple))...)) {
         return ala::invoke(ala::get<0>(_tuple),
                            _select(ala::forward<Tuple>(tp),
                                    ala::get<N + 1>(_tuple))...);
@@ -750,19 +785,7 @@ auto bind(Fn &&fn, Args &&... args) -> _bind_t<R, Fn, Args...> {
 }
 
 // C++20
-template<class...>
-struct Fucker;
 
-template<auto...>
-struct FuckerV;
-
-#define DEFER_1(x, y) x##y
-#define DEFER_2(x, y) DEFER_1(x, y)
-#define DEFER_3(x) DEFER_2(x, __COUNTER__)
-
-#define FUCK(x) Fucker<decltype(x)> DEFER_3(fuck)
-#define FUCT(x) Fucker<x> DEFER_3(fuck)
-#define FUCV(x) FuckerV<x> DEFER_3(fuck)
 template<class Fn, class... Args>
 struct _bind_front_t {
     typedef tuple<decay_t<Fn>, decay_t<Args>...> _tuple_t;

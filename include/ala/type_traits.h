@@ -986,10 +986,13 @@ struct is_implicitly_default_constructible
     : _is_implicitly_default_constructible_helper<T> {};
 
 template<class T>
-struct is_reference_wrapper: false_type {};
+struct _is_reference_wrapper_helper: false_type {};
 
 template<class T>
-struct is_reference_wrapper<reference_wrapper<T>>: true_type {};
+struct _is_reference_wrapper_helper<reference_wrapper<T>>: true_type {};
+
+template<class T>
+struct is_reference_wrapper: _is_reference_wrapper_helper<remove_cvref_t<T>> {};
 
 template<typename T, template<typename...> class>
 struct is_specification: false_type {};

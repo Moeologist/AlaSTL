@@ -16,7 +16,7 @@ void uninitialized_default_construct(ForwardIter first, ForwardIter last) {
 
 template<class ForwardIter, class Size>
 ForwardIter uninitialized_default_construct_n(ForwardIter first, Size n) {
-    for (; n > 0; (void)++first, --n)
+    for (; n > 0; ++first, (void)--n)
         ::new (static_cast<void *>(addressof(*first)))
             typename iterator_traits<ForwardIter>::value_type;
     return first;
@@ -32,7 +32,7 @@ void uninitialized_value_construct(ForwardIter first, ForwardIter last) {
 
 template<class ForwardIter, class Size>
 ForwardIter uninitialized_value_construct_n(ForwardIter first, Size n) {
-    for (; n > 0; (void)++first, --n)
+    for (; n > 0; ++first, (void)--n)
         ::new (static_cast<void *>(addressof(*first)))
             typename iterator_traits<ForwardIter>::value_type();
     return first;
@@ -48,7 +48,7 @@ ForwardIter uninitialized_copy(InputIter first, InputIter last, ForwardIter out)
 
 template<class InputIter, class Size, class ForwardIter>
 ForwardIter uninitialized_copy_n(InputIter first, Size n, ForwardIter out) {
-    for (; n > 0; ++out, (void)++first, --n)
+    for (; n > 0; ++out, ++first, (void)--n)
         ::new (static_cast<void *>(addressof(*out)))
             typename iterator_traits<ForwardIter>::value_type(*first);
     return out;
@@ -65,7 +65,7 @@ ForwardIter uninitialized_move(InputIter first, InputIter last, ForwardIter out)
 template<class InputIter, class Size, class ForwardIter>
 pair<InputIter, ForwardIter> uninitialized_move_n(InputIter first, Size n,
                                                   ForwardIter out) {
-    for (; n > 0; ++out, (void)++first, --n)
+    for (; n > 0; ++out, ++first, (void)--n)
         ::new (static_cast<void *>(addressof(*out)))
             typename iterator_traits<ForwardIter>::value_type(ala::move(*first));
     return out;
@@ -81,7 +81,7 @@ void uninitialized_fill(ForwardIter first, ForwardIter last, const T &x) {
 
 template<class ForwardIter, class Size, class T>
 ForwardIter uninitialized_fill_n(ForwardIter first, Size n, const T &x) {
-    for (; n > 0; (void)++first, --n)
+    for (; n > 0; ++first, (void)--n)
         ::new (static_cast<void *>(addressof(*first)))
             typename iterator_traits<ForwardIter>::value_type(x);
     return first;
