@@ -327,9 +327,10 @@ struct basic_common_reference;
 template<class T>                                 struct is_reference_wrapper;
 template<class T>                                 struct is_implicitly_default_constructible;
 template<typename T, template<typename...> class> struct is_specification;
+
 #if _ALA_ENABLE_INLINE_VAR
 template<typename T> inline constexpr bool is_reference_wrapper_v = is_reference_wrapper<T>::value;
-// template<typename T> inline constexpr bool is_implicitly_default_constructible_v = is_implicitly_default_constructible<T>::value;
+template<typename T> inline constexpr bool is_implicitly_default_constructible_v = is_implicitly_default_constructible<T>::value;
 template<typename T, template<typename...> class Templt>
 inline constexpr bool is_specification_v = is_specification<T, Templt>::value;
 #endif

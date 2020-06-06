@@ -72,6 +72,17 @@ inline constexpr in_place_type_t<T> in_place_type{};
 
 template<size_t I>
 inline constexpr in_place_index_t<I> in_place_index{};
+#else
+constexpr in_place_t in_place{};
+
+#ifdef _ALA_ENABLE_TEMPLATE_VAR
+template<class T>
+constexpr in_place_type_t<T> in_place_type{};
+
+template<size_t I>
+constexpr in_place_index_t<I> in_place_index{};
+#endif
+
 #endif
 
 } // namespace ala

@@ -21,6 +21,8 @@ struct nullopt_t {
 
 #ifdef _ALA_ENABLE_INLINE_VAR
 inline constexpr nullopt_t nullopt{nullopt_t::_dummy{}};
+#else
+constexpr nullopt_t nullopt{nullopt_t::_dummy{}};
 #endif
 
 template<class T, bool = is_trivially_destructible<T>::value>

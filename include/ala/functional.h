@@ -81,16 +81,16 @@ inline constexpr _placeholder_t<8> _8;
 inline constexpr _placeholder_t<9> _9;
 inline constexpr _placeholder_t<10> _10;
 #else
-const _placeholder_t<1> _1;
-const _placeholder_t<2> _2;
-const _placeholder_t<3> _3;
-const _placeholder_t<4> _4;
-const _placeholder_t<5> _5;
-const _placeholder_t<6> _6;
-const _placeholder_t<7> _7;
-const _placeholder_t<8> _8;
-const _placeholder_t<9> _9;
-const _placeholder_t<10> _10;
+constexpr _placeholder_t<1> _1;
+constexpr _placeholder_t<2> _2;
+constexpr _placeholder_t<3> _3;
+constexpr _placeholder_t<4> _4;
+constexpr _placeholder_t<5> _5;
+constexpr _placeholder_t<6> _6;
+constexpr _placeholder_t<7> _7;
+constexpr _placeholder_t<8> _8;
+constexpr _placeholder_t<9> _9;
+constexpr _placeholder_t<10> _10;
 #endif
 } // namespace placeholders
 
@@ -133,20 +133,6 @@ struct _function_base {
 
 template<>
 struct _function_base<_unknown_result> {};
-
-template<class...>
-struct Fucker;
-
-template<auto...>
-struct FuckerV;
-
-#define DEFER_1(x, y) x##y
-#define DEFER_2(x, y) DEFER_1(x, y)
-#define DEFER_3(x) DEFER_2(x, __COUNTER__)
-
-#define FUCK(x) Fucker<decltype(x)> DEFER_3(fuck)
-#define FUCT(x) Fucker<x> DEFER_3(fuck)
-#define FUCV(x) FuckerV<x> DEFER_3(fuck)
 
 template<class R, class Fn, class... Args>
 struct _bind_t: _function_base<R> {

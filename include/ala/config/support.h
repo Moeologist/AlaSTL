@@ -79,6 +79,13 @@
     #define _ALA_ENABLE_STRUCT_BIND 0
 #endif
 
+#if __cpp_variable_templates >= 201304L || \
+    (defined(_ALA_MSVC) && _MSC_VER >= 1910 && _ALA_LANG >= 201103L)
+    #define _ALA_ENABLE_TEMPLATE_VAR 1
+#else
+    #define _ALA_ENABLE_TEMPLATE_VAR 0
+#endif
+
 #ifdef _ALA_DEBUG
 
     #define ALA_FORCEINLINE
