@@ -613,46 +613,24 @@ template<template<typename> class Templt, typename... Ts>
 using _type_pick_t =
     typename _type_pick_impl<Templt, 0, index_sequence<>, Ts...>::type;
 
-template<typename T>
-struct _is_same_unary {
-    template<typename U>
-    struct _impl: is_same<T, U> {};
-};
-
-template<typename T, typename... Ts>
-using _type_pick_same_t = typename _type_pick_impl<
-    _is_same_unary<T>::template _impl, 0, index_sequence<>, Ts...>::type;
-
 template<typename T, typename... Ts>
 constexpr T &get(tuple<Ts...> &t) noexcept {
-    typedef _type_pick_same_t<T, Ts...> Index;
-    static_assert(Index::size() == 1,
-                  "No specified type or more than one type");
-    return get<Index::get(0)>(t);
+    return get<type_pack_index<T, Ts...>::value>(t);
 }
 
 template<typename T, typename... Ts>
 constexpr T &&get(tuple<Ts...> &&t) noexcept {
-    typedef _type_pick_same_t<T, Ts...> Index;
-    static_assert(Index::size() == 1,
-                  "No specified type or more than one type");
-    return get<Index::get(0)>(ala::move(t));
+    return get<type_pack_index<T, Ts...>::value>(ala::move(t));
 }
 
 template<typename T, typename... Ts>
 constexpr const T &get(const tuple<Ts...> &t) noexcept {
-    typedef _type_pick_same_t<T, Ts...> Index;
-    static_assert(Index::size() == 1,
-                  "No specified type or more than one type");
-    return get<Index::get(0)>(t);
+    return get<type_pack_index<T, Ts...>::value>(t);
 }
 
 template<typename T, typename... Ts>
 constexpr const T &&get(const tuple<Ts...> &&t) noexcept {
-    typedef _type_pick_same_t<T, Ts...> Index;
-    static_assert(Index::size() == 1,
-                  "No specified type or more than one type");
-    return get<Index::get(0)>(ala::move(t));
+    return get<type_pack_index<T, Ts...>::value>(ala::move(t));
 }
 
 #if _ALA_ENABLE_DEDUCTION_GUIDES
