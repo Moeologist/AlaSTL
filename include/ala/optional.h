@@ -136,7 +136,8 @@ class optional: _make_controller_t<_optional_base<T>, T> {
 public:
     static_assert(!is_same<remove_cvref_t<T>, in_place_t>::value &&
                       !is_same<remove_cvref_t<T>, nullopt_t>::value &&
-                      !is_array<remove_cvref_t<T>>::value && is_destructible<T>::value,
+                      !is_array<remove_cvref_t<T>>::value &&
+                      is_destructible<T>::value,
                   "N4860 [20.6.3/3]");
 
     using value_type = T;
@@ -374,6 +375,107 @@ public:
     // modifiers
     void reset() noexcept {
         this->_reset();
+    }
+
+    // Impelment p0798R3
+    // Monadic operations for std::optional
+    // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0798r3.html
+    template<class F>
+    constexpr invoke_result_t<F, T &> and_then(F &&f) & {
+        using result_t = invoke_result_t<F, T &>;
+        static_assert(is_specification<remove_cvref_t<result_t>, ala::optional>::value,
+                      "F must return an optional");
+        return has_value() ? ala::invoke(ala::forward<F>(f), **this) :
+                             result_t(nullopt);
+    }
+
+    template<class F>
+    constexpr invoke_result_t<F, T &&> and_then(F &&f) && {
+        using result_t = invoke_result_t<F, T &&>;
+        static_assert(is_specification<remove_cvref_t<result_t>, ala::optional>::value,
+                      "F must return an optional");
+        return has_value() ? ala::invoke(ala::forward<F>(f), ala::move(**this)) :
+                             result_t(nullopt);
+    }
+
+    template<class F>
+    constexpr invoke_result_t<F, const T &> and_then(F &&f) const & {
+        using result_t = invoke_result_t<F, const T &>;
+        static_assert(is_specification<remove_cvref_t<result_t>, ala::optional>::value,
+                      "F must return an optional");
+        return has_value() ? ala::invoke(ala::forward<F>(f), **this) :
+                             result_t(nullopt);
+    }
+
+    template<class F>
+    constexpr invoke_result_t<F, const T &&> and_then(F &&f) const && {
+        using result_t = invoke_result_t<F, const T &&>;
+        static_assert(is_specification<remove_cvref_t<result_t>, ala::optional>::value,
+                      "F must return an optional");
+        return has_value() ? ala::invoke(ala::forward<F>(f), ala::move(**this)) :
+                             result_t(nullopt);
+    }
+
+    template<class F>
+    constexpr optional or_else(F &&f) & {
+        if (has_value())
+            return *this;
+        ala::forward<F>(f)();
+        return nullopt;
+    }
+
+    template<class F>
+    constexpr optional or_else(F &&f) && {
+        if (has_value())
+            return ala::move(*this);
+        ala::forward<F>(f)();
+        return nullopt;
+    }
+
+    template<class F>
+    constexpr optional or_else(F &&f) const & {
+        if (has_value())
+            return *this;
+        ala::forward<F>(f)();
+        return nullopt;
+    }
+
+    template<class F>
+    constexpr optional or_else(F &&f) const && {
+        if (has_value())
+            return ala::move(*this);
+        ala::forward<F>(f)();
+        return nullopt;
+    }
+
+    template<class F>
+    constexpr optional transform(F &&f) & {
+        using result_t = optional;
+        return has_value() ? result_t(ala::invoke(ala::forward<F>(f), **this)) :
+                             result_t(nullopt);
+    }
+
+    template<class F>
+    constexpr optional transform(F &&f) && {
+        using result_t = optional;
+        return has_value() ?
+                   result_t(ala::invoke(ala::forward<F>(f), ala::move(**this))) :
+                   result_t(nullopt);
+    }
+
+    template<class F>
+    constexpr optional transform(F &&f) const & {
+        using result_t = optional;
+        return has_value() ? result_t(ala::invoke(ala::forward<F>(f), **this)) :
+                             result_t(nullopt);
+    }
+
+    template<class F>
+    constexpr optional transform(F &&f) const && {
+        using result_t = optional;
+        return has_value() ?
+                   result_t(ala::invoke(ala::forward<F>(f), ala::move(**this))) :
+                   result_t(nullopt);
     }
 };
 
