@@ -12,6 +12,8 @@ struct piecewise_construct_t { explicit piecewise_construct_t() = default; };
 
 #if _ALA_ENABLE_INLINE_VAR
 inline constexpr piecewise_construct_t piecewise_construct{};
+#else
+constexpr piecewise_construct_t piecewise_construct{};
 #endif
 
 template<typename T1, typename T2>
@@ -53,18 +55,18 @@ struct pair {
     explicit constexpr pair(const T1 &a, const T2 &b): first(a), second(b) {}
 
     template<typename U1, typename U2,
-             typename = enable_if_t<is_constructible<first_type, U1 &&>::value &&
-                                    is_constructible<second_type, U2 &&>::value &&
-                                    is_convertible<U1 &&, first_type>::value &&
-                                    is_convertible<U2 &&, second_type>::value>>
+             typename = enable_if_t<is_constructible<first_type, U1>::value &&
+                                    is_constructible<second_type, U2>::value &&
+                                    is_convertible<U1, first_type>::value &&
+                                    is_convertible<U2, second_type>::value>>
     constexpr pair(U1 &&a, U2 &&b)
         : first(ala::forward<U1>(a)), second(ala::forward<U2>(b)) {}
 
     template<typename U1, typename U2, typename = void,
-             typename = enable_if_t<is_constructible<first_type, U1 &&>::value &&
-                                    is_constructible<second_type, U2 &&>::value &&
-                                    !(is_convertible<U1 &&, first_type>::value &&
-                                      is_convertible<U2 &&, second_type>::value)>>
+             typename = enable_if_t<is_constructible<first_type, U1>::value &&
+                                    is_constructible<second_type, U2>::value &&
+                                    !(is_convertible<U1, first_type>::value &&
+                                      is_convertible<U2, second_type>::value)>>
     explicit constexpr pair(U1 &&a, U2 &&b)
         : first(ala::forward<U1>(a)), second(ala::forward<U2>(b)) {}
 
@@ -85,18 +87,18 @@ struct pair {
         : first(p.first), second(p.second) {}
 
     template<typename U1, typename U2,
-             typename = enable_if_t<is_constructible<first_type, U1 &&>::value &&
-                                    is_constructible<second_type, U2 &&>::value &&
-                                    is_convertible<U1 &&, first_type>::value &&
-                                    is_convertible<U2 &&, second_type>::value>>
+             typename = enable_if_t<is_constructible<first_type, U1>::value &&
+                                    is_constructible<second_type, U2>::value &&
+                                    is_convertible<U1, first_type>::value &&
+                                    is_convertible<U2, second_type>::value>>
     constexpr pair(pair<U1, U2> &&p)
         : first(ala::forward<U1>(p.first)), second(ala::forward<U2>(p.second)) {}
 
     template<typename U1, typename U2, typename = void,
-             typename = enable_if_t<is_constructible<first_type, U1 &&>::value &&
-                                    is_constructible<second_type, U2 &&>::value &&
-                                    !(is_convertible<U1 &&, first_type>::value &&
-                                      is_convertible<U2 &&, second_type>::value)>>
+             typename = enable_if_t<is_constructible<first_type, U1>::value &&
+                                    is_constructible<second_type, U2>::value &&
+                                    !(is_convertible<U1, first_type>::value &&
+                                      is_convertible<U2, second_type>::value)>>
     explicit constexpr pair(pair<U1, U2> &&p)
         : first(ala::forward<U1>(p.first)), second(ala::forward<U2>(p.second)) {}
 
@@ -147,8 +149,8 @@ struct pair {
     }
 
     template<typename U1, typename U2>
-    constexpr enable_if_t<is_assignable<first_type &, U1 &&>::value &&
-                              is_assignable<second_type &, U2 &&>::value,
+    constexpr enable_if_t<is_assignable<first_type &, U1>::value &&
+                              is_assignable<second_type &, U2>::value,
                           pair &>
     operator=(pair<U1, U2> &&p) {
         first = ala::forward<U1>(p.first);

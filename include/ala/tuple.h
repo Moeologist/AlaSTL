@@ -279,7 +279,7 @@ public:
                  conditional_t<is_lvalue_reference<Tuple>::value,
                                _copy_ctor_check<T1>, _move_ctor_check<T1>>::imp>>
     constexpr tuple(Tuple &&tp) noexcept(
-        is_nothrow_constructible<impl_type, Tuple &&>::value)
+        is_nothrow_constructible<impl_type, Tuple>::value)
         : _impl(false_type{}, ala::forward<Tuple>(tp)) {}
 
     template<typename Tuple, typename T1 = remove_cvref_t<Tuple>,
@@ -290,7 +290,7 @@ public:
                                _copy_ctor_check<T1>, _move_ctor_check<T1>>::exp>,
              typename = void>
     explicit constexpr tuple(Tuple &&tp) noexcept(
-        is_nothrow_constructible<impl_type, Tuple &&>::value)
+        is_nothrow_constructible<impl_type, Tuple>::value)
         : _impl(false_type{}, ala::forward<Tuple>(tp)) {}
 
     template<typename Tuple>
@@ -324,7 +324,7 @@ public:
                  conditional_t<is_lvalue_reference<Tuple>::value,
                                _copy_asgn_check<T1>, _move_asgn_check<T1>>::ok>>
     constexpr tuple &operator=(Tuple &&tp) noexcept(
-        is_nothrow_assignable<impl_type &, Tuple &&>::value) {
+        is_nothrow_assignable<impl_type &, Tuple>::value) {
         _impl.operator=(ala::forward<Tuple>(tp));
         return *this;
     }
@@ -563,7 +563,7 @@ struct _ignore_t {
 #if _ALA_ENABLE_INLINE_VAR
 inline constexpr _ignore_t ignore;
 #else
-const _ignore_t ignore;
+constexpr _ignore_t ignore;
 #endif
 
 template<typename F, typename Tuple, size_t... I>
