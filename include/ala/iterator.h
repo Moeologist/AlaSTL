@@ -518,6 +518,145 @@ move_iterator<Iter> make_move_iterator(Iter i) {
     return ala::move_iterator<Iter>(ala::move(i));
 }
 
+// insert iterators
+template<class Container>
+struct back_insert_iterator {
+    using iterator_category = output_iterator_tag;
+    using value_type = void;
+    using difference_type = void;
+    using pointer = void;
+    using reference = void;
+    using container_type = Container;
+
+    constexpr back_insert_iterator() noexcept = default;
+
+    constexpr explicit back_insert_iterator(Container &c)
+        : container(ala::addressof(c)) {}
+
+    constexpr back_insert_iterator<Container> &
+    operator=(const typename Container::value_type &value) {
+        container->push_back(value);
+    }
+
+    constexpr back_insert_iterator<Container> &
+    operator=(typename Container::value_type &&value) {
+        container->push_back(ala::move(value));
+    }
+
+    constexpr back_insert_iterator &operator*() {
+        return *this;
+    }
+
+    constexpr back_insert_iterator &operator++() {
+        return *this;
+    }
+
+    constexpr back_insert_iterator &operator++(int) {
+        return *this;
+    }
+
+protected:
+    Container *container;
+};
+
+template<class Container>
+constexpr back_insert_iterator<Container> back_inserter(Container &c) {
+    return ala::back_insert_iterator<Container>(c);
+}
+
+template<class Container>
+struct front_insert_iterator {
+    using iterator_category = output_iterator_tag;
+    using value_type = void;
+    using difference_type = void;
+    using pointer = void;
+    using reference = void;
+    using container_type = Container;
+
+    constexpr front_insert_iterator() noexcept = default;
+
+    constexpr explicit front_insert_iterator(Container &c)
+        : container(ala::addressof(c)) {}
+
+    constexpr front_insert_iterator<Container> &
+    operator=(const typename Container::value_type &value) {
+        container->push_front(value);
+    }
+
+    constexpr front_insert_iterator<Container> &
+    operator=(typename Container::value_type &&value) {
+        container->push_front(ala::move(value));
+    }
+
+    constexpr front_insert_iterator &operator*() {
+        return *this;
+    }
+
+    constexpr front_insert_iterator &operator++() {
+        return *this;
+    }
+
+    constexpr front_insert_iterator &operator++(int) {
+        return *this;
+    }
+
+protected:
+    Container *container;
+};
+
+template<class Container>
+constexpr front_insert_iterator<Container> front_inserter(Container &c) {
+    return ala::front_insert_iterator<Container>(c);
+}
+
+template<class Container>
+struct insert_iterator {
+    using iterator_category = output_iterator_tag;
+    using value_type = void;
+    using difference_type = void;
+    using pointer = void;
+    using reference = void;
+    using container_type = Container;
+
+    constexpr insert_iterator() noexcept = default;
+
+    constexpr insert_iterator(Container &c, typename Container::iterator i)
+        : container(ala::addressof(c)), iter(i) {}
+
+    constexpr insert_iterator<Container> &
+    operator=(const typename Container::value_type &value) {
+        container->insert(iter, value);
+        ++iter;
+    }
+
+    constexpr insert_iterator<Container> &
+    operator=(typename Container::value_type &&value) {
+        container->insert(iter, ala::move(value));
+        ++iter;
+    }
+
+    constexpr insert_iterator &operator*() {
+        return *this;
+    }
+
+    constexpr insert_iterator &operator++() {
+        return *this;
+    }
+
+    constexpr insert_iterator &operator++(int) {
+        return *this;
+    }
+
+protected:
+    Container *container;
+    typename Container::iterator iter;
+};
+
+template<class Container>
+constexpr insert_iterator<Container> inserter(Container &c,
+                                              typename Container::iterator i) {
+    return ala::insert_iterator<Container>(c, i);
+}
 } // namespace ala
 
 #endif
