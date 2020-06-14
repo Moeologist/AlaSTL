@@ -258,7 +258,7 @@ struct _bind_t: _function_base<R> {
     }
 };
 
-enum Operation { Copy, Move, Destroy, TypeInfo, Invoke, Local };
+enum class FunctionOP { Copy, Move, Destroy, TypeInfo, Invoke, Local };
 
 template<class Function, class Functor>
 struct _function_handle;
@@ -291,19 +291,19 @@ struct _function_handle<R(Args...), Functor> {
                is_nothrow_move_constructible<Functor>::value;
     }
 
-    static void *operate(Operation op) {
+    static void *operate(FunctionOP op) {
         switch (op) {
-            case Copy:
+            case FunctionOP::Copy:
                 return reinterpret_cast<void *>(&_function_handle::copy);
-            case Move:
+            case FunctionOP::Move:
                 return reinterpret_cast<void *>(&_function_handle::move);
-            case Destroy:
+            case FunctionOP::Destroy:
                 return reinterpret_cast<void *>(&_function_handle::destroy);
-            case TypeInfo:
+            case FunctionOP::TypeInfo:
                 return reinterpret_cast<void *>(&_function_handle::typeinfo);
-            case Invoke:
+            case FunctionOP::Invoke:
                 return reinterpret_cast<void *>(&_function_handle::invoke);
-            case Local:
+            case FunctionOP::Local:
                 return reinterpret_cast<void *>(&_function_handle::local);
         }
         return nullptr;
@@ -325,6 +325,7 @@ struct _is_ala_function<function<R(Args...)>>: true_type {};
 
 template<class R, class... Args>
 struct function<R(Args...)>: _function_base<R> {
+private:
     static_assert(sizeof(void *) == sizeof(size_t), "Unsupported platform");
 
     typedef R (*op_invoke_t)(void *, Args &&...);
@@ -334,18 +335,8 @@ struct function<R(Args...)>: _function_base<R> {
     typedef const type_info &(*op_typeinfo_t)();
     typedef bool (*op_local_t)();
 
-    void *(*_op_handle)(Operation) = nullptr;
+    void *(*_op_handle)(FunctionOP) = nullptr;
     size_t _placehold[2] = {};
-
-    op_local_t _op_local() const noexcept {
-        return reinterpret_cast<op_local_t>(_op_handle(Local));
-    }
-
-    bool is_local() const noexcept {
-        if (_op_handle == nullptr)
-            return true;
-        return _op_local()();
-    }
 
     const void *_address() const noexcept {
         if (is_local())
@@ -360,38 +351,48 @@ struct function<R(Args...)>: _function_base<R> {
     }
 
     size_t &_size() noexcept {
-        assert(!is_local() || !*this);
+        assert(!is_local());
         return _placehold[1];
     }
 
     const size_t &_size() const noexcept {
-        assert(!is_local() || !*this);
+        assert(!is_local());
         return _placehold[1];
     }
 
     void *&_addref() noexcept {
-        assert(!is_local() || !*this);
+        assert(!is_local());
         return *reinterpret_cast<void **>(_placehold);
     }
 
     op_invoke_t _op_invoke() const noexcept {
-        return reinterpret_cast<op_invoke_t>(_op_handle(Invoke));
+        return reinterpret_cast<op_invoke_t>(_op_handle(FunctionOP::Invoke));
     }
 
     op_copy_t _op_copy() const noexcept {
-        return reinterpret_cast<op_copy_t>(_op_handle(Copy));
+        return reinterpret_cast<op_copy_t>(_op_handle(FunctionOP::Copy));
     }
 
     op_move_t _op_move() const noexcept {
-        return reinterpret_cast<op_move_t>(_op_handle(Move));
+        return reinterpret_cast<op_move_t>(_op_handle(FunctionOP::Move));
     }
 
     op_destroy_t _op_destroy() const noexcept {
-        return reinterpret_cast<op_destroy_t>(_op_handle(Destroy));
+        return reinterpret_cast<op_destroy_t>(_op_handle(FunctionOP::Destroy));
     }
 
     op_typeinfo_t _op_typeinfo() const noexcept {
-        return reinterpret_cast<op_typeinfo_t>(_op_handle(TypeInfo));
+        return reinterpret_cast<op_typeinfo_t>(_op_handle(FunctionOP::TypeInfo));
+    }
+
+    op_local_t _op_local() const noexcept {
+        return reinterpret_cast<op_local_t>(_op_handle(FunctionOP::Local));
+    }
+
+    bool is_local() const noexcept {
+        if (_op_handle == nullptr)
+            return true;
+        return _op_local()();
     }
 
     void *_alloc(size_t sz) {
@@ -409,8 +410,8 @@ struct function<R(Args...)>: _function_base<R> {
     }
 
     void _copy(const function &other) {
-        _op_handle = other._op_handle;
         if (other) {
+            _op_handle = other._op_handle;
             if (other.is_local()) {
                 _op_copy()(this->_address(), other._address());
             } else {
@@ -422,18 +423,40 @@ struct function<R(Args...)>: _function_base<R> {
 
     void _move(function &&other) {
         if (other) {
+            _op_handle = other._op_handle;
             if (other.is_local()) {
-                _op_handle = other._op_handle;
                 _op_move()(this->_address(), other._address());
+                other.reset();
             } else {
-                ala::swap(_addref(), other._addref());
-                ala::swap(_size(), other._size());
-                _op_handle = other._op_handle;
+                _addref() = other._addref();
+                _size() = other._size();
+                other._addref() = nullptr;
+                other._size() = 0;
             }
             other._op_handle = nullptr;
         }
     }
 
+    template<class Fn>
+    enable_if_t<_is_ala_function<Fn>::value, bool> is_empty_fn(const Fn &fn) {
+        return !fn;
+    }
+
+    template<class Fn>
+    enable_if_t<is_pointer<Fn>::value || is_member_pointer<Fn>::value, bool>
+    is_empty_fn(const Fn &fn) {
+        return fn == nullptr;
+    }
+
+    template<class Fn>
+    enable_if_t<!_is_ala_function<Fn>::value &&
+                    !(is_pointer<Fn>::value || is_member_pointer<Fn>::value),
+                bool>
+    is_empty_fn(const Fn &fn) {
+        return false;
+    }
+
+public:
     // construct/copy/destroy:
     function() noexcept {}
 
@@ -447,25 +470,6 @@ struct function<R(Args...)>: _function_base<R> {
         this->_move(ala::move(other));
     }
 
-    template<class Fn>
-    enable_if_t<_is_ala_function<Fn>::value, bool> _is_empty_fn(const Fn &fn) {
-        return !fn;
-    }
-
-    template<class Fn>
-    enable_if_t<is_pointer<Fn>::value || is_member_pointer<Fn>::value, bool>
-    _is_empty_fn(const Fn &fn) {
-        return fn == nullptr;
-    }
-
-    template<class Fn>
-    enable_if_t<!_is_ala_function<Fn>::value &&
-                    !(is_pointer<Fn>::value || is_member_pointer<Fn>::value),
-                bool>
-    _is_empty_fn(const Fn &fn) {
-        return false;
-    }
-
     template<class Fn, class = enable_if_t<is_invocable_r<R, Fn &, Args...>::value>>
     function(Fn fn) {
         // static_assert(sizeof(Fn) <= sizeof(placehold_t),
@@ -474,7 +478,7 @@ struct function<R(Args...)>: _function_base<R> {
         // static_assert(is_nothrow_move_constructible<Fn>::value,
         //               "ala::function use small-objects optimization, "
         //               "Fn must be nothrow_move_constructible.");
-        if (this->template _is_empty_fn<Fn>(fn))
+        if (this->template is_empty_fn<Fn>(fn))
             return;
         typedef _function_handle<R(Args...), Fn> handle_t;
         _op_handle = &handle_t::operate;
@@ -510,23 +514,19 @@ struct function<R(Args...)>: _function_base<R> {
     }
 
     template<class Fn>
-    function &operator=(reference_wrapper<Fn>) noexcept;
+    function &operator=(reference_wrapper<Fn> fn) noexcept {
+        function(f).swap(*this);
+        return *this;
+    }
+
     ~function() {
-        if (*this)
-            _op_destroy()(this->_address());
-        _dealloc();
+        reset();
     }
 
     void swap(function &other) noexcept {
-        if (!this->is_local() && !other.is_local()) {
-            ala::swap(this->_addref(), other._addref());
-            ala::swap(this->_size(), other._size());
-            ala::swap(this->_op_handle, other._op_handle);
-        } else {
-            function tmp(ala::move(*this));
-            this->_move(ala::move(other));
-            other._move(ala::move(tmp));
-        }
+        function tmp(ala::move(*this));
+        this->_move(ala::move(other));
+        other._move(ala::move(tmp));
     }
 
     explicit operator bool() const noexcept {
@@ -538,6 +538,12 @@ struct function<R(Args...)>: _function_base<R> {
             throw bad_function_call();
         return _op_invoke()(const_cast<function *>(this)->_address(),
                             ala::forward<Args>(args)...);
+    }
+
+    void reset() {
+        if (*this)
+            _op_destroy()(this->_address());
+        _dealloc();
     }
 
 #if ALA_USE_RTTI
