@@ -155,8 +155,6 @@ struct array<T, 0> {
     typedef ala::reverse_iterator<iterator> reverse_iterator;
     typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
 
-    // aligned_storage_t<sizeof(T), alignof(T)> _placehold;
-
     struct _array_struct {
         T _m[1];
     };
@@ -165,7 +163,7 @@ struct array<T, 0> {
                                          char> _placehold[sizeof(_array_struct)];
 
     constexpr pointer _data() const noexcept {
-        return (pointer)_placehold;
+        return const_cast<pointer>(reinterpret_cast<const_pointer>(_placehold));
     }
 
     constexpr void fill(const T &u) noexcept {

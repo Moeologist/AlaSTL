@@ -17,15 +17,15 @@ enum class AnyOP { Copy, Move, Destroy, TypeInfo, Local };
 template<class T>
 struct _any_handle {
     static void copy(void *dst, const void *src) {
-        ::new (dst) T(*(T *)src);
+        ::new (dst) T(*reinterpret_cast<const T *>(src));
     }
 
-    static void move(void *dst, const void *src) {
-        ::new (dst) T(ala::move(*(T *)src));
+    static void move(void *dst, void *src) {
+        ::new (dst) T(ala::move(*reinterpret_cast<T *>(src)));
     }
 
     static void destroy(void *dst) {
-        (*(T *)dst).~T();
+        (*reinterpret_cast<T *>(dst)).~T();
     }
 
     static const type_info &typeinfo() {
@@ -59,7 +59,7 @@ private:
     static_assert(sizeof(void *) == sizeof(size_t), "Unsupported platform");
 
     typedef void (*op_copy_t)(void *, const void *);
-    typedef void (*op_move_t)(void *, const void *);
+    typedef void (*op_move_t)(void *, void *);
     typedef void (*op_destroy_t)(void *);
     typedef const type_info &(*op_typeinfo_t)();
     typedef bool (*op_local_t)();

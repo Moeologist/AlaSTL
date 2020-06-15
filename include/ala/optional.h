@@ -28,7 +28,7 @@ constexpr nullopt_t nullopt{nullopt_t::_dummy{}};
 template<class T, bool = is_trivially_destructible<T>::value>
 struct _optional_destroy {
     union {
-        aligned_storage_t<sizeof(T), alignof(T)> _placehold;
+        char _placehold;
         T _value;
     };
     bool _valid = false;
@@ -55,7 +55,7 @@ struct _optional_destroy {
 template<class T>
 struct _optional_destroy<T, false> {
     union {
-        aligned_storage_t<sizeof(T), alignof(T)> _placehold;
+        char _placehold;
         T _value;
     };
     bool _valid = false;

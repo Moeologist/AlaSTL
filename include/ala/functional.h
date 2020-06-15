@@ -266,15 +266,15 @@ struct _function_handle;
 template<class R, class... Args, class Functor>
 struct _function_handle<R(Args...), Functor> {
     static void copy(void *dst, const void *src) {
-        ::new (dst) Functor(*(Functor *)src);
+        ::new (dst) Functor(*reinterpret_cast<const Functor *>(src));
     }
 
-    static void move(void *dst, const void *src) {
-        ::new (dst) Functor(ala::move(*(Functor *)src));
+    static void move(void *dst, void *src) {
+        ::new (dst) Functor(ala::move(*reinterpret_cast<Functor *>(src)));
     }
 
     static void destroy(void *dst) {
-        (*(Functor *)dst).~Functor();
+        (*reinterpret_cast<Functor *>(dst)).~Functor();
     }
 
     static const type_info &typeinfo() {
@@ -282,8 +282,8 @@ struct _function_handle<R(Args...), Functor> {
     }
 
     static R invoke(void *f, Args &&... args) {
-        return static_cast<R>(
-            ala::invoke(*(Functor *)f, ala::forward<Args>(args)...));
+        return static_cast<R>(ala::invoke(*reinterpret_cast<Functor *>(f),
+                                          ala::forward<Args>(args)...));
     }
 
     static bool local() {
@@ -330,7 +330,7 @@ private:
 
     typedef R (*op_invoke_t)(void *, Args &&...);
     typedef void (*op_copy_t)(void *, const void *);
-    typedef void (*op_move_t)(void *, const void *);
+    typedef void (*op_move_t)(void *, void *);
     typedef void (*op_destroy_t)(void *);
     typedef const type_info &(*op_typeinfo_t)();
     typedef bool (*op_local_t)();
