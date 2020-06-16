@@ -24,53 +24,15 @@ struct integral_constant {
     constexpr value_type operator()() const noexcept { return value; }
 };
 
-} // namespace ala
+}
 
+#include <ala/detail/meta.h>
 #include <ala/detail/utility_base.h>
 
 namespace ala {
 
 template<bool B, typename T, typename F> struct conditional      { typedef T type; };
 template<typename T, typename F> struct conditional<false, T, F> { typedef F type; };
-
-template<typename...> struct _or_;
-template<> struct _or_<>: false_type {};
-template<typename B1> struct _or_<B1>: B1 {};
-template<typename B1, typename... Bs> struct _or_<B1, Bs...>: conditional_t<bool(B1::value), B1, _or_<Bs...>> {};
-
-template<typename...> struct _and_;
-template<> struct _and_<>: true_type {};
-template<typename B1> struct _and_<B1>: B1 {};
-template<typename B1, typename... Bs> struct _and_<B1, Bs...>: conditional_t<bool(B1::value), _and_<Bs...>, B1> {};
-
-template<typename B>
-struct _not_: bool_constant<!bool(B::value)> {};
-
-template<typename T, bool = is_const<T>::value,
-                     bool = is_volatile<T>::value>
-struct _get_cv;
-
-template<typename T> struct _get_cv<T, false, false> { template<typename U> using rebind = U; };
-template<typename T> struct _get_cv<T, true,  false> { template<typename U> using rebind = const U; };
-template<typename T> struct _get_cv<T, false, true>  { template<typename U> using rebind = volatile U; };
-template<typename T> struct _get_cv<T, true,  true>  { template<typename U> using rebind = const volatile U; };
-
-template<typename T, bool = is_lvalue_reference<T>::value,
-                     bool = is_rvalue_reference<T>::value>
-struct _get_ref;
-
-template<typename T> struct _get_ref<T, false, false> { template<typename U> using rebind = U; };
-template<typename T> struct _get_ref<T, true, false>  { template<typename U> using rebind = U&; };
-template<typename T> struct _get_ref<T, false, true>  { template<typename U> using rebind = U&&; };
-
-template<typename T> struct _get_cvref {
-    template<typename U> using rebind =
-    typename _get_ref<T>::template rebind<
-        typename _get_cv<remove_reference_t<T>>::template rebind<U>>;
-};
-
-template<typename From, typename To>
-using _copy_cv_t = typename _get_cv<From>::template rebind<To>;
 
 template<typename T> struct is_void: is_same<void, remove_cv_t<T>> {};
 
@@ -108,7 +70,7 @@ template<typename T> struct is_array:                      false_type {};
 template<typename T> struct is_array<T[]>:                  true_type {};
 template<typename T, size_t Size> struct is_array<T[Size]>: true_type {};
 
-template<typename T> struct is_enum  : bool_constant<__is_enum(T)>  {};
+template<typename T> struct is_enum:  bool_constant<__is_enum(T)>  {};
 template<typename T> struct is_union: bool_constant<__is_union(T)> {};
 template<typename T> struct is_class: bool_constant<__is_class(T)> {};
 
@@ -468,8 +430,8 @@ struct is_swappable_with: _is_swappable_with_helper<T, U> {};
 
 template<typename T>
 struct is_swappable: conditional_t<_is_referenceable<T>::value,
-                                    is_swappable_with<add_lvalue_reference_t<T>, add_lvalue_reference_t<T>>,
-                                    false_type> {};
+                                   is_swappable_with<add_lvalue_reference_t<T>, add_lvalue_reference_t<T>>,
+                                   false_type> {};
 
 template<typename T, typename U, bool>
 struct _is_nothrow_swappable_helper: bool_constant<noexcept(swap(declval<T>(), declval<U>())) &&
@@ -500,16 +462,6 @@ template<typename T, size_t I, unsigned N> struct extent<T[I], N>: extent<T, N -
 
 template<typename T, typename U> struct is_same:      false_type {};
 template<typename T>             struct is_same<T, T>: true_type {};
-
-// template<typename T, typename = void>
-// struct _is_complete: false_type {};
-
-// template<typename T>
-// struct _is_complete<T, void_t<bool_constant<sizeof(T) == sizeof(T)>>>
-//     : bool_constant<sizeof(T) == sizeof(T)> {};
-
-// template<typename Base, typename Derived, typename = void>
-// struct _is_base_of_helper: false_type {};
 
 template<typename Base, typename Derived> struct is_base_of: bool_constant<__is_base_of(Base, Derived)> {};
 
@@ -564,7 +516,7 @@ template<> struct _make_unsigned_i<signed long long> { typedef unsigned long lon
 template<> struct _make_unsigned_i<char>             { typedef unsigned char      type; };
 template<> struct _make_unsigned_i<wchar_t>          { typedef conditional_t<sizeof(wchar_t) == 2, unsigned short, unsigned int> type; };
 #ifdef _ALA_INT128
-template<> struct _make_unsigned_i<__int128_t> { typedef __uint128_t        type; };
+template<> struct _make_unsigned_i<__int128_t>       { typedef __uint128_t        type; };
 #endif
 
 template<typename T, bool = is_enum<T>::value> struct _make_unsigned_helper
@@ -596,9 +548,8 @@ template<size_t Size, size_t Align, bool> struct _alignshl: _alignshl<Size, Alig
 template<size_t Size, size_t Align> struct _alignshl<Size, Align, true>: integral_constant<size_t, Align> {};
 
 template<size_t Size>
-struct _maxalign: integral_constant<size_t,
-                                    (_alignshl<Size>::value < alignof(max_align_t)) ?
-                                    _alignshl<Size>::value : alignof(max_align_t)> {};
+struct _maxalign: _max_integral_constant<_alignshl<Size>,
+                                         integral_constant<size_t, alignof(max_align_t)>> {};
 
 template<size_t Size, size_t Align = _maxalign<Size>::value>
 struct aligned_storage {
@@ -607,16 +558,12 @@ struct aligned_storage {
     };
 };
 
-template<size_t... Vals> struct _maximum;
-template<>               struct _maximum<>:    integral_constant<size_t, 0> {};
-template<size_t Val>     struct _maximum<Val>: integral_constant<size_t, Val> {};
-template<size_t First, size_t Second, size_t... Rest>
-struct _maximum<First, Second, Rest...>: _maximum<(First < Second ? Second: First), Rest...> {};
-
 template<size_t Size, typename... Ts>
 struct aligned_union {
-    constexpr static size_t alignment_value = _maximum<alignof(Ts)...>::value;
-    typedef aligned_storage_t<_maximum<Size, sizeof(Ts)...>::value, alignment_value> type;
+    static_assert(sizeof...(Ts) != 0, "Undefined behaviour");
+    constexpr static size_t alignment_value = _meta_reduce<_max_integral_constant,
+                                                           integral_constant<size_t, alignof(Ts)>...>::value;
+    typedef aligned_storage_t<Size, alignment_value> type;
 };
 
 template<typename T>
@@ -882,7 +829,7 @@ struct _sc_rlref {};
 
 template<typename T1, typename T2, typename Y1, typename Y2>
 struct _sc_rlref<T1, T2, Y1, Y2,
-                            void_t<typename _sc_lref<const Y1&, Y2&>::type>>
+                 void_t<typename _sc_lref<const Y1&, Y2&>::type>>
     : _sc_rlref_helper<T1, T2, typename _sc_lref<const Y1&, Y2&>::type> {};
 
 template<typename T1, typename T2,
@@ -999,29 +946,6 @@ struct is_specification: false_type {};
 
 template<template<typename...> class Templt, typename... Args>
 struct is_specification<Templt<Args...>, Templt>: true_type {};
-
-constexpr int                _convert_to_integral(char val)               { return val; }
-constexpr unsigned           _convert_to_integral(unsigned char val)      { return val; }
-constexpr unsigned           _convert_to_integral(signed char val)        { return val; }
-constexpr int                _convert_to_integral(short val)              { return val; }
-constexpr unsigned           _convert_to_integral(unsigned short val)     { return val; }
-constexpr int                _convert_to_integral(int val)                { return val; }
-constexpr unsigned           _convert_to_integral(unsigned int val)       { return val; }
-constexpr long               _convert_to_integral(long val)               { return val; }
-constexpr unsigned long      _convert_to_integral(unsigned long val)      { return val; }
-constexpr long long          _convert_to_integral(long long val)          { return val; }
-constexpr unsigned long long _convert_to_integral(unsigned long long val) { return val; }
-
-#ifdef _ALA_INT128
-constexpr __int128_t  _convert_to_integral(__int128_t val)  { return val; }
-constexpr __uint128_t _convert_to_integral(__uint128_t val) { return val; }
-#endif
-
-template<typename Float>
-constexpr enable_if_t<is_floating_point<Float>::value, long long>
-_convert_to_integral(Float val) {
-    return val;
-}
 
 } // namespace ala
 

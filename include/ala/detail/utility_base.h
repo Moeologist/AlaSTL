@@ -2,7 +2,7 @@
 #define _ALA_DETAIL_UTILITY_BASE_H
 
 #ifndef _ALA_DETAIL_TRAITS_DECLARE_H
-    #error Never use this directly
+    #error Never include this head directly, use ala/utility.h instead
 #endif
 
 namespace ala {
