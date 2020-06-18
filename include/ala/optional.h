@@ -36,9 +36,6 @@ struct _optional_destroy {
     constexpr void _reset() {
         _valid = false;
     }
-    void *_address() {
-        return &_placehold;
-    }
     constexpr bool _has_value() const {
         return _valid;
     }
@@ -68,9 +65,6 @@ struct _optional_destroy<T, false> {
             this->_valid = false;
         }
     }
-    void *_address() {
-        return &_placehold;
-    }
     constexpr bool _has_value() const {
         return _valid;
     }
@@ -88,9 +82,12 @@ template<class T>
 struct _optional_base: _optional_destroy<T> {
     using _base_t = _optional_destroy<T>;
     using _base_t::_base_t;
-    using _base_t::_address;
     using _base_t::_has_value;
     using _base_t::_reset;
+
+    void *_address() {
+        return &this->_placehold;
+    }
 
     template<class... Args>
     void _ctor_v(Args &&... args) {
@@ -100,12 +97,14 @@ struct _optional_base: _optional_destroy<T> {
         } catch (...) { throw; }
         this->_valid = true;
     }
+
     template<class OptBase>
     void _ctor(OptBase &&other) noexcept(
         is_nothrow_constructible<T, decltype((declval<OptBase>()._value))>::value) {
         if (other._has_value())
             this->_ctor_v(ala::forward<OptBase>(other)._value);
     }
+
     template<class Arg>
     void _asgn_v(Arg &&arg) {
         if (this->_has_value()) {
@@ -116,6 +115,7 @@ struct _optional_base: _optional_destroy<T> {
             this->_ctor_v(ala::forward<Arg>(arg));
         }
     }
+
     template<class OptBase>
     void _asgn(OptBase &&other) noexcept(
         is_nothrow_constructible<T, decltype((declval<OptBase>()._value))>::value &&
@@ -126,6 +126,8 @@ struct _optional_base: _optional_destroy<T> {
             this->_reset();
         }
     }
+
+    ~_optional_base() = default;
     constexpr _optional_base(): _base_t{} {}
     constexpr _optional_base(_optional_base &&) = default;
     constexpr _optional_base(const _optional_base &) = default;
