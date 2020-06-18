@@ -55,15 +55,18 @@ void _swap_adl(T &lhs, T &rhs) noexcept(is_nothrow_swappable<T>::value) {
 
 template<class Base, class T, class Derived, class... Args>
 constexpr auto
-_invoke_helper(T Base::*pmf, Derived &&ref, Args &&... args) -> enable_if_t<
-    is_function<T>::value && !is_reference_wrapper<decay_t<Derived>>::value &&
-        is_base_of<Base, decay_t<Derived>>::value,
-    decltype((ala::forward<Derived>(ref).*pmf)(ala::forward<Args>(args)...))> {
+_invoke_helper(T Base::*pmf, Derived &&ref, Args &&... args) noexcept(
+    noexcept((ala::forward<Derived>(ref).*pmf)(ala::forward<Args>(args)...)))
+    -> enable_if_t<
+        is_function<T>::value && !is_reference_wrapper<decay_t<Derived>>::value &&
+            is_base_of<Base, decay_t<Derived>>::value,
+        decltype((ala::forward<Derived>(ref).*pmf)(ala::forward<Args>(args)...))> {
     return (ala::forward<Derived>(ref).*pmf)(ala::forward<Args>(args)...);
 }
 
 template<class Base, class T, class Ptr, class... Args>
-constexpr auto _invoke_helper(T Base::*pmf, Ptr &&ptr, Args &&... args)
+constexpr auto _invoke_helper(T Base::*pmf, Ptr &&ptr, Args &&... args) noexcept(
+    noexcept(((*ala::forward<Ptr>(ptr)).*pmf)(ala::forward<Args>(args)...)))
     -> enable_if_t<
         is_function<T>::value && !is_reference_wrapper<decay_t<Ptr>>::value &&
             !is_base_of<Base, decay_t<Ptr>>::value,
@@ -72,14 +75,18 @@ constexpr auto _invoke_helper(T Base::*pmf, Ptr &&ptr, Args &&... args)
 }
 
 template<class Base, class T, class RefWrap, class... Args>
-constexpr auto _invoke_helper(T Base::*pmf, RefWrap &&ref, Args &&... args)
+constexpr auto
+_invoke_helper(T Base::*pmf, RefWrap &&ref, Args &&... args) noexcept(
+    noexcept((ref.get().*pmf)(ala::forward<Args>(args)...)))
     -> enable_if_t<is_function<T>::value && is_reference_wrapper<decay_t<RefWrap>>::value,
                    decltype((ref.get().*pmf)(ala::forward<Args>(args)...))> {
     return (ref.get().*pmf)(ala::forward<Args>(args)...);
 }
 
 template<class Base, class T, class Derived>
-constexpr auto _invoke_helper(T Base::*pmd, Derived &&ref)
+constexpr auto
+_invoke_helper(T Base::*pmd,
+               Derived &&ref) noexcept(noexcept(ala::forward<Derived>(ref).*pmd))
     -> enable_if_t<!is_function<T>::value &&
                        !is_reference_wrapper<decay_t<Derived>>::value &&
                        is_base_of<Base, decay_t<Derived>>::value,
@@ -88,7 +95,9 @@ constexpr auto _invoke_helper(T Base::*pmd, Derived &&ref)
 }
 
 template<class Base, class T, class Ptr>
-constexpr auto _invoke_helper(T Base::*pmd, Ptr &&ptr)
+constexpr auto
+_invoke_helper(T Base::*pmd,
+               Ptr &&ptr) noexcept(noexcept((*ala::forward<Ptr>(ptr)).*pmd))
     -> enable_if_t<!is_function<T>::value && !is_reference_wrapper<decay_t<Ptr>>::value &&
                        !is_base_of<Base, decay_t<Ptr>>::value,
                    decltype((*ala::forward<Ptr>(ptr)).*pmd)> {
@@ -96,7 +105,8 @@ constexpr auto _invoke_helper(T Base::*pmd, Ptr &&ptr)
 }
 
 template<class Base, class T, class RefWrap>
-constexpr auto _invoke_helper(T Base::*pmd, RefWrap &&ref)
+constexpr auto _invoke_helper(T Base::*pmd,
+                              RefWrap &&ref) noexcept(noexcept(ref.get().*pmd))
     -> enable_if_t<!is_function<T>::value &&
                        is_reference_wrapper<decay_t<RefWrap>>::value,
                    decltype(ref.get().*pmd)> {
@@ -104,7 +114,8 @@ constexpr auto _invoke_helper(T Base::*pmd, RefWrap &&ref)
 }
 
 template<class Fn, class... Args>
-constexpr auto _invoke_helper(Fn &&f, Args &&... args)
+constexpr auto _invoke_helper(Fn &&f, Args &&... args) noexcept(
+    noexcept(ala::forward<Fn>(f)(ala::forward<Args>(args)...)))
     -> enable_if_t<!is_member_pointer<decay_t<Fn>>::value,
                    decltype(ala::forward<Fn>(f)(ala::forward<Args>(args)...))> {
     return ala::forward<Fn>(f)(ala::forward<Args>(args)...);
@@ -121,7 +132,6 @@ invoke(Fn &&f,
         "invoke_result not compatible with invoke");
     return _invoke_helper(ala::forward<Fn>(f), ala::forward<Args>(args)...);
 }
-
 
 template<class T>
 const T *addressof(const T &&) = delete;
@@ -159,7 +169,6 @@ struct reference_wrapper {
         return ala::invoke(get(), ala::forward<Args>(args)...);
     }
 };
-
 
 #if _ALA_ENABLE_DEDUCTION_GUIDES
 template<class T>

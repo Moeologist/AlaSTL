@@ -317,12 +317,6 @@ struct bad_function_call: exception {
 template<class>
 struct function;
 
-template<class T>
-struct _is_ala_function: false_type {};
-
-template<class R, class... Args>
-struct _is_ala_function<function<R(Args...)>>: true_type {};
-
 template<class R, class... Args>
 struct function<R(Args...)>: _function_base<R> {
 private:
@@ -437,6 +431,12 @@ private:
         }
     }
 
+    template<class T>
+    struct _is_ala_function: false_type {};
+
+    template<class R1, class... Args1>
+    struct _is_ala_function<ala::function<R1(Args1...)>>: true_type {};
+
     template<class Fn>
     enable_if_t<_is_ala_function<Fn>::value, bool> is_empty_fn(const Fn &fn) {
         return !fn;
@@ -515,7 +515,7 @@ public:
 
     template<class Fn>
     function &operator=(reference_wrapper<Fn> fn) noexcept {
-        function(f).swap(*this);
+        function(fn).swap(*this);
         return *this;
     }
 

@@ -7,10 +7,10 @@
 unsigned char _BitScanForward(unsigned long *, unsigned long);
 unsigned char _BitScanReverse(unsigned long *, unsigned long);
 
-#if defined(_ALA_X64) || defined(_ALA_ARM64)
+    #if defined(_ALA_X64) || defined(_ALA_ARM64)
 unsigned char _BitScanForward64(unsigned long *, unsigned long long);
 unsigned char _BitScanReverse64(unsigned long *, unsigned long long);
-#endif
+    #endif
 
 #endif
 
@@ -93,26 +93,26 @@ inline int _clzll(unsigned long long x) {
 }
 #endif
 
-template<class UInt>
-enable_if_t<sizeof(UInt) == 4, int> ctz(UInt i) {
+template<class Int>
+enable_if_t<is_integral<Int>::value && sizeof(Int) == 4, int> ctz(Int i) {
     static_assert(sizeof(unsigned) == 4, "Internal error");
     return ala::intrin::_ctz(i);
 }
 
-template<class UInt>
-enable_if_t<sizeof(UInt) == 8, int> ctz(UInt i) {
+template<class Int>
+enable_if_t<is_integral<Int>::value && sizeof(Int) == 8, int> ctz(Int i) {
     static_assert(sizeof(unsigned long long) == 8, "Internal error");
     return ala::intrin::_ctzll(i);
 }
 
-template<class UInt>
-enable_if_t<sizeof(UInt) == 4, int> clz(UInt i) {
+template<class Int>
+enable_if_t<is_integral<Int>::value && sizeof(Int) == 4, int> clz(Int i) {
     static_assert(sizeof(unsigned) == 4, "Internal error");
     return ala::intrin::_clz(i);
 }
 
-template<class UInt>
-enable_if_t<sizeof(UInt) == 8, int> clz(UInt i) {
+template<class Int>
+enable_if_t<is_integral<Int>::value && sizeof(Int) == 8, int> clz(Int i) {
     static_assert(sizeof(unsigned long long) == 8, "Internal error");
     return ala::intrin::_clzll(i);
 }
