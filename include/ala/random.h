@@ -84,14 +84,17 @@ struct _xoshiro_jump<uint_fast32_t> {
 #endif
 
 /*
-A    state xor-lshift
-B    state rotate left
-Star use ** scrambler
-I    index of element used for starstar output
+A        state xor-lshift
+B        state rotate left
+Scramber Scramber type
 */
 
-template<typename UInt, UInt A, UInt B, bool Star, size_t I>
+enum xoshiro_scramber { ScramberPlus, ScramberStarStar, ScramberPlusPlus };
+
+template<typename UInt, UInt A, UInt B, xoshiro_scramber Scramber>
 struct xoshiro {
+    static_assert(sizeof(UInt) == 32 || sizeof(UInt) == 64,
+                  "xoshiro only support 32bit|64bit integral");
     typedef UInt result_type;
     result_type s[4];
 
@@ -99,14 +102,40 @@ struct xoshiro {
         return (x << k) | (x >> (sizeof(UInt) * 8 - k));
     }
 
-    template<bool Dummy = Star>
-    constexpr enable_if_t<!Dummy, result_type> scramber() {
+    template<xoshiro_scramber Dummy = Scramber>
+    constexpr enable_if_t<sizeof(UInt) == 64 && Dummy == ScramberPlus, result_type>
+    scramber() {
         return s[0] + s[3];
     }
 
-    template<bool Dummy = Star>
-    constexpr enable_if_t<Dummy, result_type> scramber() {
-        return rotl(s[I] * 5, 7) * 9;
+    template<xoshiro_scramber Dummy = Scramber>
+    constexpr enable_if_t<sizeof(UInt) == 64 && Dummy == ScramberStarStar, result_type>
+    scramber() {
+        return rotl(s[1] * 5, 7) * 9;
+    }
+
+    template<xoshiro_scramber Dummy = Scramber>
+    constexpr enable_if_t<sizeof(UInt) == 64 && Dummy == ScramberPlusPlus, result_type>
+    scramber() {
+        return rotl(s[0] + s[3], 23) + s[0];
+    }
+
+    template<xoshiro_scramber Dummy = Scramber>
+    constexpr enable_if_t<sizeof(UInt) == 32 && Dummy == ScramberPlus, result_type>
+    scramber() {
+        return s[0] + s[3];
+    }
+
+    template<xoshiro_scramber Dummy = Scramber>
+    constexpr enable_if_t<sizeof(UInt) == 32 && Dummy == ScramberStarStar, result_type>
+    scramber() {
+        return rotl(s[0] * 5, 7) * 9;
+    }
+
+    template<xoshiro_scramber Dummy = Scramber>
+    constexpr enable_if_t<sizeof(UInt) == 32 && Dummy == ScramberPlusPlus, result_type>
+    scramber() {
+        return rotl(s[0] + s[3], 7) + s[0];
     }
 
     constexpr void next() {
@@ -191,10 +220,12 @@ struct linear_congruential_engine {
     }
 };
 
-using xoshiro256ss = xoshiro<uint_fast64_t, 17, 45, true, 1>;
-using xoshiro256p = xoshiro<uint_fast64_t, 17, 45, false, 1>;
-using xoshiro128ss = xoshiro<uint_fast32_t, 9, 11, true, 0>;
-using xoshiro128p = xoshiro<uint_fast32_t, 9, 11, false, 0>;
+using xoshiro256pp = xoshiro<uint_fast64_t, 17, 45, ScramberPlusPlus>;
+using xoshiro256ss = xoshiro<uint_fast64_t, 17, 45, ScramberStarStar>;
+using xoshiro256p = xoshiro<uint_fast64_t, 17, 45, ScramberPlus>;
+using xoshiro128pp = xoshiro<uint_fast32_t, 9, 11, ScramberPlusPlus>;
+using xoshiro128ss = xoshiro<uint_fast32_t, 9, 11, ScramberStarStar>;
+using xoshiro128p = xoshiro<uint_fast32_t, 9, 11, ScramberPlus>;
 
 using xorshift32 = xorshift<uint_fast32_t, 13, 17, 5>;
 using xorshift64 = xorshift<uint_fast64_t, 13, 7, 17>;
