@@ -103,8 +103,4 @@
     #define _ALA_LANG __cplusplus
 #endif
 
-#ifdef __SIZEOF_INT128__
-    #define _ALA_INT128
-#endif
-
 #endif // HEAD

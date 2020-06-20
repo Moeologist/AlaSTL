@@ -86,6 +86,18 @@
     #define _ALA_ENABLE_TEMPLATE_VAR 0
 #endif
 
+#if __cpp_char8_t >= 201811L
+    #define _ALA_ENABLE_CHAR8T 1
+#else
+    #define _ALA_ENABLE_CHAR8T 0
+#endif
+
+#ifdef __SIZEOF_INT128__
+    #define _ALA_ENABLE_INT128T 1
+#else
+    #define _ALA_ENABLE_INT128T 0
+#endif
+
 #ifdef _ALA_DEBUG
 
     #define ALA_FORCEINLINE

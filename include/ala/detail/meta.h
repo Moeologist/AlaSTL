@@ -58,7 +58,7 @@ constexpr unsigned long      _convert_to_integral(unsigned long val)      { retu
 constexpr long long          _convert_to_integral(long long val)          { return val; }
 constexpr unsigned long long _convert_to_integral(unsigned long long val) { return val; }
 
-#ifdef _ALA_INT128
+#if _ALA_ENABLE_INT128T
 constexpr __int128_t  _convert_to_integral(__int128_t val)  { return val; }
 constexpr __uint128_t _convert_to_integral(__uint128_t val) { return val; }
 #endif

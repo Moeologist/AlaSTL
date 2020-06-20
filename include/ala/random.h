@@ -274,7 +274,7 @@ public:
         result_type l = b - a;
         if (l == 0)
             return a;
-        int z = ala::intrin::clz(l);
+        int z = ala::intrin::clz(make_unsigned_t<Int>(l));
         result_type mask = numeric_limits<result_type>::max() >> z;
         result_type r = g() & mask;
         for (; l < r;)

@@ -93,27 +93,27 @@ inline int _clzll(unsigned long long x) {
 }
 #endif
 
-template<class Int>
-enable_if_t<is_integral<Int>::value && sizeof(Int) == 4, int> ctz(Int i) {
-    static_assert(sizeof(unsigned) == 4, "Internal error");
+inline int ctz(unsigned i) {
     return ala::intrin::_ctz(i);
 }
 
-template<class Int>
-enable_if_t<is_integral<Int>::value && sizeof(Int) == 8, int> ctz(Int i) {
-    static_assert(sizeof(unsigned long long) == 8, "Internal error");
+inline int ctz(unsigned long i) {
+    return ala::intrin::_ctzl(i);
+}
+
+inline int ctz(unsigned long long i) {
     return ala::intrin::_ctzll(i);
 }
 
-template<class Int>
-enable_if_t<is_integral<Int>::value && sizeof(Int) == 4, int> clz(Int i) {
-    static_assert(sizeof(unsigned) == 4, "Internal error");
+inline int clz(unsigned i) {
     return ala::intrin::_clz(i);
 }
 
-template<class Int>
-enable_if_t<is_integral<Int>::value && sizeof(Int) == 8, int> clz(Int i) {
-    static_assert(sizeof(unsigned long long) == 8, "Internal error");
+inline int clz(unsigned long i) {
+    return ala::intrin::_clzl(i);
+}
+
+inline int clz(unsigned long long i) {
     return ala::intrin::_clzll(i);
 }
 

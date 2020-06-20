@@ -54,10 +54,14 @@ template<> struct _is_integral_helper<long>:               true_type {};
 template<> struct _is_integral_helper<unsigned long>:      true_type {};
 template<> struct _is_integral_helper<long long>:          true_type {};
 template<> struct _is_integral_helper<unsigned long long>: true_type {};
-#ifdef _ALA_INT128
+#if _ALA_ENABLE_INT128T
 template<> struct _is_integral_helper<__int128_t>:  true_type {};
 template<> struct _is_integral_helper<__uint128_t>: true_type {};
 #endif
+#if _ALA_ENABLE_CHAR8T
+template<> struct _is_integral_helper<char8_t>: true_type {};
+#endif
+
 template<typename T> struct is_integral: _is_integral_helper<remove_cv_t<T>> {};
 
 template<typename> struct _is_floating_point_helper:             false_type {};
@@ -497,7 +501,7 @@ template<> struct _make_signed_i<unsigned long>      { typedef signed long      
 template<> struct _make_signed_i<unsigned long long> { typedef signed long long type; };
 template<> struct _make_signed_i<char>               { typedef signed char      type; };
 template<> struct _make_signed_i<wchar_t>            { typedef conditional_t<sizeof(wchar_t) == 2, short, int> type; };
-#ifdef _ALA_INT128
+#if _ALA_ENABLE_INT128T
 template<> struct _make_signed_i<__uint128_t>        { typedef __int128_t       type; };
 #endif
 
@@ -515,7 +519,7 @@ template<> struct _make_unsigned_i<signed long>      { typedef unsigned long    
 template<> struct _make_unsigned_i<signed long long> { typedef unsigned long long type; };
 template<> struct _make_unsigned_i<char>             { typedef unsigned char      type; };
 template<> struct _make_unsigned_i<wchar_t>          { typedef conditional_t<sizeof(wchar_t) == 2, unsigned short, unsigned int> type; };
-#ifdef _ALA_INT128
+#if _ALA_ENABLE_INT128T
 template<> struct _make_unsigned_i<__int128_t>       { typedef __uint128_t        type; };
 #endif
 
@@ -709,7 +713,7 @@ template<typename Result, typename Ret, typename = void>
 struct _is_invocable_r_impl: false_type {};
 
 template<typename Result, typename Ret>
-struct _is_invocable_r_impl<Result, Ret, void_t<typename Result::type>
+struct _is_invocable_r_impl<Result, Ret, void_t<typename Result::type>>
     : _or_<is_void<Ret>, is_convertible<typename Result::type, Ret>> {};
 
 template<typename Fn, typename... Args>
