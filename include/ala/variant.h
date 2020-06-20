@@ -90,47 +90,6 @@ union _variant_union {
         : _rght(in_place_index_t<I>{}, ala::forward<Args>(args)...) {}
 
     constexpr _variant_union(in_place_index_t<variant_npos>): _placehold{} {}
-
-    template<size_t I>
-    constexpr auto get() const
-        -> enable_if_t<(Begin <= I && I < Begin + (Size >> 1)),
-                       decltype(_left.template get<I>())> {
-        return _left.template get<I>();
-    }
-
-    template<size_t I>
-    constexpr auto get() const
-        -> enable_if_t<(Begin + (Size >> 1) <= I && I < Begin + Size),
-                       decltype(_rght.template get<I>())> {
-        return _rght.template get<I>();
-    }
-
-    template<class Fn>
-    constexpr auto fmap(size_t I, Fn &&fn) const
-        -> common_type_t<decltype(_left.fmap(I, ala::forward<Fn>(fn))),
-                         decltype(_rght.fmap(I, ala::forward<Fn>(fn)))> {
-        if (Begin <= I && I < Begin + (Size >> 1))
-            return _left.fmap(I, ala::forward<Fn>(fn));
-        if (Begin + (Size >> 1) <= I && I < Begin + Size)
-            return _rght.fmap(I, ala::forward<Fn>(fn));
-        assert(false);
-    }
-
-    template<size_t I, class Fn>
-    constexpr auto fmap(in_place_index_t<I>, Fn &&fn)
-        -> enable_if_t<(Begin <= I && I < Begin + (Size >> 1)),
-                       decltype(_left.fmap(in_place_index_t<I>{},
-                                           ala::forward<Fn>(fn)))> {
-        return _left.fmap(in_place_index_t<I>{}, ala::forward<Fn>(fn));
-    }
-
-    template<size_t I, class Fn>
-    constexpr auto fmap(in_place_index_t<I>, Fn &&fn)
-        -> enable_if_t<(Begin + (Size >> 1) <= I && I < Begin + Size),
-                       decltype(_rght.fmap(in_place_index_t<I>{},
-                                           ala::forward<Fn>(fn)))> {
-        return _rght.fmap(in_place_index_t<I>{}, ala::forward<Fn>(fn));
-    }
 };
 
 template<size_t Begin, size_t Size, class... Ts>
@@ -158,47 +117,6 @@ union _variant_union<false, Begin, Size, Ts...> {
         : _rght(in_place_index_t<I>{}, ala::forward<Args>(args)...) {}
 
     constexpr _variant_union(in_place_index_t<variant_npos>): _placehold{} {}
-
-    template<size_t I>
-    constexpr auto get() const
-        -> enable_if_t<(Begin <= I && I < Begin + (Size >> 1)),
-                       decltype(_left.template get<I>())> {
-        return _left.template get<I>();
-    }
-
-    template<size_t I>
-    constexpr auto get() const
-        -> enable_if_t<(Begin + (Size >> 1) <= I && I < Begin + Size),
-                       decltype(_rght.template get<I>())> {
-        return _rght.template get<I>();
-    }
-
-    template<class Fn>
-    constexpr auto fmap(size_t I, Fn &&fn) const
-        -> common_type_t<decltype(_left.fmap(I, ala::forward<Fn>(fn))),
-                         decltype(_rght.fmap(I, ala::forward<Fn>(fn)))> {
-        if (Begin <= I && I < Begin + (Size >> 1))
-            return _left.fmap(I, ala::forward<Fn>(fn));
-        if (Begin + (Size >> 1) <= I && I < Begin + Size)
-            return _rght.fmap(I, ala::forward<Fn>(fn));
-        assert(false);
-    }
-
-    template<size_t I, class Fn>
-    constexpr auto fmap(in_place_index_t<I>, Fn &&fn)
-        -> enable_if_t<(Begin <= I && I < Begin + (Size >> 1)),
-                       decltype(_left.fmap(in_place_index_t<I>{},
-                                           ala::forward<Fn>(fn)))> {
-        return _left.fmap(in_place_index_t<I>{}, ala::forward<Fn>(fn));
-    }
-
-    template<size_t I, class Fn>
-    constexpr auto fmap(in_place_index_t<I>, Fn &&fn)
-        -> enable_if_t<(Begin + (Size >> 1) <= I && I < Begin + Size),
-                       decltype(_rght.fmap(in_place_index_t<I>{},
-                                           ala::forward<Fn>(fn)))> {
-        return _rght.fmap(in_place_index_t<I>{}, ala::forward<Fn>(fn));
-    }
 };
 
 template<size_t Begin, class... Ts>
@@ -218,26 +136,6 @@ union _variant_union<true, Begin, 1, Ts...> {
         : _value(ala::forward<Args>(args)...) {}
 
     constexpr _variant_union(in_place_index_t<variant_npos>): _placehold{} {}
-
-    template<size_t I>
-    constexpr const type_pack_element_t<Begin, Ts...> &get() const {
-        static_assert(I == Begin, "Internal error");
-        return this->_value;
-    }
-
-    template<class Fn>
-    constexpr auto fmap(size_t I, Fn &&fn) const
-        -> decltype(ala::forward<Fn>(fn)(_value)) {
-        assert(I == Begin);
-        return ala::forward<Fn>(fn)(_value);
-    }
-
-    template<size_t I, class Fn>
-    constexpr auto fmap(in_place_index_t<I>, Fn &&fn)
-        -> decltype(ala::forward<Fn>(fn)(_value)) {
-        static_assert(I == Begin, "Internal error");
-        return ala::forward<Fn>(fn)(_value);
-    }
 };
 
 template<size_t Begin, class... Ts>
@@ -257,31 +155,88 @@ union _variant_union<false, Begin, 1, Ts...> {
         : _value(ala::forward<Args>(args)...) {}
 
     constexpr _variant_union(in_place_index_t<variant_npos>): _placehold{} {}
+};
+
+template<bool Trivial, size_t Begin, size_t Size, class... Ts>
+struct _union_op {
+    static constexpr bool is_left(size_t I) noexcept {
+        return Begin <= I && I < Begin + (Size >> 1);
+    }
+
+    static constexpr bool is_rght(size_t I) noexcept {
+        return Begin + (Size >> 1) <= I && I < Begin + Size;
+    }
 
     template<size_t I>
-    constexpr const type_pack_element_t<Begin, Ts...> &get() const {
-        static_assert(I == Begin, "Internal error");
-        return this->_value;
+    static constexpr bool is_left_v = (Begin <= I && I < Begin + (Size >> 1));
+
+    template<size_t I>
+    static constexpr bool is_rght_v = (Begin + (Size >> 1) <= I &&
+                                       I < Begin + Size);
+
+    using left_t = _union_op<Trivial, Begin, (Size >> 1), Ts...>;
+
+    using rght_t =
+        _union_op<Trivial, Begin + (Size >> 1), Size - (Size >> 1), Ts...>;
+
+    template<class Fn, class Union>
+    static constexpr auto fmap(size_t I, Fn &&fn, Union &&un)
+        -> decltype(left_t::fmap(I, ala::forward<Fn>(fn),
+                                 ala::forward<Union>(un)._left)) {
+        static_assert(
+            is_same<decltype(left_t::fmap(I, ala::forward<Fn>(fn),
+                                          ala::forward<Union>(un)._left)),
+                    decltype(rght_t::fmap(I, ala::forward<Fn>(fn),
+                                          ala::forward<Union>(un)._rght))>::value,
+            "Internal error");
+        if (is_left(I))
+            return left_t::fmap(I, ala::forward<Fn>(fn),
+                                ala::forward<Union>(un)._left);
+        if (is_rght(I))
+            return rght_t::fmap(I, ala::forward<Fn>(fn),
+                                ala::forward<Union>(un)._rght);
     }
 
-    template<class Fn>
-    constexpr auto fmap(size_t I, Fn &&fn) const
-        -> decltype(ala::forward<Fn>(fn)(_value)) {
-        assert(I == Begin);
-        return ala::forward<Fn>(fn)(_value);
+    template<size_t I, class Fn, class Union>
+    static constexpr auto fmap(Fn &&fn, Union &&un)
+        -> enable_if_t<is_left_v<I>,
+                       decltype(left_t::template fmap<I>(
+                           ala::forward<Fn>(fn), ala::forward<Union>(un)._left))> {
+        return left_t::template fmap<I>(ala::forward<Fn>(fn),
+                                        ala::forward<Union>(un)._left);
     }
 
-    template<size_t I, class Fn>
-    constexpr auto fmap(in_place_index_t<I>, Fn &&fn)
-        -> decltype(ala::forward<Fn>(fn)(_value)) {
-        static_assert(I == Begin, "Internal error");
-        return ala::forward<Fn>(fn)(_value);
+    template<size_t I, class Fn, class Union>
+    static constexpr auto fmap(Fn &&fn, Union &&un)
+        -> enable_if_t<is_rght_v<I>,
+                       decltype(rght_t::template fmap<I>(
+                           ala::forward<Fn>(fn), ala::forward<Union>(un)._rght))> {
+        return rght_t::template fmap<I>(ala::forward<Fn>(fn),
+                                        ala::forward<Union>(un)._rght);
+    }
+};
+
+template<bool Trivial, size_t Begin, class... Ts>
+struct _union_op<Trivial, Begin, 1, Ts...> {
+    template<class Fn, class Union>
+    static constexpr auto fmap(size_t I, Fn &&fn, Union &&un)
+        -> decltype(ala::forward<Fn>(fn)(ala::forward<Union>(un)._value)) {
+        if (I == Begin)
+            return ala::forward<Fn>(fn)(ala::forward<Union>(un)._value);
+    }
+
+    template<size_t I, class Fn, class Union>
+    static constexpr auto fmap(Fn &&fn, Union &&un)
+        -> enable_if_t<I == Begin, decltype(ala::forward<Fn>(fn)(
+                                       ala::forward<Union>(un)._value))> {
+        return ala::forward<Fn>(fn)(ala::forward<Union>(un)._value);
     }
 };
 
 template<bool, class... Ts>
 struct _variant_destroy {
     _variant_union<true, 0, sizeof...(Ts), Ts...> _union;
+    using _union_op_t = _union_op<true, 0, sizeof...(Ts), Ts...>;
     size_t _index = variant_npos;
     ~_variant_destroy() = default;
     constexpr void _reset() {
@@ -301,16 +256,20 @@ struct _variant_destroy {
 template<class... Ts>
 struct _variant_destroy<false, Ts...> {
     _variant_union<false, 0, sizeof...(Ts), Ts...> _union;
+    using _union_op_t = _union_op<false, 0, sizeof...(Ts), Ts...>;
     size_t _index = variant_npos;
     ~_variant_destroy() {
         this->_reset();
     }
     constexpr void _reset() {
         if (this->_index != variant_npos) {
-            this->_union.fmap(this->_index, [](auto &&v) {
-                using T = remove_cvref_t<decltype(v)>;
-                v.~T();
-            });
+            _union_op_t::fmap(
+                this->_index,
+                [](auto &&v) {
+                    using T = remove_cvref_t<decltype(v)>;
+                    v.~T();
+                },
+                _union);
             this->_index = variant_npos;
         }
     }
@@ -335,17 +294,28 @@ struct _variant_base
     using _base_t::_union;
     using _base_t::_index;
     using _base_t::_reset;
+    using typename _base_t::_union_op_t;
 
     template<size_t I>
-    constexpr const type_pack_element_t<I, Ts...> &get() const {
-        return _union.template get<I>();
+    constexpr const type_pack_element_t<I, Ts...> &_get() const noexcept {
+        auto f = [](auto &&v) -> decltype(v) { return v; };
+        return _union_op_t::template fmap<I>(f, _union);
+    }
+
+    template<size_t I>
+    constexpr type_pack_element_t<I, Ts...> &_get() noexcept {
+        auto f = [](auto &&v) -> decltype(v) { return v; };
+        return _union_op_t::template fmap<I>(f, _union);
     }
 
     void *_address() {
-        return this->_union.fmap(this->_index, [](auto &&v) {
-            return const_cast<void *>(
-                reinterpret_cast<const volatile void *>(ala::addressof(v)));
-        });
+        return _union_op_t::fmap(
+            this->_index,
+            [](auto &&v) {
+                return const_cast<void *>(
+                    reinterpret_cast<const volatile void *>(ala::addressof(v)));
+            },
+            _union);
     }
 
     template<size_t I, class... Args>
@@ -353,40 +323,30 @@ struct _variant_base
         assert(this->_index == variant_npos);
         try {
             this->_index = I;
-            ::new (this->_address())
-                type_pack_element_t<I, Ts...>(ala::forward<Args>(args)...);
+            using T = type_pack_element_t<I, Ts...>;
+            ::new (this->_address()) T(ala::forward<Args>(args)...);
         } catch (...) {
             this->_index = variant_npos;
             throw;
         }
     }
 
-    void _ctor(_variant_base &&other) noexcept(
-        _and_<is_nothrow_move_constructible<Ts>...>::value) {
+    template<class VarBase>
+    void _ctor(VarBase &&other) noexcept(
+        conditional_t<is_lvalue_reference<VarBase>::value,
+                      _and_<is_nothrow_copy_constructible<Ts>...>,
+                      _and_<is_nothrow_move_constructible<Ts>...>>::value) {
         assert(this->_index == variant_npos);
         if (other._index != variant_npos) {
             try {
                 this->_index = other._index;
-                other._union.fmap(other._index, [addr = _address()](auto &&v) {
-                    ::new (addr) remove_cvref_t<decltype(v)>(
-                        const_cast<remove_cvref_t<decltype(v)> &&>(v));
-                });
-            } catch (...) {
-                this->_index = variant_npos;
-                throw;
-            }
-        }
-    }
-
-    void _ctor(const _variant_base &other) noexcept(
-        _and_<is_nothrow_copy_constructible<Ts>...>::value) {
-        assert(this->_index == variant_npos);
-        if (other._index != variant_npos) {
-            try {
-                this->_index = other._index;
-                other._union.fmap(other._index, [addr = _address()](auto &&v) {
-                    ::new (addr) remove_cvref_t<decltype(v)>(v);
-                });
+                _union_op_t::fmap(
+                    other._index,
+                    [addr = _address()](auto &&v) {
+                        using T = remove_cvref_t<decltype(v)>;
+                        ::new (addr) T(ala::forward<decltype(v)>(v));
+                    },
+                    ala::forward<VarBase>(other)._union);
             } catch (...) {
                 this->_index = variant_npos;
                 throw;
@@ -398,8 +358,8 @@ struct _variant_base
     void _asgn_v(in_place_index_t<I>, Arg &&arg) {
         if (_index == I) {
             try {
-                _union.fmap(in_place_index_t<I>{},
-                            [&](auto &v) { v = ala::forward<Arg>(arg); });
+                using T = type_pack_element_t<I, Ts...>;
+                *reinterpret_cast<T *>(_address()) = ala::forward<Arg>(arg);
             } catch (...) { throw; }
         } else if (is_nothrow_constructible<type_pack_element_t<I, Ts...>, Arg>::value ||
                    !is_nothrow_move_constructible<type_pack_element_t<I, Ts...>>::value) {
@@ -421,9 +381,14 @@ struct _variant_base
             this->_reset();
         } else if (this->_index == other._index) {
             try {
-                other._union.fmap(other._index, [addr = _address()](auto &&v) {
-                    *reinterpret_cast<remove_cvref_t<decltype(v)> *>(addr) = v;
-                });
+                _union_op_t::fmap(
+                    other._index,
+                    [addr = _address()](auto &&v) {
+                        using T = remove_cvref_t<decltype(v)>;
+                        *reinterpret_cast<T *>(
+                            addr) = v;
+                    },
+                    other._union);
             } catch (...) { throw; }
         } else if (a[other._index]) {
             this->_reset();
@@ -444,10 +409,14 @@ struct _variant_base
             this->_reset();
         } else if (this->_index == other._index) {
             try {
-                other._union.fmap(other._index, [addr = _address()](auto &&v) {
-                    *reinterpret_cast<remove_cvref_t<decltype(v)> *>(
-                        addr) = const_cast<remove_cvref_t<decltype(v)> &&>(v);
-                });
+                _union_op_t::fmap(
+                    other._index,
+                    [addr = _address()](auto &&v) {
+                        using T = remove_cvref_t<decltype(v)>;
+                        *reinterpret_cast<T *>(
+                            addr) = ala::move(v);
+                    },
+                    ala::move(other)._union);
             } catch (...) { throw; }
         } else {
             this->_reset();
@@ -474,11 +443,13 @@ struct _variant_base
             return;
         } else if (this->_index == other._index) {
             try {
-                other._union.fmap(other._index, [addr = _address()](auto &&v) {
-                    ala::_swap_adl(
-                        *reinterpret_cast<remove_cvref_t<decltype(v)> *>(addr),
-                        const_cast<remove_cvref_t<decltype(v)> &>(v));
-                });
+                _union_op_t::fmap(
+                    other._index,
+                    [addr = _address()](auto &&v) {
+                        using T = remove_cvref_t<decltype(v)>;
+                        ala::_swap_adl(*reinterpret_cast<T *>(addr), v);
+                    },
+                    other._union);
             } catch (...) { throw; }
         } else {
             using tag_t = bool_constant<_and_<is_move_constructible<Ts>...,
@@ -493,7 +464,7 @@ struct _variant_base
     constexpr _variant_base(const _variant_base &) = default;
     constexpr _variant_base &operator=(const _variant_base &) = default;
     constexpr _variant_base &operator=(_variant_base &&other) = default;
-};
+}; // namespace ala
 
 struct monostate {};
 
@@ -709,16 +680,14 @@ template<size_t I, class... Ts>
 constexpr variant_alternative_t<I, variant<Ts...>> &get(variant<Ts...> &v) {
     if (I != v.index())
         throw bad_variant_access{};
-    return const_cast<variant_alternative_t<I, variant<Ts...>> &>(
-        v.template get<I>());
+    return v.template _get<I>();
 }
 
 template<size_t I, class... Ts>
 constexpr variant_alternative_t<I, variant<Ts...>> &&get(variant<Ts...> &&v) {
     if (I != v.index())
         throw bad_variant_access{};
-    return ala::move(const_cast<variant_alternative_t<I, variant<Ts...>> &>(
-        v.template get<I>()));
+    return ala::move(v.template _get<I>());
 }
 
 template<size_t I, class... Ts>
@@ -726,7 +695,7 @@ constexpr const variant_alternative_t<I, variant<Ts...>> &
 get(const variant<Ts...> &v) {
     if (I != v.index())
         throw bad_variant_access{};
-    return v.template get<I>();
+    return v.template _get<I>();
 }
 
 template<size_t I, class... Ts>
@@ -734,7 +703,7 @@ constexpr const variant_alternative_t<I, variant<Ts...>> &&
 get(const variant<Ts...> &&v) {
     if (I != v.index())
         throw bad_variant_access{};
-    return ala::move(v.template get<I>());
+    return ala::move(v.template _get<I>());
 }
 
 template<class T, class... Ts>
@@ -762,8 +731,7 @@ constexpr add_pointer_t<variant_alternative_t<I, variant<Ts...>>>
 get_if(variant<Ts...> *v) noexcept {
     if (v == nullptr || I != v->index())
         return nullptr;
-    return const_cast<add_pointer_t<variant_alternative_t<I, variant<Ts...>>>>(
-        ala::addressof(v->template get<I>()));
+    return ala::addressof(v->template _get<I>());
 }
 
 template<size_t I, class... Ts>
@@ -771,7 +739,7 @@ constexpr add_pointer_t<const variant_alternative_t<I, variant<Ts...>>>
 get_if(const variant<Ts...> *v) noexcept {
     if (v == nullptr || I != v->index())
         return nullptr;
-    return ala::addressof(v->template get<I>());
+    return ala::addressof(v->template _get<I>());
 }
 
 template<class T, class... Ts>

@@ -706,17 +706,17 @@ template<typename Fn, typename... Args>
 struct result_of<Fn(Args...)>: invoke_result<Fn, Args...> {};
 
 template<typename Result, typename Ret, typename = void>
-struct _is_invocable_impl: false_type {};
+struct _is_invocable_r_impl: false_type {};
 
 template<typename Result, typename Ret>
-struct _is_invocable_impl<Result, Ret, void_t<typename Result::type>>: _or_<is_void<Ret>,
-                                                                            is_convertible<typename Result::type, Ret>> {};
+struct _is_invocable_r_impl<Result, Ret, void_t<typename Result::type>
+    : _or_<is_void<Ret>, is_convertible<typename Result::type, Ret>> {};
 
 template<typename Fn, typename... Args>
-struct is_invocable: _is_invocable_impl<invoke_result<Fn, Args...>, void> {};
+struct is_invocable: _is_invocable_r_impl<invoke_result<Fn, Args...>, void> {};
 
 template<typename Ret, typename Fn, typename... Args>
-struct is_invocable_r: _is_invocable_impl<invoke_result<Fn, Args...>, Ret> {};
+struct is_invocable_r: _is_invocable_r_impl<invoke_result<Fn, Args...>, Ret> {};
 
 template<typename Fn, typename... Args>
 struct _is_nt_invocable: decltype(_invoke_result_test<true>(declval<Fn>(), declval<Args>()...)) {};
@@ -734,7 +734,9 @@ template<typename Fn, typename... Args>
 struct is_nothrow_invocable: _and_<is_invocable<Fn, Args...>, _is_nt_invocable<Fn, Args...>> {};
 
 template<typename Ret, typename Fn, typename... Args>
-struct is_nothrow_invocable_r: _and_<_is_nt_invocable_r_impl<invoke_result<Fn, Args...>, Ret>, _is_nt_invocable<Fn, Args...>> {};
+struct is_nothrow_invocable_r: _and_<is_invocable_r<Ret, Fn, Args...>,
+                                     _is_nt_invocable<Fn, Args...>,
+                                     _is_nt_invocable_r_impl<invoke_result<Fn, Args...>, Ret>> {};
 
 template<typename... B> struct conjunction: _and_<B...> {};
 template<typename... B> struct disjunction: _or_<B...> {};
