@@ -93,7 +93,7 @@ enum xoshiro_scramber { ScramberPlus, ScramberStarStar, ScramberPlusPlus };
 
 template<typename UInt, UInt A, UInt B, xoshiro_scramber Scramber>
 struct xoshiro {
-    static_assert(sizeof(UInt) == 32 || sizeof(UInt) == 64,
+    static_assert(sizeof(UInt) == 4 || sizeof(UInt) == 8,
                   "xoshiro only support 32bit|64bit integral");
     typedef UInt result_type;
     result_type s[4];
@@ -103,37 +103,37 @@ struct xoshiro {
     }
 
     template<xoshiro_scramber Dummy = Scramber>
-    constexpr enable_if_t<sizeof(UInt) == 64 && Dummy == ScramberPlus, result_type>
+    constexpr enable_if_t<sizeof(UInt) == 8 && Dummy == ScramberPlus, result_type>
     scramber() {
         return s[0] + s[3];
     }
 
     template<xoshiro_scramber Dummy = Scramber>
-    constexpr enable_if_t<sizeof(UInt) == 64 && Dummy == ScramberStarStar, result_type>
+    constexpr enable_if_t<sizeof(UInt) == 8 && Dummy == ScramberStarStar, result_type>
     scramber() {
         return rotl(s[1] * 5, 7) * 9;
     }
 
     template<xoshiro_scramber Dummy = Scramber>
-    constexpr enable_if_t<sizeof(UInt) == 64 && Dummy == ScramberPlusPlus, result_type>
+    constexpr enable_if_t<sizeof(UInt) == 8 && Dummy == ScramberPlusPlus, result_type>
     scramber() {
         return rotl(s[0] + s[3], 23) + s[0];
     }
 
     template<xoshiro_scramber Dummy = Scramber>
-    constexpr enable_if_t<sizeof(UInt) == 32 && Dummy == ScramberPlus, result_type>
+    constexpr enable_if_t<sizeof(UInt) == 4 && Dummy == ScramberPlus, result_type>
     scramber() {
         return s[0] + s[3];
     }
 
     template<xoshiro_scramber Dummy = Scramber>
-    constexpr enable_if_t<sizeof(UInt) == 32 && Dummy == ScramberStarStar, result_type>
+    constexpr enable_if_t<sizeof(UInt) == 4 && Dummy == ScramberStarStar, result_type>
     scramber() {
         return rotl(s[0] * 5, 7) * 9;
     }
 
     template<xoshiro_scramber Dummy = Scramber>
-    constexpr enable_if_t<sizeof(UInt) == 32 && Dummy == ScramberPlusPlus, result_type>
+    constexpr enable_if_t<sizeof(UInt) == 4 && Dummy == ScramberPlusPlus, result_type>
     scramber() {
         return rotl(s[0] + s[3], 7) + s[0];
     }
@@ -163,7 +163,7 @@ struct xoshiro {
         constexpr const result_type(&jmp)[4] = _xoshiro_jump<result_type>::jmp;
         result_type s0 = 0, s1 = 0, s2 = 0, s3 = 0;
         for (int i = 0; i < sizeof(jmp) / sizeof(*jmp); ++i)
-            for (int b = 0; b < 8 * sizeof(result_type); ++b) {
+            for (int b = 0; b < sizeof(result_type) * 8; ++b) {
                 if (jmp[i] & (result_type(1) << b)) {
                     s0 ^= s[0];
                     s1 ^= s[1];
