@@ -1,0 +1,138 @@
+#ifndef _ALA_DETAIL_HASH_H
+#define _ALA_DETAIL_HASH_H
+
+#include <ala/detail/memory_base.h>
+#include <ala/detail/city-inl.h>
+
+namespace ala {
+
+struct _disabled_hash {
+    constexpr _disabled_hash() = delete;
+    constexpr _disabled_hash(const _disabled_hash &) = delete;
+    constexpr _disabled_hash(_disabled_hash &&) = delete;
+    constexpr _disabled_hash &operator=(const _disabled_hash &) = delete;
+    constexpr _disabled_hash &operator=(_disabled_hash &&) = delete;
+};
+
+template<class T, bool = is_enum<T>::value>
+struct _enum_hash {
+    using argument_type = T;
+    using result_type = size_t;
+    constexpr size_t operator()(T v) const noexcept {
+        return static_cast<size_t>(static_cast<underlying_type_t<T>>(v));
+    }
+};
+
+template<class T>
+struct _enum_hash<T, false>: _disabled_hash {};
+
+template<class T>
+struct _identity_hash {
+    using argument_type = T;
+    using result_type = size_t;
+    static_assert(sizeof(T) <= sizeof(size_t),
+                  "_identity_hash only suport small scalar hash");
+    constexpr size_t operator()(T v) const noexcept {
+        return static_cast<size_t>(v);
+    }
+};
+
+template<class T>
+struct _city_hash {
+    using argument_type = T;
+    using result_type = size_t;
+
+    size_t city(true_type, const char *p) const noexcept {
+        return ala::city::CityHash64(p, sizeof(T));
+    }
+
+    size_t city(false_type, const char *p) const noexcept {
+        return ala::city::CityHash32(p, sizeof(T));
+    }
+
+    size_t operator()(T v) const noexcept {
+        const char *p = reinterpret_cast<const char *>(ala::addressof(v));
+        return _city_hash::city(bool_constant<sizeof(size_t) == 8>{}, p);
+    }
+};
+
+template<class T>
+struct _float_hash {
+    using argument_type = T;
+    using result_type = size_t;
+    constexpr size_t operator()(T v) const noexcept {
+        if (v == static_cast<T>(0.))
+            return _city_hash<T>{}(0.);
+        return _city_hash<T>{}(v);
+    }
+};
+
+// clang-format off
+
+template<class T> struct hash: _enum_hash<T> {};
+
+template<> struct hash<bool>:           _identity_hash<bool> {};
+template<> struct hash<char>:           _identity_hash<char> {};
+template<> struct hash<signed char>:    _identity_hash<signed char> {};
+template<> struct hash<unsigned char>:  _identity_hash<unsigned char> {};
+template<> struct hash<char16_t>:       _identity_hash<char16_t> {};
+template<> struct hash<char32_t>:       _identity_hash<char32_t> {};
+template<> struct hash<wchar_t>:        _identity_hash<wchar_t> {};
+template<> struct hash<short>:          _identity_hash<short> {};
+template<> struct hash<unsigned short>: _identity_hash<unsigned short> {};
+template<> struct hash<int>:            _identity_hash<int> {};
+template<> struct hash<unsigned int>:   _identity_hash<unsigned int> {};
+template<> struct hash<long>:           _identity_hash<long> {};
+template<> struct hash<unsigned long>:  _identity_hash<unsigned long> {};
+
+template<> struct hash<long long> :         _city_hash<long long> {};
+template<> struct hash<unsigned long long>: _city_hash<unsigned long long> {};
+
+#if _ALA_ENABLE_INT128T
+template<> struct hash<__int128_t>:  _city_hash<__int128_t> {};
+template<> struct hash<__uint128_t>: _city_hash<__uint128_t> {};
+#endif
+
+#if _ALA_ENABLE_CHAR8T
+template<> struct hash<char8_t>: _identity_hash<char8_t> {};
+#endif
+
+template<> struct hash<float>:       _float_hash<float> {};
+template<> struct hash<double>:      _float_hash<double> {};
+template<> struct hash<long double>: _float_hash<long double> {};
+
+// clang-format on
+
+template<class T>
+struct hash<T *> {
+    using argument_type = T *;
+    using result_type = size_t;
+
+    constexpr size_t operator()(T *v) const noexcept {
+        return reinterpret_cast<size_t>(v);
+    }
+};
+
+template<>
+struct hash<nullptr_t> {
+    using argument_type = nullptr_t;
+    using result_type = size_t;
+
+    constexpr size_t operator()(nullptr_t) const noexcept {
+        return 0;
+    }
+};
+
+template<typename T, typename = void>
+struct _is_hashable: false_type {};
+
+template<typename Hashable>
+struct _is_hashable<
+    Hashable, enable_if_t<is_invocable_r<size_t, hash<Hashable>, Hashable>::value>>
+    : true_type {};
+
+template<class T, class...>
+using _sfinae_checker = T;
+
+} // namespace ala
+#endif

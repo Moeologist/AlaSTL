@@ -6,6 +6,7 @@
 #include <ala/functional.h>
 #include <ala/detail/macro.h>
 #include <ala/detail/controller.h>
+#include <ala/detail/hash.h>
 
 #ifdef _ALA_CLANG
     #pragma clang diagnostic push
@@ -308,6 +309,13 @@ struct _variant_base
         return _union_op_t::template fmap<I>(f, _union);
     }
 
+    size_t _hash() const noexcept {
+        return _union_op_t::fmap(
+            this->_index,
+            [](auto &&v) { return hash<remove_cvref_t<decltype(v)>>{}(v); },
+            _union);
+    }
+
     void *_address() {
         return _union_op_t::fmap(
             this->_index,
@@ -385,8 +393,7 @@ struct _variant_base
                     other._index,
                     [addr = _address()](auto &&v) {
                         using T = remove_cvref_t<decltype(v)>;
-                        *reinterpret_cast<T *>(
-                            addr) = v;
+                        *reinterpret_cast<T *>(addr) = v;
                     },
                     other._union);
             } catch (...) { throw; }
@@ -413,8 +420,7 @@ struct _variant_base
                     other._index,
                     [addr = _address()](auto &&v) {
                         using T = remove_cvref_t<decltype(v)>;
-                        *reinterpret_cast<T *>(
-                            addr) = ala::move(v);
+                        *reinterpret_cast<T *>(addr) = ala::move(v);
                     },
                     ala::move(other)._union);
             } catch (...) { throw; }
@@ -468,6 +474,16 @@ struct _variant_base
 
 struct monostate {};
 
+template<>
+struct hash<monostate> {
+    using argument_type = monostate;
+    using result_type = size_t;
+
+    constexpr size_t operator()(monostate) const noexcept {
+        return 10;
+    }
+};
+
 struct bad_variant_access: exception {
     bad_variant_access() noexcept {}
     virtual const char *what() const noexcept {
@@ -505,6 +521,8 @@ class variant: _make_controller_t<_variant_base<Ts...>, Ts...> {
     template<size_t I, class... Us>
     constexpr friend const variant_alternative_t<I, variant<Us...>> &&
     get(const variant<Us...> &&);
+
+    friend class hash<variant>;
 
     template<size_t I, class Ti, class T,
              bool = is_same<bool, remove_cvref_t<Ti>>::value, class = void>
@@ -988,6 +1006,24 @@ enable_if_t<_and_<is_move_constructible<Ts>..., is_swappable<Ts>...>::value>
 swap(variant<Ts...> &lhs, variant<Ts...> &rhs) noexcept(noexcept(lhs.swap(rhs))) {
     lhs.swap(rhs);
 }
+
+template<class... Ts>
+struct hash<_sfinae_checker<
+    variant<Ts...>, enable_if_t<_and_<_is_hashable<remove_const_t<Ts>>...>::value>>> {
+    typedef variant<Ts...> argument_type;
+    typedef size_t result_type;
+
+    result_type operator()(const argument_type &var) const {
+        using _union_op_t = typename _variant_base<Ts...>::_union_op_t;
+        if (var.valueless_by_exception())
+            return 0;
+        else {
+            size_t index_hash = hash<size_t>{}(var.index());
+            size_t value_hash = var._hash();
+            return index_hash ^ value_hash;
+        }
+    }
+};
 
 #ifdef _ALA_CLANG
     #pragma clang diagnostic pop

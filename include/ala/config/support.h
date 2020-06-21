@@ -98,6 +98,14 @@
     #define _ALA_ENABLE_INT128T 0
 #endif
 
+#if !defined(ALA_EXPECT)
+    #if ALA_HAS_BUILTIN(__builtin_expect)
+        #define ALA_EXPECT(x) (__builtin_expect(!!(x), 1))
+    #else
+        #define ALA_EXPECT(x) (x)
+    #endif
+#endif
+
 #ifdef _ALA_DEBUG
 
     #define ALA_FORCEINLINE

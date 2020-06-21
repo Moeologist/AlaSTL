@@ -4,6 +4,7 @@
 #include <ala/utility.h>
 #include <ala/detail/memory_base.h>
 #include <ala/detail/controller.h>
+#include <ala/detail/hash.h>
 
 namespace ala {
 
@@ -674,6 +675,17 @@ template<class T, class U, class... Args>
 constexpr optional<T> make_optional(initializer_list<U> il, Args &&... args) {
     return ala::optional<T>(in_place_t(), il, ala::forward<Args>(args)...);
 }
+
+template<class T>
+struct hash<_sfinae_checker<optional<T>,
+                            enable_if_t<_is_hashable<remove_const_t<T>>::value>>> {
+    typedef optional<T> argument_type;
+    typedef size_t result_type;
+
+    result_type operator()(const argument_type &opt) const {
+        return !!opt ? hash<remove_const_t<T>>()(*opt) : 0;
+    }
+};
 
 } // namespace ala
 
