@@ -54,35 +54,6 @@ using random_device_64 = random_device_adaptor<uint_fast64_t>;
 
 // see http://xoshiro.di.unimi.it/
 
-template<typename>
-struct _xoshiro_jump;
-
-template<>
-struct _xoshiro_jump<uint_fast64_t> {
-    static constexpr uint_fast64_t jmp[] = {0x180ec6d33cfd0aba,
-                                            0xd5a61266f0c9392c,
-                                            0xa9582618e03fc9aa,
-                                            0x39abdc4529b1661c};
-    // equivalent to 2^128 calls to next()
-
-    /*
-  static constexpr uint_fast64_t jmp[] = {0x76e15d3efefdcbbf,
-                                      0xc5004e441c522fb3,
-                                      0x77710069854ee241,
-                                      0x39109bb02acbe635};
-  equivalent to 2^192 calls to next()
-  */
-};
-
-#if UINT_FAST32_MAX != UINT_FAST64_MAX
-template<>
-struct _xoshiro_jump<uint_fast32_t> {
-    static constexpr uint_fast32_t jmp[] = {0x8764000b, 0xf542d2d3, 0x6fa035c3,
-                                            0x77f2db5b};
-    // equivalent to 2^64 calls to next()
-};
-#endif
-
 /*
 A        state xor-lshift
 B        state rotate left
@@ -157,26 +128,6 @@ struct xoshiro {
         for (; k > 0; --k)
             next();
     }
-
-    constexpr void jump() {
-        // jump need UInt is uint_fast32_t or uint_fast64_t
-        constexpr const result_type(&jmp)[4] = _xoshiro_jump<result_type>::jmp;
-        result_type s0 = 0, s1 = 0, s2 = 0, s3 = 0;
-        for (int i = 0; i < sizeof(jmp) / sizeof(*jmp); ++i)
-            for (int b = 0; b < sizeof(result_type) * 8; ++b) {
-                if (jmp[i] & (result_type(1) << b)) {
-                    s0 ^= s[0];
-                    s1 ^= s[1];
-                    s2 ^= s[2];
-                    s3 ^= s[3];
-                }
-                next();
-            }
-        s[0] = s0;
-        s[1] = s1;
-        s[2] = s2;
-        s[3] = s3;
-    }
 };
 
 template<typename UInt, UInt A, UInt B, UInt C>
@@ -240,15 +191,17 @@ generate_real(URBG &&g) {
     using Real =
         conditional_t<(sizeof(typename remove_cvref_t<URBG>::result_type) * 8 >= 52),
                       double, float>;
-    static_assert(numeric_limits<Real>::is_iec559,
-                  "IEC 559 (IEEE 754) check failed");
+    static_assert(numeric_limits<Real>::is_iec559 &&
+                      (is_same<double, Real>::value ||
+                       is_same<float, Real>::value),
+                  "IEC 559/IEEE 754 check failed");
     static_assert(sizeof(UInt) >= sizeof(Real), "The size of uint too small");
     constexpr size_t exponent = is_same<double, Real>::value ? 11 : 8;
     constexpr size_t fraction = is_same<double, Real>::value ? 52 : 23;
     constexpr size_t bits = sizeof(UInt) * 8;
     constexpr UInt e = ((UInt)1 << (exponent - 1)) - 1;
     UInt s = (g() >> (bits - fraction)) | (e << fraction);
-    return *(Real *)(&s) - (Real)1.0;
+    return *reinterpret_cast<Real *>(&s) - static_cast<Real>(1.0);
 }
 
 template<class Int = int>

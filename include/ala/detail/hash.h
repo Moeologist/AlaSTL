@@ -2,7 +2,7 @@
 #define _ALA_DETAIL_HASH_H
 
 #include <ala/detail/memory_base.h>
-#include <ala/detail/city-inl.h>
+#include <ala/detail/city_inl.h>
 
 namespace ala {
 

@@ -215,10 +215,10 @@ constexpr enable_if_t<!is_base_of<random_access_iterator_tag,
                                   typename iterator_traits<Iter>::iterator_category>::value,
                       typename iterator_traits<Iter>::difference_type>
 distance(Iter first, Iter last) {
-    typename iterator_traits<Iter>::difference_type ret = 0;
+    typename iterator_traits<Iter>::difference_type result = 0;
     for (; first != last; ++first)
-        ++ret;
-    return ret;
+        ++result;
+    return result;
 }
 
 template<class Iter, class Distance>
