@@ -257,7 +257,8 @@ struct _is_a_constructible_impl<T, Arg, void_t<decltype(::new T(declval<Arg>()))
 template<typename T, typename Arg, bool = is_reference<T>::value>
 struct _is_a_constructible: is_convertible<Arg, T> {};
 template<typename T, typename Arg>
-struct _is_a_constructible<T, Arg, false>: _is_a_constructible_impl<T, Arg> {};
+struct _is_a_constructible<T, Arg, false>: _and_<is_destructible<T>,
+                                                 _is_a_constructible_impl<T, Arg>> {};
 
 template<typename, typename T, typename... Args>
 struct _is_va_constructible_impl: false_type {};
@@ -280,16 +281,23 @@ struct _is_def_constructible<T, true>: _and_<is_bounded_array<T>,
                                              _is_def_constructible<remove_extent_t<T>>> {};
 
 template<typename T, typename... Args>
-struct is_constructible: _is_va_constructible<T, Args...> {};
+struct _is_constructible: _is_va_constructible<T, Args...> {};
 
 template<typename T, typename Arg>
-struct is_constructible<T, Arg>: _is_a_constructible<T, Arg> {};
+struct _is_constructible<T, Arg>: _is_a_constructible<T, Arg> {};
 
 template<typename T>
-struct is_constructible<T>: _is_def_constructible<T> {};
+struct _is_constructible<T>: _is_def_constructible<T> {};
 
-// template<typename T, typename... Args>
-// struct is_constructible: bool_constant<__is_constructible(T, Args...)> {};
+#if (defined(_ALA_CLANG) && !ALA_IS_IDENTIFIER(__is_constructible)) || \
+    (defined(_ALA_GCC) && _ALA_GCC_VER >= 80100) || \
+    (defined(_ALA_MSVC) && MSC_VER >= 1900)
+template<typename T, typename... Args>
+struct is_constructible: bool_constant<__is_constructible(T, Args...)> {};
+#else
+template<typename T, typename... Args>
+struct is_constructible: _is_constructible<T, Args...> {};
+#endif
 
 // template<typename T, typename... Args>
 // struct is_trivially_constructible: bool_constant<__is_trivially_constructible(T, Args...)> {};
@@ -303,16 +311,22 @@ struct is_trivially_constructible: _and_<is_constructible<T, Args...>,
 // Add remove_all_extent in bif to avoid gcc crash
 
 template<typename T, typename... Args>
-struct _is_nothrow_constructible_helper: bool_constant<noexcept(remove_all_extents_t<T>(declval<Args>()...))> {};
+struct _is_nt_va_constructible_impl: bool_constant<noexcept(T(declval<Args>()...))> {};
 
 template<typename T, typename Arg>
-struct _is_nothrow_constructible_helper<T, Arg>
-    : conditional_t<is_reference<T>::value,
-                    bool_constant<noexcept((T)declval<Arg>())>,
-                    bool_constant<noexcept(remove_all_extents_t<T>(declval<Arg>()))>> {};
+struct _is_nt_a_constructible_impl: conditional_t<is_reference<T>::value,
+                                                  is_nothrow_convertible<Arg, T>,
+                                                  bool_constant<noexcept(T(declval<Arg>()))>> {};
 
 template<typename T, typename... Args>
-struct is_nothrow_constructible: _and_<is_constructible<T, Args...>, _is_nothrow_constructible_helper<T, Args...>> {};
+struct _is_nt_constructible: _is_nt_va_constructible_impl<T, Args...> {};
+
+template<typename T, typename Arg>
+struct _is_nt_constructible<T, Arg>: _is_nt_a_constructible_impl<T, Arg> {};
+
+template<typename T, typename... Args>
+struct is_nothrow_constructible: _and_<is_constructible<T, Args...>,
+                                       _is_nt_constructible<T, Args...>> {};
 
 template<typename T, typename U, typename = void>
 struct _is_assignable_impl: false_type {};

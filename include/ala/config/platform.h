@@ -97,10 +97,4 @@
     #define _ALA_UNIX
 #endif
 
-#ifdef _MSVC_LANG
-    #define _ALA_LANG _MSVC_LANG
-#else
-    #define _ALA_LANG __cplusplus
-#endif
-
 #endif // HEAD

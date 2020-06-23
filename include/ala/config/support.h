@@ -106,6 +106,14 @@
     #endif
 #endif
 
+#ifndef ALA_LANG
+    #ifdef _MSVC_LANG
+        #define ALA_LANG _MSVC_LANG
+    #else
+        #define ALA_LANG __cplusplus
+    #endif
+#endif
+
 #ifdef _ALA_DEBUG
 
     #define ALA_FORCEINLINE

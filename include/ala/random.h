@@ -14,6 +14,12 @@ struct bad_random_device: exception {
 
 template<class UInt, bool RdSeed = true>
 struct random_device_adaptor {
+    static_assert(is_unsigned<UInt>::value,
+                  "random_device_adaptor only support unsigned integral");
+    static_assert(
+        sizeof(UInt) == 2 || sizeof(UInt) == 4 || sizeof(UInt) == 8,
+        "random_device_adaptor only support 16bit|32bit|64bit integral");
+
     typedef UInt result_type;
     result_type s;
 
@@ -53,7 +59,6 @@ using random_device = random_device_adaptor<uint_fast32_t>;
 using random_device_64 = random_device_adaptor<uint_fast64_t>;
 
 // see http://xoshiro.di.unimi.it/
-
 /*
 A        state xor-lshift
 B        state rotate left
@@ -62,12 +67,16 @@ Scramber Scramber type
 
 enum xoshiro_scramber { ScramberPlus, ScramberStarStar, ScramberPlusPlus };
 
-template<typename UInt, UInt A, UInt B, xoshiro_scramber Scramber>
+template<typename UInt, xoshiro_scramber Scramber>
 struct xoshiro {
+    static_assert(is_unsigned<UInt>::value,
+                  "xoshiro only support unsigned integral");
     static_assert(sizeof(UInt) == 4 || sizeof(UInt) == 8,
                   "xoshiro only support 32bit|64bit integral");
     typedef UInt result_type;
     result_type s[4];
+    static constexpr UInt A = sizeof(UInt) == 8 ? 17 : 9;
+    static constexpr UInt B = sizeof(UInt) == 8 ? 45 : 11;
 
     constexpr result_type rotl(result_type x, result_type k) {
         return (x << k) | (x >> (sizeof(UInt) * 8 - k));
@@ -128,6 +137,64 @@ struct xoshiro {
         for (; k > 0; --k)
             next();
     }
+
+    constexpr void do_jump(UInt (&jmp)[4]) {
+        result_type s0 = 0, s1 = 0, s2 = 0, s3 = 0;
+        for (int i = 0; i < sizeof(jmp) / sizeof(*jmp); ++i)
+            for (int b = 0; b < sizeof(result_type) * 8; ++b) {
+                if (jmp[i] & (result_type(1) << b)) {
+                    s0 ^= s[0];
+                    s1 ^= s[1];
+                    s2 ^= s[2];
+                    s3 ^= s[3];
+                }
+                next();
+            }
+        s[0] = s0;
+        s[1] = s1;
+        s[2] = s2;
+        s[3] = s3;
+    }
+
+    constexpr void _jump(true_type) {
+        constexpr uint_fast64_t jmp64[4] = {0x180ec6d33cfd0abaU,
+                                            0xd5a61266f0c9392cU,
+                                            0xa9582618e03fc9aaU,
+                                            0x39abdc4529b1661cU};
+        do_jump(jmp64);
+    }
+
+    constexpr void _long_jump(true_type) {
+        constexpr uint_fast64_t jmp64[4] = {0x76e15d3efefdcbbfU,
+                                            0xc5004e441c522fb3U,
+                                            0x77710069854ee241U,
+                                            0x39109bb02acbe635U};
+        do_jump(jmp64);
+    }
+
+    constexpr void _jump(false_type) {
+        constexpr uint_fast32_t jmp32[4] = {0x8764000bU, 0xf542d2d3U,
+                                            0x6fa035c3U, 0x77f2db5bU};
+        do_jump(jmp32);
+    }
+
+    constexpr void _long_jump(false_type) {
+        constexpr uint_fast32_t jmp32[4] = {0xb523952eU, 0x0b6f099fU,
+                                            0xccf5a0efU, 0x1c580662U};
+        do_jump(jmp32);
+    }
+
+    // 32bit: It is equivalent to 2^64 calls to next()
+    // 64bit: It is equivalent to 2^128 calls to next()
+    constexpr void jump() {
+        return _jump(bool_constant<sizeof(UInt) == 8>{});
+    }
+
+    // 32bit: It is equivalent to 2^96 calls to next()
+    // 64bit: It is equivalent to 2^192 calls to next()
+    constexpr void long_jump() {
+        return _long_jump(bool_constant<sizeof(UInt) == 8>{});
+    }
 };
 
 template<typename UInt, UInt A, UInt B, UInt C>
@@ -171,12 +238,12 @@ struct linear_congruential_engine {
     }
 };
 
-using xoshiro256pp = xoshiro<uint_fast64_t, 17, 45, ScramberPlusPlus>;
-using xoshiro256ss = xoshiro<uint_fast64_t, 17, 45, ScramberStarStar>;
-using xoshiro256p = xoshiro<uint_fast64_t, 17, 45, ScramberPlus>;
-using xoshiro128pp = xoshiro<uint_fast32_t, 9, 11, ScramberPlusPlus>;
-using xoshiro128ss = xoshiro<uint_fast32_t, 9, 11, ScramberStarStar>;
-using xoshiro128p = xoshiro<uint_fast32_t, 9, 11, ScramberPlus>;
+using xoshiro256pp = xoshiro<uint_fast64_t, ScramberPlusPlus>;
+using xoshiro256ss = xoshiro<uint_fast64_t, ScramberStarStar>;
+using xoshiro256p = xoshiro<uint_fast64_t, ScramberPlus>;
+using xoshiro128pp = xoshiro<uint_fast32_t, ScramberPlusPlus>;
+using xoshiro128ss = xoshiro<uint_fast32_t, ScramberStarStar>;
+using xoshiro128p = xoshiro<uint_fast32_t, ScramberPlus>;
 
 using xorshift32 = xorshift<uint_fast32_t, 13, 17, 5>;
 using xorshift64 = xorshift<uint_fast64_t, 13, 7, 17>;
