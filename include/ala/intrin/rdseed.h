@@ -28,28 +28,50 @@ namespace intrin {
 
     #if defined(_ALA_MSVC)
 
-        inline int _rdseed16(unsigned short *p)         { return _rdseed16_step(p); }
-        inline int _rdseed32(unsigned int *p)           { return _rdseed32_step(p); }
+        static inline int _rdseed16(unsigned short *p)         { return _rdseed16_step(p); }
+        static inline int _rdseed32(unsigned int *p)           { return _rdseed32_step(p); }
 
         #ifdef _ALA_X64
-        inline int _rdseed64(unsigned long long *p)     { return _rdseed64_step(p); }
+        static inline int _rdseed64(unsigned long long *p)     { return _rdseed64_step(p); }
         #endif
 
     #elif defined(_ALA_CLANG)
 
-        inline int _rdseed16(unsigned short *p)     { return __builtin_ia32_rdseed16_step(p); }
-        inline int _rdseed32(unsigned int *p)       { return __builtin_ia32_rdseed32_step(p); }
+        #ifndef __RDSEED__
+        #pragma clang attribute push (__attribute__((target("rdseed"))), apply_to=function)
+        #define __POP_RDSEED__
+        #endif // __RDSEED__
+
+        static inline int _rdseed16(unsigned short *p)     { return __builtin_ia32_rdseed16_step(p); }
+        static inline int _rdseed32(unsigned int *p)       { return __builtin_ia32_rdseed32_step(p); }
         #ifdef _ALA_X64
-        inline int _rdseed64(unsigned long long *p) { return __builtin_ia32_rdseed64_step(p); }
+        static inline int _rdseed64(unsigned long long *p) { return __builtin_ia32_rdseed64_step(p); }
         #endif
+
+        #ifdef __POP_RDSEED__
+        #pragma clang attribute pop
+        #undef __POP_RDSEED__
+        #endif // __POP_RDSEED__
+
 
     #elif defined(_ALA_GCC)
 
-        inline int _rdseed16(unsigned short *p)     { return __builtin_ia32_rdseed_hi_step(p); }
-        inline int _rdseed32(unsigned int *p)       { return __builtin_ia32_rdseed_si_step(p); }
+        #ifndef __RDSEED__
+        #pragma GCC push_options
+        #pragma GCC target("rdseed")
+        #define __POP_RDSEED__
+        #endif // __RDSEED__
+
+        static inline int _rdseed16(unsigned short *p)     { return __builtin_ia32_rdseed_hi_step(p); }
+        static inline int _rdseed32(unsigned int *p)       { return __builtin_ia32_rdseed_si_step(p); }
         #ifdef _ALA_X64
-        inline int _rdseed64(unsigned long long *p) { return __builtin_ia32_rdseed_di_step(p); }
+        static inline int _rdseed64(unsigned long long *p) { return __builtin_ia32_rdseed_di_step(p); }
         #endif
+
+        #ifdef __POP_RDSEED__
+        #pragma GCC push_options
+        #undef __POP_RDSEED__
+        #endif // __POP_RDSEED__
 
     #endif // COMPILER
 

@@ -2,7 +2,7 @@
 #define _ALA_INTRIN_CPUID_H
 
 #include <cstring>
-#include "ala/type_traits.h"
+#include <ala/type_traits.h>
 
 #ifdef _ALA_MSVC
 

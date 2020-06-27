@@ -1,15 +1,13 @@
 #ifndef _ALA_INTRIN_CPUID_H
 #define _ALA_INTRIN_CPUID_H
 
-#include <ala/type_traits.h>
-
 #ifdef _ALA_MSVC
-unsigned char _BitScanForward(unsigned long *, unsigned long);
-unsigned char _BitScanReverse(unsigned long *, unsigned long);
+extern unsigned char _BitScanForward(unsigned long *, unsigned long);
+extern unsigned char _BitScanReverse(unsigned long *, unsigned long);
 
     #if defined(_ALA_X64) || defined(_ALA_ARM64)
-unsigned char _BitScanForward64(unsigned long *, unsigned long long);
-unsigned char _BitScanReverse64(unsigned long *, unsigned long long);
+extern unsigned char _BitScanForward64(unsigned long *, unsigned long long);
+extern unsigned char _BitScanReverse64(unsigned long *, unsigned long long);
     #endif
 
 #endif
@@ -28,7 +26,7 @@ inline int _clz(unsigned x)             noexcept { return __builtin_clz(x); }
 inline int _clzl(unsigned long x)       noexcept { return __builtin_clzl(x); }
 inline int _clzll(unsigned long long x) noexcept { return __builtin_clzll(x); }
 
-    // clang-format on
+// clang-format on
 
 #else
 
