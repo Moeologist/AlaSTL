@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8"?>
 
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
@@ -10,124 +10,178 @@
     </Expand>
   </Type>
 
-
   <Type Name="ala::tuple&lt;&gt;">
-    <DisplayString></DisplayString>
-    <Expand />
+    <DisplayString Optional="true">()</DisplayString>
+    <Expand></Expand>
   </Type>
 
   <Type Name="ala::tuple&lt;*&gt;">
-    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <DisplayString Optional="true">({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value})</DisplayString>
     <Expand>
-      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">*(($T1*) (ala::_tuple_base&lt;0,$T1,1&gt;*) &amp;_impl)</Item>
     </Expand>
   </Type>
 
   <Type Name="ala::tuple&lt;*,*&gt;">
-    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <DisplayString Optional="true">({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value})</DisplayString>
     <Expand>
-      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">*(($T1*) (ala::_tuple_base&lt;0,$T1,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[1]" Optional="true">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]" Optional="true">*(($T2*) (ala::_tuple_base&lt;1,$T2,1&gt;*) &amp;_impl)</Item>
     </Expand>
   </Type>
 
   <Type Name="ala::tuple&lt;*,*,*&gt;">
-    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <DisplayString Optional="true">({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value})</DisplayString>
     <Expand>
-      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">*(($T1*) (ala::_tuple_base&lt;0,$T1,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[1]" Optional="true">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]" Optional="true">*(($T2*) (ala::_tuple_base&lt;1,$T2,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[2]" Optional="true">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]" Optional="true">*(($T3*) (ala::_tuple_base&lt;2,$T3,1&gt;*) &amp;_impl)</Item>
     </Expand>
   </Type>
 
   <Type Name="ala::tuple&lt;*,*,*,*&gt;">
-    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <DisplayString Optional="true">({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value})</DisplayString>
     <Expand>
-      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[3]">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">*(($T1*) (ala::_tuple_base&lt;0,$T1,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[1]" Optional="true">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]" Optional="true">*(($T2*) (ala::_tuple_base&lt;1,$T2,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[2]" Optional="true">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]" Optional="true">*(($T3*) (ala::_tuple_base&lt;2,$T3,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[3]" Optional="true">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[3]" Optional="true">*(($T4*) (ala::_tuple_base&lt;3,$T4,1&gt;*) &amp;_impl)</Item>
     </Expand>
   </Type>
 
   <Type Name="ala::tuple&lt;*,*,*,*,*&gt;">
-    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <DisplayString Optional="true">({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value})</DisplayString>
     <Expand>
-      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[3]">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[4]">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">*(($T1*) (ala::_tuple_base&lt;0,$T1,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[1]" Optional="true">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]" Optional="true">*(($T2*) (ala::_tuple_base&lt;1,$T2,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[2]" Optional="true">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]" Optional="true">*(($T3*) (ala::_tuple_base&lt;2,$T3,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[3]" Optional="true">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[3]" Optional="true">*(($T4*) (ala::_tuple_base&lt;3,$T4,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[4]" Optional="true">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[4]" Optional="true">*(($T5*) (ala::_tuple_base&lt;4,$T5,1&gt;*) &amp;_impl)</Item>
     </Expand>
   </Type>
 
   <Type Name="ala::tuple&lt;*,*,*,*,*,*&gt;">
-    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <DisplayString Optional="true">({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value})</DisplayString>
     <Expand>
-      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[3]">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[4]">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[5]">((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">*(($T1*) (ala::_tuple_base&lt;0,$T1,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[1]" Optional="true">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]" Optional="true">*(($T2*) (ala::_tuple_base&lt;1,$T2,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[2]" Optional="true">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]" Optional="true">*(($T3*) (ala::_tuple_base&lt;2,$T3,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[3]" Optional="true">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[3]" Optional="true">*(($T4*) (ala::_tuple_base&lt;3,$T4,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[4]" Optional="true">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[4]" Optional="true">*(($T5*) (ala::_tuple_base&lt;4,$T5,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[5]" Optional="true">((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[5]" Optional="true">*(($T6*) (ala::_tuple_base&lt;5,$T6,1&gt;*) &amp;_impl)</Item>
     </Expand>
   </Type>
 
   <Type Name="ala::tuple&lt;*,*,*,*,*,*,*&gt;">
-    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <DisplayString Optional="true">({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value})</DisplayString>
     <Expand>
-      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[3]">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[4]">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[5]">((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[6]">((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">*(($T1*) (ala::_tuple_base&lt;0,$T1,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[1]" Optional="true">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]" Optional="true">*(($T2*) (ala::_tuple_base&lt;1,$T2,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[2]" Optional="true">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]" Optional="true">*(($T3*) (ala::_tuple_base&lt;2,$T3,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[3]" Optional="true">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[3]" Optional="true">*(($T4*) (ala::_tuple_base&lt;3,$T4,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[4]" Optional="true">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[4]" Optional="true">*(($T5*) (ala::_tuple_base&lt;4,$T5,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[5]" Optional="true">((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[5]" Optional="true">*(($T6*) (ala::_tuple_base&lt;5,$T6,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[6]" Optional="true">((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[6]" Optional="true">*(($T7*) (ala::_tuple_base&lt;6,$T7,1&gt;*) &amp;_impl)</Item>
     </Expand>
   </Type>
 
   <Type Name="ala::tuple&lt;*,*,*,*,*,*,*,*&gt;">
-    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <DisplayString Optional="true">({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value})</DisplayString>
     <Expand>
-      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[3]">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[4]">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[5]">((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[6]">((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[7]">((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">*(($T1*) (ala::_tuple_base&lt;0,$T1,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[1]" Optional="true">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]" Optional="true">*(($T2*) (ala::_tuple_base&lt;1,$T2,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[2]" Optional="true">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]" Optional="true">*(($T3*) (ala::_tuple_base&lt;2,$T3,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[3]" Optional="true">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[3]" Optional="true">*(($T4*) (ala::_tuple_base&lt;3,$T4,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[4]" Optional="true">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[4]" Optional="true">*(($T5*) (ala::_tuple_base&lt;4,$T5,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[5]" Optional="true">((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[5]" Optional="true">*(($T6*) (ala::_tuple_base&lt;5,$T6,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[6]" Optional="true">((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[6]" Optional="true">*(($T7*) (ala::_tuple_base&lt;6,$T7,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[7]" Optional="true">((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[7]" Optional="true">*(($T8*) (ala::_tuple_base&lt;7,$T8,1&gt;*) &amp;_impl)</Item>
     </Expand>
   </Type>
 
   <Type Name="ala::tuple&lt;*,*,*,*,*,*,*,*,*&gt;">
-    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;8,$T9,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <DisplayString Optional="true">({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;8,$T9,0&gt;*) &amp;_impl)->value})</DisplayString>
     <Expand>
-      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[3]">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[4]">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[5]">((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[6]">((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[7]">((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[8]">((ala::_tuple_base&lt;8,$T9,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">*(($T1*) (ala::_tuple_base&lt;0,$T1,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[1]" Optional="true">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]" Optional="true">*(($T2*) (ala::_tuple_base&lt;1,$T2,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[2]" Optional="true">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]" Optional="true">*(($T3*) (ala::_tuple_base&lt;2,$T3,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[3]" Optional="true">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[3]" Optional="true">*(($T4*) (ala::_tuple_base&lt;3,$T4,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[4]" Optional="true">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[4]" Optional="true">*(($T5*) (ala::_tuple_base&lt;4,$T5,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[5]" Optional="true">((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[5]" Optional="true">*(($T6*) (ala::_tuple_base&lt;5,$T6,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[6]" Optional="true">((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[6]" Optional="true">*(($T7*) (ala::_tuple_base&lt;6,$T7,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[7]" Optional="true">((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[7]" Optional="true">*(($T8*) (ala::_tuple_base&lt;7,$T8,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[8]" Optional="true">((ala::_tuple_base&lt;8,$T9,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[8]" Optional="true">*(($T9*) (ala::_tuple_base&lt;8,$T9,1&gt;*) &amp;_impl)</Item>
     </Expand>
   </Type>
 
   <Type Name="ala::tuple&lt;*,*,*,*,*,*,*,*,*,*&gt;">
-    <DisplayString>({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;8,$T9,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;9,$T10,0&gt;*) &amp;_impl)->value})</DisplayString>
+    <DisplayString Optional="true">({((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;8,$T9,0&gt;*) &amp;_impl)->value}, {((ala::_tuple_base&lt;9,$T10,0&gt;*) &amp;_impl)->value})</DisplayString>
     <Expand>
-      <Item Name="[0]">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[1]">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[2]">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[3]">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[4]">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[5]">((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[6]">((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[7]">((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[8]">((ala::_tuple_base&lt;8,$T9,0&gt;*) &amp;_impl)->value</Item>
-      <Item Name="[9]">((ala::_tuple_base&lt;9,$T10,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">((ala::_tuple_base&lt;0,$T1,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[0]" Optional="true">*(($T1*) (ala::_tuple_base&lt;0,$T1,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[1]" Optional="true">((ala::_tuple_base&lt;1,$T2,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[1]" Optional="true">*(($T2*) (ala::_tuple_base&lt;1,$T2,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[2]" Optional="true">((ala::_tuple_base&lt;2,$T3,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[2]" Optional="true">*(($T3*) (ala::_tuple_base&lt;2,$T3,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[3]" Optional="true">((ala::_tuple_base&lt;3,$T4,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[3]" Optional="true">*(($T4*) (ala::_tuple_base&lt;3,$T4,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[4]" Optional="true">((ala::_tuple_base&lt;4,$T5,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[4]" Optional="true">*(($T5*) (ala::_tuple_base&lt;4,$T5,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[5]" Optional="true">((ala::_tuple_base&lt;5,$T6,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[5]" Optional="true">*(($T6*) (ala::_tuple_base&lt;5,$T6,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[6]" Optional="true">((ala::_tuple_base&lt;6,$T7,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[6]" Optional="true">*(($T7*) (ala::_tuple_base&lt;6,$T7,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[7]" Optional="true">((ala::_tuple_base&lt;7,$T8,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[7]" Optional="true">*(($T8*) (ala::_tuple_base&lt;7,$T8,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[8]" Optional="true">((ala::_tuple_base&lt;8,$T9,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[8]" Optional="true">*(($T9*) (ala::_tuple_base&lt;8,$T9,1&gt;*) &amp;_impl)</Item>
+      <Item Name="[9]" Optional="true">((ala::_tuple_base&lt;9,$T10,0&gt;*) &amp;_impl)->value</Item>
+      <Item Name="[9]" Optional="true">*(($T10*) (ala::_tuple_base&lt;9,$T10,1&gt;*) &amp;_impl)</Item>
     </Expand>
   </Type>
 
@@ -349,7 +403,7 @@
   </Type>
 
   <Type Name="ala::function&lt;*&gt;">
-    <DisplayString Condition="_op_handle == 0">empty</DisplayString>
+    <DisplayString Condition="_op_handle == 0">[empty]</DisplayString>
     <DisplayString Condition="_op_handle != 0">{_op_handle,na}</DisplayString>
     <Expand>
       <Item Name="[handle]" Condition="_op_handle != 0">_op_handle,na</Item>
@@ -532,6 +586,75 @@
     <Expand>
       <ExpandedItem>current,na</ExpandedItem>
     </Expand>
+  </Type>
+
+  <Type Name="ala::any">
+    <DisplayString Condition="_op_handle == 0">empty</DisplayString>
+    <DisplayString Condition="_op_handle != 0">{_op_handle,na}</DisplayString>
+    <Expand>
+      <Item Name="[handle]" Condition="_op_handle != 0">_op_handle,na</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::_variant_union&lt;*,*,1,*&gt;" IncludeView="VariantHelper">
+    <Expand>
+      <CustomListItems MaxItemsPerView="5000">
+        <Variable Name="index" InitialValue="0" />
+        <Size>1</Size>
+        <Exec>index = $T2</Exec>
+        <Item Name="[{index}]">_value</Item>
+      </CustomListItems>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::_variant_union&lt;*,*,*,*&gt;" IncludeView="VariantHelper">
+    <Expand>
+      <ExpandedItem>_left,view(VariantHelper)</ExpandedItem>
+      <ExpandedItem>_rght,view(VariantHelper)</ExpandedItem>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::variant&lt;*&gt;">
+    <DisplayString Condition="_index &lt; 0">[valueless_by_exception]</DisplayString>
+    <Expand>
+      <Item Name="[index]">_index</Item>
+      <Item Name="[value]" Condition="_index == 0" Optional="true">((ala::_variant_union&lt;0,$T1&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 1" Optional="true">((ala::_variant_union&lt;0,$T2&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 2" Optional="true">((ala::_variant_union&lt;0,$T3&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 3" Optional="true">((ala::_variant_union&lt;0,$T4&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 4" Optional="true">((ala::_variant_union&lt;0,$T5&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 5" Optional="true">((ala::_variant_union&lt;0,$T6&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 6" Optional="true">((ala::_variant_union&lt;0,$T7&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 7" Optional="true">((ala::_variant_union&lt;0,$T8&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 8" Optional="true">((ala::_variant_union&lt;0,$T9&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 9" Optional="true">((ala::_variant_union&lt;0,$T10&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 0" Optional="true">((ala::_variant_union&lt;1,$T1&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 1" Optional="true">((ala::_variant_union&lt;1,$T2&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 2" Optional="true">((ala::_variant_union&lt;1,$T3&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 3" Optional="true">((ala::_variant_union&lt;1,$T4&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 4" Optional="true">((ala::_variant_union&lt;1,$T5&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 5" Optional="true">((ala::_variant_union&lt;1,$T6&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 6" Optional="true">((ala::_variant_union&lt;1,$T7&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 7" Optional="true">((ala::_variant_union&lt;1,$T8&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 8" Optional="true">((ala::_variant_union&lt;1,$T9&gt;*) &amp;_union)->_value</Item>
+      <Item Name="[value]" Condition="_index == 9" Optional="true">((ala::_variant_union&lt;1,$T10&gt;*) &amp;_union)->_value</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="aarray&lt;*,*&gt;">
+    <Expand>
+      <ArrayItems Condition="_m != 0">
+        <Direction>Forward</Direction>
+        <Rank>3</Rank>
+        <Size>$T4</Size>
+        <ValuePointer>($T1*) _m</ValuePointer>
+      </ArrayItems>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::monostate">
+    <DisplayString>monostate</DisplayString>
+    <Expand />
   </Type>
 
 </AutoVisualizer>
