@@ -4,94 +4,93 @@
 #include <ala/config.h>
 #include <ala/detail/pair.h>
 #include <ala/detail/memory_base.h>
+#include <ala/iterator.h>
 
 namespace ala {
 
 template<class ForwardIter>
 void uninitialized_default_construct(ForwardIter first, ForwardIter last) {
+    using T = typename iterator_traits<ForwardIter>::value_type;
     for (; first != last; ++first)
-        ::new (static_cast<void *>(ala::addressof(*first)))
-            typename iterator_traits<ForwardIter>::value_type;
+        ::new (static_cast<void *>(ala::addressof(*first))) T;
     return first;
 }
 
 template<class ForwardIter, class Size>
 ForwardIter uninitialized_default_construct_n(ForwardIter first, Size n) {
+    using T = typename iterator_traits<ForwardIter>::value_type;
     for (; n > 0; ++first, (void)--n)
-        ::new (static_cast<void *>(ala::addressof(*first)))
-            typename iterator_traits<ForwardIter>::value_type;
+        ::new (static_cast<void *>(ala::addressof(*first))) T;
     return first;
 }
 
 template<class ForwardIter>
 void uninitialized_value_construct(ForwardIter first, ForwardIter last) {
+    using T = typename iterator_traits<ForwardIter>::value_type;
     for (; first != last; ++first)
-        ::new (static_cast<void *>(ala::addressof(*first)))
-            typename iterator_traits<ForwardIter>::value_type();
+        ::new (static_cast<void *>(ala::addressof(*first))) T();
     return first;
 }
 
 template<class ForwardIter, class Size>
 ForwardIter uninitialized_value_construct_n(ForwardIter first, Size n) {
+    using T = typename iterator_traits<ForwardIter>::value_type;
     for (; n > 0; ++first, (void)--n)
-        ::new (static_cast<void *>(ala::addressof(*first)))
-            typename iterator_traits<ForwardIter>::value_type();
+        ::new (static_cast<void *>(ala::addressof(*first))) T();
     return first;
 }
 
 template<class InputIter, class ForwardIter>
 ForwardIter uninitialized_copy(InputIter first, InputIter last, ForwardIter out) {
+    using T = typename iterator_traits<ForwardIter>::value_type;
     for (; first != last; ++first, (void)++out)
-        ::new (static_cast<void *>(ala::ala::addressof(*out)))
-            typename iterator_traits<ForwardIter>::value_type(*first);
+        ::new (static_cast<void *>(ala::addressof(*out))) T(*first);
     return out;
 }
 
 template<class InputIter, class Size, class ForwardIter>
 ForwardIter uninitialized_copy_n(InputIter first, Size n, ForwardIter out) {
+    using T = typename iterator_traits<ForwardIter>::value_type;
     for (; n > 0; ++out, ++first, (void)--n)
-        ::new (static_cast<void *>(ala::addressof(*out)))
-            typename iterator_traits<ForwardIter>::value_type(*first);
+        ::new (static_cast<void *>(ala::addressof(*out))) T(*first);
     return out;
 }
 
 template<class InputIter, class ForwardIter>
 ForwardIter uninitialized_move(InputIter first, InputIter last, ForwardIter out) {
+    using T = typename iterator_traits<ForwardIter>::value_type;
     for (; first != last; ++first, (void)++out)
-        ::new (static_cast<void *>(ala::ala::addressof(*out)))
-            typename iterator_traits<ForwardIter>::value_type(ala::move(*first));
+        ::new (static_cast<void *>(ala::addressof(*out))) T(ala::move(*first));
     return out;
 }
 
 template<class InputIter, class Size, class ForwardIter>
 pair<InputIter, ForwardIter> uninitialized_move_n(InputIter first, Size n,
                                                   ForwardIter out) {
+    using T = typename iterator_traits<ForwardIter>::value_type;
     for (; n > 0; ++out, ++first, (void)--n)
-        ::new (static_cast<void *>(ala::addressof(*out)))
-            typename iterator_traits<ForwardIter>::value_type(ala::move(*first));
+        ::new (static_cast<void *>(ala::addressof(*out))) T(ala::move(*first));
     return out;
 }
 
 template<class ForwardIter, class T>
 void uninitialized_fill(ForwardIter first, ForwardIter last, const T &x) {
     for (; first != last; ++first)
-        ::new (static_cast<void *>(ala::addressof(*first)))
-            typename iterator_traits<ForwardIter>::value_type(x);
+        ::new (static_cast<void *>(ala::addressof(*first))) T(x);
     return first;
 }
 
 template<class ForwardIter, class Size, class T>
 ForwardIter uninitialized_fill_n(ForwardIter first, Size n, const T &x) {
     for (; n > 0; ++first, (void)--n)
-        ::new (static_cast<void *>(ala::addressof(*first)))
-            typename iterator_traits<ForwardIter>::value_type(x);
+        ::new (static_cast<void *>(ala::addressof(*first))) T(x);
     return first;
 }
 
 template<class T>
 constexpr enable_if_t<is_array<T>::value> destroy_at(T *p) {
     for (auto &elem : *p)
-        destroy_at(ala::ala::addressof(elem));
+        destroy_at(ala::addressof(elem));
 }
 
 template<class T>
@@ -108,13 +107,13 @@ constexpr T *construct_at(T *p, Args &&... args) {
 template<class ForwardIter>
 constexpr void destroy(ForwardIter first, ForwardIter last) {
     for (; first != last; ++first)
-        ala::destroy_at(ala::ala::addressof(*first));
+        ala::destroy_at(ala::addressof(*first));
 }
 
 template<class ForwardIter, class Size>
 ForwardIter destroy_n(ForwardIter first, Size n) {
     for (; n > 0; (void)++first, --n)
-        ala::destroy_at(ala::ala::addressof(*first));
+        ala::destroy_at(ala::addressof(*first));
 }
 
 } // namespace ala
