@@ -3,8 +3,6 @@
 
 #include <ala/array.h>
 #include <ala/utility.h>
-#include <ala/functional.h>
-#include <ala/detail/macro.h>
 #include <ala/detail/controller.h>
 #include <ala/detail/hash.h>
 
@@ -66,12 +64,41 @@ struct variant_alternative<I, const volatile T> {
     using type = add_const_t<add_volatile_t<variant_alternative_t<I, T>>>;
 };
 
-template<bool, size_t Begin, size_t Size, class... Ts>
+template<bool, class...>
+union _variant_union;
+
+template<bool, class... Ts>
+struct _union_op;
+
+template<class IntSeq, bool Trivial, class... Ts>
+struct _make_union_helper {};
+
+template<bool Trivial, class... Ts, size_t... Is>
+struct _make_union_helper<index_sequence<Is...>, Trivial, Ts...> {
+    using type = _variant_union<Trivial, type_pack_element_t<Is, Ts...>...>;
+    using op = _union_op<Trivial, type_pack_element_t<Is, Ts...>...>;
+};
+
+template<bool Trivial, class T, size_t I>
+struct _make_union_helper<index_sequence<I>, Trivial, T> {
+    using type = _variant_union<Trivial, T>;
+    using op = _union_op<Trivial, T>;
+};
+
+template<class IntSeq, bool Trivial, class... Ts>
+using _make_union_t = typename _make_union_helper<IntSeq, Trivial, Ts...>::type;
+
+template<class IntSeq, bool Trivial, class... Ts>
+using _make_union_op_t = typename _make_union_helper<IntSeq, Trivial, Ts...>::op;
+
+template<bool Trivial, class... Ts>
 union _variant_union {
+    static constexpr size_t Size = sizeof...(Ts);
     static_assert(1 < Size, "Internal error");
+    static_assert(Trivial, "Internal error");
     char _placehold;
-    _variant_union<true, Begin, (Size >> 1), Ts...> _left;
-    _variant_union<true, Begin + (Size >> 1), Size - (Size >> 1), Ts...> _rght;
+    _make_union_t<make_integer_range<size_t, 0, (Size >> 1)>, true, Ts...> _left;
+    _make_union_t<make_integer_range<size_t, (Size >> 1), Size>, true, Ts...> _rght;
 
     ~_variant_union() = default;
     constexpr _variant_union(): _placehold{} {}
@@ -80,25 +107,26 @@ union _variant_union {
     constexpr _variant_union &operator=(const _variant_union &) = default;
     constexpr _variant_union &operator=(_variant_union &&) = default;
 
-    template<size_t I, class... Args,
-             class = enable_if_t<(Begin <= I && I < Begin + (Size >> 1))>>
+    template<size_t I, class... Args, class = enable_if_t<(I < (Size >> 1))>>
     constexpr _variant_union(in_place_index_t<I>, Args &&... args)
         : _left(in_place_index_t<I>{}, ala::forward<Args>(args)...) {}
 
     template<size_t I, class... Args, class = void,
-             class = enable_if_t<(Begin + (Size >> 1) <= I && I < Begin + Size)>>
+             class = enable_if_t<!(I < (Size >> 1))>>
     constexpr _variant_union(in_place_index_t<I>, Args &&... args)
-        : _rght(in_place_index_t<I>{}, ala::forward<Args>(args)...) {}
+        : _rght(in_place_index_t<I - (Size >> 1)>{}, ala::forward<Args>(args)...) {
+    }
 
     constexpr _variant_union(in_place_index_t<variant_npos>): _placehold{} {}
 };
 
-template<size_t Begin, size_t Size, class... Ts>
-union _variant_union<false, Begin, Size, Ts...> {
+template<class... Ts>
+union _variant_union<false, Ts...> {
+    static constexpr size_t Size = sizeof...(Ts);
     static_assert(1 < Size, "Internal error");
     char _placehold;
-    _variant_union<false, Begin, (Size >> 1), Ts...> _left;
-    _variant_union<false, Begin + (Size >> 1), Size - (Size >> 1), Ts...> _rght;
+    _make_union_t<make_integer_range<size_t, 0, (Size >> 1)>, false, Ts...> _left;
+    _make_union_t<make_integer_range<size_t, (Size >> 1), Size>, false, Ts...> _rght;
 
     ~_variant_union(){};
     constexpr _variant_union(): _placehold{} {}
@@ -107,22 +135,22 @@ union _variant_union<false, Begin, Size, Ts...> {
     constexpr _variant_union &operator=(const _variant_union &) = default;
     constexpr _variant_union &operator=(_variant_union &&) = default;
 
-    template<size_t I, class... Args,
-             class = enable_if_t<(Begin <= I && I < Begin + (Size >> 1))>>
+    template<size_t I, class... Args, class = enable_if_t<(I < (Size >> 1))>>
     constexpr _variant_union(in_place_index_t<I>, Args &&... args)
         : _left(in_place_index_t<I>{}, ala::forward<Args>(args)...) {}
 
     template<size_t I, class... Args, class = void,
-             class = enable_if_t<(Begin + (Size >> 1) <= I && I < Begin + Size)>>
+             class = enable_if_t<!(I < (Size >> 1))>>
     constexpr _variant_union(in_place_index_t<I>, Args &&... args)
-        : _rght(in_place_index_t<I>{}, ala::forward<Args>(args)...) {}
+        : _rght(in_place_index_t<I - (Size >> 1)>{}, ala::forward<Args>(args)...) {
+    }
 
     constexpr _variant_union(in_place_index_t<variant_npos>): _placehold{} {}
 };
 
-template<size_t Begin, class... Ts>
-union _variant_union<true, Begin, 1, Ts...> {
-    type_pack_element_t<Begin, Ts...> _value;
+template<class T>
+union _variant_union<true, T> {
+    T _value;
     char _placehold;
 
     ~_variant_union() = default;
@@ -133,15 +161,15 @@ union _variant_union<true, Begin, 1, Ts...> {
     constexpr _variant_union &operator=(_variant_union &&) = default;
 
     template<class... Args>
-    constexpr _variant_union(in_place_index_t<Begin>, Args &&... args)
+    constexpr _variant_union(in_place_index_t<0>, Args &&... args)
         : _value(ala::forward<Args>(args)...) {}
 
     constexpr _variant_union(in_place_index_t<variant_npos>): _placehold{} {}
 };
 
-template<size_t Begin, class... Ts>
-union _variant_union<false, Begin, 1, Ts...> {
-    type_pack_element_t<Begin, Ts...> _value;
+template<class T>
+union _variant_union<false, T> {
+    T _value;
     char _placehold;
 
     ~_variant_union(){};
@@ -152,33 +180,21 @@ union _variant_union<false, Begin, 1, Ts...> {
     constexpr _variant_union &operator=(_variant_union &&) = default;
 
     template<class... Args>
-    constexpr _variant_union(in_place_index_t<Begin>, Args &&... args)
+    constexpr _variant_union(in_place_index_t<0>, Args &&... args)
         : _value(ala::forward<Args>(args)...) {}
 
     constexpr _variant_union(in_place_index_t<variant_npos>): _placehold{} {}
 };
 
-template<bool Trivial, size_t Begin, size_t Size, class... Ts>
+template<bool Trivial, class... Ts>
 struct _union_op {
-    static constexpr bool is_left(size_t I) noexcept {
-        return Begin <= I && I < Begin + (Size >> 1);
-    }
+    static constexpr size_t Size = sizeof...(Ts);
+    static_assert(1 < Size, "Internal error");
 
-    static constexpr bool is_rght(size_t I) noexcept {
-        return Begin + (Size >> 1) <= I && I < Begin + Size;
-    }
-
-    template<size_t I>
-    static constexpr bool is_left_v = (Begin <= I && I < Begin + (Size >> 1));
-
-    template<size_t I>
-    static constexpr bool is_rght_v = (Begin + (Size >> 1) <= I &&
-                                       I < Begin + Size);
-
-    using left_t = _union_op<Trivial, Begin, (Size >> 1), Ts...>;
-
-    using rght_t =
-        _union_op<Trivial, Begin + (Size >> 1), Size - (Size >> 1), Ts...>;
+    using left_t =
+        _make_union_op_t<make_integer_range<size_t, 0, (Size >> 1)>, Trivial, Ts...>;
+    using rght_t = _make_union_op_t<make_integer_range<size_t, (Size >> 1), Size>,
+                                    Trivial, Ts...>;
 
     template<class Fn, class Union>
     static constexpr auto fmap(size_t I, Fn &&fn, Union &&un)
@@ -190,17 +206,17 @@ struct _union_op {
                     decltype(rght_t::fmap(I, ala::forward<Fn>(fn),
                                           ala::forward<Union>(un)._rght))>::value,
             "Internal error");
-        if (is_left(I))
+        if (I < (Size >> 1))
             return left_t::fmap(I, ala::forward<Fn>(fn),
                                 ala::forward<Union>(un)._left);
-        if (is_rght(I))
-            return rght_t::fmap(I, ala::forward<Fn>(fn),
+        if (Size >> 1 <= I && I < Size)
+            return rght_t::fmap(I - (Size >> 1), ala::forward<Fn>(fn),
                                 ala::forward<Union>(un)._rght);
     }
 
     template<size_t I, class Fn, class Union>
     static constexpr auto fmap(Fn &&fn, Union &&un)
-        -> enable_if_t<is_left_v<I>,
+        -> enable_if_t<(I < (Size >> 1)),
                        decltype(left_t::template fmap<I>(
                            ala::forward<Fn>(fn), ala::forward<Union>(un)._left))> {
         return left_t::template fmap<I>(ala::forward<Fn>(fn),
@@ -209,35 +225,36 @@ struct _union_op {
 
     template<size_t I, class Fn, class Union>
     static constexpr auto fmap(Fn &&fn, Union &&un)
-        -> enable_if_t<is_rght_v<I>,
-                       decltype(rght_t::template fmap<I>(
+        -> enable_if_t<(Size >> 1 <= I && I < Size),
+                       decltype(rght_t::template fmap<I - (Size >> 1)>(
                            ala::forward<Fn>(fn), ala::forward<Union>(un)._rght))> {
-        return rght_t::template fmap<I>(ala::forward<Fn>(fn),
-                                        ala::forward<Union>(un)._rght);
+        return rght_t::template fmap<I - (Size >> 1)>(
+            ala::forward<Fn>(fn), ala::forward<Union>(un)._rght);
     }
 };
 
-template<bool Trivial, size_t Begin, class... Ts>
-struct _union_op<Trivial, Begin, 1, Ts...> {
+template<bool Trivial, class T>
+struct _union_op<Trivial, T> {
     template<class Fn, class Union>
     static constexpr auto fmap(size_t I, Fn &&fn, Union &&un)
         -> decltype(ala::forward<Fn>(fn)(ala::forward<Union>(un)._value)) {
-        if (I == Begin)
+        if (I == 0)
             return ala::forward<Fn>(fn)(ala::forward<Union>(un)._value);
     }
 
     template<size_t I, class Fn, class Union>
     static constexpr auto fmap(Fn &&fn, Union &&un)
-        -> enable_if_t<I == Begin, decltype(ala::forward<Fn>(fn)(
-                                       ala::forward<Union>(un)._value))> {
+        -> decltype(ala::forward<Fn>(fn)(ala::forward<Union>(un)._value)) {
+        static_assert(I == 0);
         return ala::forward<Fn>(fn)(ala::forward<Union>(un)._value);
     }
 };
 
-template<bool, class... Ts>
+template<bool Trivial, class... Ts>
 struct _variant_destroy {
-    _variant_union<true, 0, sizeof...(Ts), Ts...> _union;
-    using _union_op_t = _union_op<true, 0, sizeof...(Ts), Ts...>;
+    static_assert(Trivial, "Internal error");
+    _make_union_t<index_sequence_for<Ts...>, true, Ts...> _union;
+    using _union_op_t = _make_union_op_t<index_sequence_for<Ts...>, true, Ts...>;
     size_t _index = variant_npos;
     ~_variant_destroy() = default;
     constexpr void _reset() {
@@ -256,8 +273,8 @@ struct _variant_destroy {
 
 template<class... Ts>
 struct _variant_destroy<false, Ts...> {
-    _variant_union<false, 0, sizeof...(Ts), Ts...> _union;
-    using _union_op_t = _union_op<false, 0, sizeof...(Ts), Ts...>;
+    _make_union_t<index_sequence_for<Ts...>, false, Ts...> _union;
+    using _union_op_t = _make_union_op_t<index_sequence_for<Ts...>, false, Ts...>;
     size_t _index = variant_npos;
     ~_variant_destroy() {
         this->_reset();

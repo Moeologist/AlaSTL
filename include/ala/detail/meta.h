@@ -7,15 +7,68 @@
 
 namespace ala {
 // clang-format off
-template<typename...> struct _or_;
-template<> struct _or_<>: false_type {};
-template<typename B1> struct _or_<B1>: B1 {};
-template<typename B1, typename... Bs> struct _or_<B1, Bs...>: conditional_t<bool(B1::value), B1, _or_<Bs...>> {};
 
-template<typename...> struct _and_;
-template<> struct _and_<>: true_type {};
-template<typename B1> struct _and_<B1>: B1 {};
-template<typename B1, typename... Bs> struct _and_<B1, Bs...>: conditional_t<bool(B1::value), _and_<Bs...>, B1> {};
+// short-circuit evaluation
+template<typename...> struct _lz_or_;
+template<> struct _lz_or_<>: false_type {};
+template<typename B1> struct _lz_or_<B1>: B1 {};
+template<typename B1, typename... Bs> struct _lz_or_<B1, Bs...>: conditional_t<bool(B1::value), B1, _lz_or_<Bs...>> {};
+
+template<typename...> struct _lz_and_;
+template<> struct _lz_and_<>: true_type {};
+template<typename B1> struct _lz_and_<B1>: B1 {};
+template<typename B1, typename... Bs> struct _lz_and_<B1, Bs...>: conditional_t<bool(B1::value), _lz_and_<Bs...>, B1> {};
+
+template<typename...Bools>
+constexpr bool _ce_or_helper_(Bools...bs) {
+#if _ALA_ENABLE_FOLD_EXPRESSIONS
+    return (false || ... || bs);
+#else
+    bool a[] = {bs...};
+    bool b = false;
+    for (size_t i = 0; i < sizeof(a)/sizeof(bool);++i)
+        b = b || a[i];
+    return b;
+#endif
+}
+
+template<typename...Bools>
+constexpr bool _ce_and_helper(Bools...bs) {
+#if _ALA_ENABLE_FOLD_EXPRESSIONS
+    return (true && ... && bs);
+#else
+    bool a[] = {bs...};
+    bool b = true;
+    for (size_t i = 0; i < sizeof(a)/sizeof(bool);++i)
+        b = b && a[i];
+    return b;
+#endif
+}
+
+// non-short-circuit evaluation
+template<typename... Bools>
+struct _ce_or_: bool_constant<_ce_or_helper_(Bools::value...)> {};
+
+template<typename... Bools>
+struct _ce_and_: bool_constant<_ce_and_helper(Bools::value...)> {};
+
+template<bool, typename... Bools>
+struct _or_helper_: _ce_or_<Bools...> {};
+
+template<typename... Bools>
+struct _or_helper_<true, Bools...>: _lz_or_<Bools...> {};
+
+template<bool, typename... Bools>
+struct _and_helper_: _ce_and_<Bools...> {};
+
+template<typename... Bools>
+struct _and_helper_<true, Bools...>: _lz_and_<Bools...> {};
+
+template<typename... Bools>
+struct _or_: _or_helper_<(sizeof...(Bools)<ALA_TEMPLATE_RECURSIVE_DEPTH), Bools...> {};
+
+template<typename... Bools>
+struct _and_: _and_helper_<(sizeof...(Bools)<ALA_TEMPLATE_RECURSIVE_DEPTH), Bools...> {};
 
 template<typename B>
 struct _not_: bool_constant<!bool(B::value)> {};

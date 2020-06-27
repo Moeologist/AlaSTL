@@ -85,6 +85,10 @@
     #warning Unsupported architecture, some features are disabled
 #endif // Architectures
 
+#if defined(__clang__) && defined(__c2__)
+#define _ALA_CLANG_C2
+#endif
+
 #ifdef _WIN32
     #define _ALA_WIN32
 #elif defined(__linux__)

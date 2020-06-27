@@ -130,7 +130,7 @@ struct _make_int_range_impl<Int, Start, End, Step, false>
 
 template<typename Int, Int Start, Int End, Int Step = 1>
 using make_integer_range =
-    typename _make_int_range_impl<Int, Start, End, (Step > 0 ? Step : -Step)>::type;
+    typename _make_int_range_impl<Int, Start, End, (Step >= 0 ? Step : -Step)>::type;
 
 template<typename... T>
 using index_sequence_for = make_index_sequence<sizeof...(T)>;
