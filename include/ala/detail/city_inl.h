@@ -49,9 +49,13 @@ static uint32 UNALIGNED_LOAD32(const char *p) {
     return result;
 }
 
-#ifdef _MSC_VER
+#if ALA_HAS_BUILTIN(__builtin_bswap32) && ALA_HAS_BUILTIN(__builtin_bswap64)
+    #define bswap_32(x) __builtin_bswap32(x)
+    #define bswap_64(x) __builtin_bswap64(x)
 
-    #include <stdlib.h>
+#elif defined(_MSC_VER)
+
+    #include <cstdlib>
     #define bswap_32(x) _byteswap_ulong(x)
     #define bswap_64(x) _byteswap_uint64(x)
 
@@ -497,6 +501,11 @@ uint128 CityHash128(const char *s, size_t len) {
                                    uint128(Fetch64(s), Fetch64(s + 8) + k0)) :
                CityHash128WithSeed(s, len, uint128(k0, k1));
 }
+
+#undef bswap_32
+#undef bswap_64
+#undef uint32_in_expected_order
+#undef uint64_in_expected_order
 
 } // namespace city
 } // namespace ala

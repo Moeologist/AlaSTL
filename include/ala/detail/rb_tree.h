@@ -227,7 +227,7 @@ protected:
     const value_compare &key_comp() const noexcept {
         return _comp;
     }
-    //TODO
+
     template<typename P, typename P1 = remove_cvref_t<P>,
              typename = enable_if_t<!is_lvalue_reference<P>::value>>
     auto pair_ref(P &&pr) const noexcept {
