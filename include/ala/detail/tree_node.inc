@@ -130,7 +130,10 @@ protected:
 #endif
     typedef NodePtr node_pointer;
     node_pointer _ptr = nullptr;
-    aligned_storage_t<sizeof(allocator_type), alignof(allocator_type)> _am;
+    union {
+        allocator_type _a;
+        char placehold;
+    };
 
     void clear() {
         if (_ptr != nullptr) {
@@ -142,11 +145,15 @@ protected:
 
     template<class... Args>
     void alloc_ctor(Args &&... args) {
-        ::new ((void *)&_am) allocator_type(ala::forward<Args>(args)...);
+        ::new (ala::addressof(_a)) allocator_type(ala::forward<Args>(args)...);
     }
 
-    allocator_type &_alloc() const {
-        return *(allocator_type *)&_am;
+    const allocator_type &_alloc() const {
+        return _a;
+    }
+
+    allocator_type &_alloc() {
+        return _a;
     }
 
     NODE(node_pointer p, const allocator_type &a): _ptr(p) {

@@ -251,7 +251,7 @@ struct is_nothrow_destructible: _is_nt_destructible_helper<T> {};
 template<typename T, typename Arg, typename = void>
 struct _is_a_constructible_impl: false_type {};
 template<typename T, typename Arg>
-struct _is_a_constructible_impl<T, Arg, void_t<decltype(::new T(declval<Arg>()))>>: true_type {};
+struct _is_a_constructible_impl<T, Arg, void_t<decltype(new T(declval<Arg>()))>>: true_type {};
 // use new to avoid explicit cast semantics
 
 template<typename T, typename Arg, bool = is_reference<T>::value>
