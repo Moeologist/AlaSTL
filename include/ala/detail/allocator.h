@@ -1,8 +1,6 @@
 #ifndef _ALA_DETAIL_ALLOCATOR_H
 #define _ALA_DETAIL_ALLOCATOR_H
 
-#include <ala/type_traits.h>
-#include <ala/detail/macro.h>
 #include <ala/detail/memory_base.h>
 
 #ifdef _ALA_MSVC
@@ -17,8 +15,8 @@ struct allocator {
     typedef T value_type;
     typedef T *pointer;
     typedef const T *const_pointer;
-    typedef T &reference;
-    typedef const T &const_reference;
+    typedef add_lvalue_reference_t<T> reference;
+    typedef add_lvalue_reference_t<add_const_t<T>> const_reference;
     typedef size_t size_type;
     typedef ptrdiff_t difference_type;
     typedef true_type propagate_on_container_move_assignment;
@@ -52,7 +50,7 @@ struct allocator {
     }
 
     template<class U, class... Args>
-    void construct(U *p, Args &&... args) {
+    void construct(U *p, Args &&...args) {
         ::new ((void *)p) U(ala::forward<Args>(args)...);
     }
 
@@ -187,7 +185,7 @@ struct allocator_traits {
 
     template<typename Pointer, typename... Args>
     static enable_if_t<_has_construct<void, allocator_type &, Pointer, Args...>::value>
-    construct(allocator_type &a, Pointer p, Args &&... args) {
+    construct(allocator_type &a, Pointer p, Args &&...args) {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
         static_assert(is_same<T, value_type>::value,
                       "Can not process incompatible type");
@@ -196,9 +194,9 @@ struct allocator_traits {
 
     template<typename Pointer, typename... Args>
     static enable_if_t<!_has_construct<void, allocator_type &, Pointer, Args...>::value>
-    construct(allocator_type &a, Pointer p, Args &&... args) {
+    construct(allocator_type &a, Pointer p, Args &&...args) {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
-        static_assert(is_same<remove_cv_t<T>, value_type>::value,
+        static_assert(is_same<T, value_type>::value,
                       "Can not process incompatible type");
         void *raw = static_cast<void *>(ala::to_address(p));
         ::new (raw) value_type(ala::forward<Args>(args)...);
@@ -207,8 +205,8 @@ struct allocator_traits {
     template<typename Pointer>
     static enable_if_t<_has_destroy<void, allocator_type &, Pointer>::value>
     destroy(allocator_type &a, Pointer p) {
-        using T = typename pointer_traits<Pointer>::element_type;
-        static_assert(is_same<remove_cv_t<T>, value_type>::value,
+        using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
+        static_assert(is_same<T, value_type>::value,
                       "Can not process incompatible type");
         a.destroy(p);
     }
@@ -216,8 +214,8 @@ struct allocator_traits {
     template<typename Pointer>
     static enable_if_t<!_has_destroy<void, allocator_type &, Pointer>::value>
     destroy(allocator_type &a, Pointer p) {
-        using T = typename pointer_traits<Pointer>::element_type;
-        static_assert(is_same<remove_cv_t<T>, value_type>::value,
+        using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
+        static_assert(is_same<T, value_type>::value,
                       "Can not process incompatible type");
         (*p).~T();
     }
@@ -312,6 +310,63 @@ struct allocator_traits {
         a.template deallocate_object<U>(p, n);
     }
 
+    template<typename Void, typename U, typename A, typename P, typename... Args>
+    struct _has_construct_obj: false_type {};
+
+    template<typename A, typename U, typename P, typename... Args>
+    struct _has_construct_obj<
+        void_t<decltype(declval<A &>().template construct_object<U>(
+            declval<P>(), declval<Args>()...))>,
+        U, A, P, Args...>: true_type {};
+
+    template<typename Void, typename U, typename A, typename P>
+    struct _has_destroy_obj: false_type {};
+
+    template<typename A, typename U, typename P>
+    struct _has_destroy_obj<
+        void_t<decltype(declval<A &>().template destroy_object<U>(declval<P>()))>,
+        U, A, P>: true_type {};
+
+    template<typename U, typename Pointer, typename... Args>
+    static enable_if_t<
+        _has_construct_obj<void, U, allocator_type &, Pointer, Args...>::value>
+    construct_object(allocator_type &a, Pointer p, Args &&...args) {
+        using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
+        static_assert(is_same<T, remove_cv_t<U>>::value,
+                      "Can not process incompatible type");
+        a.template construct_object<U>(p, ala::forward<Args>(args)...);
+    }
+
+    template<typename U, typename Pointer, typename... Args>
+    static enable_if_t<
+        !_has_construct_obj<void, U, allocator_type &, Pointer, Args...>::value>
+    construct_object(allocator_type &a, Pointer p, Args &&...args) {
+        using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
+        static_assert(is_same<T, remove_cv_t<U>>::value,
+                      "Can not process incompatible type");
+        void *raw = const_cast<void *>(
+            static_cast<const volatile void *>(ala::to_address(p)));
+        ::new (raw) U(ala::forward<Args>(args)...);
+    }
+
+    template<typename U, typename Pointer>
+    static enable_if_t<_has_destroy_obj<void, U, allocator_type &, Pointer>::value>
+    destroy_object(allocator_type &a, Pointer p) {
+        using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
+        static_assert(is_same<T, remove_cv_t<U>>::value,
+                      "Can not process incompatible type");
+        a.template destroy_object<U>(p);
+    }
+
+    template<typename U, typename Pointer>
+    static enable_if_t<!_has_destroy_obj<void, U, allocator_type &, Pointer>::value>
+    destroy_object(allocator_type &a, Pointer p) {
+        using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
+        static_assert(is_same<T, remove_cv_t<U>>::value,
+                      "Can not process incompatible type");
+        (*p).~U();
+    }
+
     template<typename Void, typename A>
     struct _has_max_size: false_type {};
 
@@ -343,6 +398,56 @@ struct _is_allocator<Alloc, void_t<typename Alloc::value_type,
     : true_type {};
 
 } // namespace ala
+
+template<class Pointer, class Alloc>
+struct pointer_holder {
+    Pointer _ptr = nullptr;
+    Alloc &_alloc;
+    size_t _size = 0;
+    using _alloc_traits = ala::allocator_traits<Alloc>;
+    pointer_holder(Alloc &a, size_t s): _alloc(a) {
+        _ptr = _alloc.allocate(s);
+        _size = s;
+    }
+    ~pointer_holder() {
+        if (_ptr)
+            _alloc.deallocate(_ptr, _size);
+    }
+    Pointer release() {
+        Pointer tmp = _ptr;
+        _ptr = nullptr;
+        return tmp;
+    }
+    Pointer get() {
+        return _ptr;
+    }
+};
+
+template<class T, class Alloc>
+struct pointer_holder<T *, Alloc> {
+    using Pointer = T *;
+    Pointer _ptr = nullptr;
+    Alloc &_alloc;
+    size_t _size = 0;
+    using _alloc_traits = ala::allocator_traits<Alloc>;
+
+    pointer_holder(Alloc &a, size_t s): _alloc(a) {
+        _ptr = _alloc_traits::template allocate_object<T>(_alloc, s);
+        _size = s;
+    }
+    ~pointer_holder() {
+        if (_ptr)
+            _alloc_traits::template deallocate_object<T>(_alloc, _ptr, _size);
+    }
+    Pointer release() {
+        Pointer tmp = _ptr;
+        _ptr = nullptr;
+        return tmp;
+    }
+    Pointer get() {
+        return _ptr;
+    }
+};
 
 #ifdef _ALA_MSVC
     #pragma warning(pop)

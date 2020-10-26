@@ -2,6 +2,7 @@
 #define _ALA_DETAIL_MEMORY_BASE_H
 
 #include <new>
+#include <ala/type_traits.h>
 #include <ala/detail/macro.h>
 
 namespace ala {
@@ -11,6 +12,7 @@ using ::std::align_val_t;
 #endif
 
 using ::std::bad_array_new_length;
+using ::std::bad_alloc;
 
 template<typename Ptr>
 struct pointer_traits {
@@ -59,7 +61,7 @@ struct pointer_traits {
     struct _dummy {};
 
     constexpr static pointer pointer_to(
-        conditional_t<is_void<element_type>::value, _dummy, element_type &> r) noexcept {
+        conditional_t<is_void<element_type>::value, _dummy, element_type> &r) noexcept {
         return pointer::pointer_to(r);
     }
 };

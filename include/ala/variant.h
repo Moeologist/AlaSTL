@@ -79,12 +79,6 @@ struct _make_union_helper<index_sequence<Is...>, Trivial, Ts...> {
     using op = _union_op<Trivial, type_pack_element_t<Is, Ts...>...>;
 };
 
-template<bool Trivial, class T, size_t I>
-struct _make_union_helper<index_sequence<I>, Trivial, T> {
-    using type = _variant_union<Trivial, T>;
-    using op = _union_op<Trivial, T>;
-};
-
 template<class IntSeq, bool Trivial, class... Ts>
 using _make_union_t = typename _make_union_helper<IntSeq, Trivial, Ts...>::type;
 
