@@ -575,7 +575,7 @@ public:
     template<class... Args>
     enable_if_t<!_is_v_emp<Args...>::value && !_is_km_emp<Args...>::value,
                 pair<_hdle_t, bool>>
-    emplace(_hdle_t hint, Args &&... args) {
+    emplace(_hdle_t hint, Args &&...args) {
         _hdle_t node = construct_node(ala::forward<Args>(args)...);
         locate_states ls = locate(hint, this->_key(node->_data));
         if (IsUniq && ls.found) {
@@ -605,7 +605,7 @@ public:
     }
 
     template<class K, class... Args>
-    pair<_hdle_t, bool> emplace_k(const K &k, _hdle_t hint, Args &&... args) {
+    pair<_hdle_t, bool> emplace_k(const K &k, _hdle_t hint, Args &&...args) {
         locate_states ls = locate(hint, k);
         if (IsUniq && ls.found) {
             return pair<_hdle_t, bool>(ls.postion, false);
@@ -682,23 +682,23 @@ protected:
 
     template<class... Args>
     enable_if_t<sizeof...(Args) != 1 || !_use_pair_ref<Args...>::value, _hdle_t>
-    construct_node(Args &&... args) {
-        _hdle_t node = _alloc_traits::template allocate_object<_node_t>(_alloc,
-                                                                        1);
-        _alloc_traits::construct(_alloc, ala::addressof(node->_data),
+    construct_node(Args &&...args) {
+        using holder_t = pointer_holder<_node_t *, Alloc>;
+        holder_t holder(_alloc, 1);
+        _alloc_traits::construct(_alloc, ala::addressof(holder.get()->_data),
                                  ala::forward<Args>(args)...);
-        node->_is_nil = false;
-        return node;
+        holder.get()->_is_nil = false;
+        return holder.release();
     }
 
     template<class P>
     enable_if_t<_use_pair_ref<P>::value, _hdle_t> construct_node(P &&pr) {
-        _hdle_t node = _alloc_traits::template allocate_object<_node_t>(_alloc,
-                                                                        1);
-        _alloc_traits::construct(_alloc, ala::addressof(node->_data),
+        using holder_t = pointer_holder<_node_t *, Alloc>;
+        holder_t holder(_alloc, 1);
+        _alloc_traits::construct(_alloc, ala::addressof(holder.get()->_data),
                                  this->pair_ref(ala::forward<P>(pr)));
-        node->_is_nil = false;
-        return node;
+        holder.get()->_is_nil = false;
+        return holder.release();
     }
 
     void destruct_node(_hdle_t node) {

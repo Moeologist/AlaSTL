@@ -783,11 +783,11 @@ class shared_ptr {
                       "Internal error");
         using traits_t = allocator_traits<A>;
         using blk_t = _ctblk<Pointer, D, A>;
+        using holder_t = pointer_holder<blk_t *, A>;
         try {
-            _cb = traits_t::template allocate_object<blk_t>(a);
-            traits_t::template construct_object<blk_t>(a,
-                                                       static_cast<blk_t *>(_cb),
-                                                       p, d, a);
+            holder_t holder(a, 1);
+            traits_t::template construct_object<blk_t>(a, holder.get(), p, d, a);
+            _cb = holder.release();
             _ptr = p;
             _weak_this();
         } catch (...) {
@@ -1024,15 +1024,16 @@ shared_ptr<T> allocate_shared(const A &a, Args &&...args) {
     using traits_t = allocator_traits<A>;
     using blk_t = _ctblk<T *, D, A>;
     using ph_t = char[sizeof(blk_t) + sizeof(T)];
+    using holder_t = pointer_holder<blk_t *, A>;
     A alloc(a);
-    blk_t *blk = reinterpret_cast<blk_t *>(
-        traits_t::template allocate_object<ph_t>(alloc));
+    holder_t holder(a, 1);
+    blk_t *blk = reinterpret_cast<blk_t *>(holder.get());
     T *ptr = reinterpret_cast<T *>(reinterpret_cast<char *>(blk) + sizeof(blk_t));
     traits_t::template construct_object<blk_t>(alloc, blk, ptr, D(), alloc);
     traits_t::template construct_object<T>(blk->_alloc, ptr,
                                            ala::forward<Args>(args)...);
     shared_ptr<T> sp;
-    sp._cb = blk;
+    sp._cb = holder.release();
     sp._ptr = ptr;
     sp._weak_this();
     return sp;

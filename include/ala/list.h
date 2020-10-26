@@ -99,19 +99,19 @@ protected:
     };
 
     template<class... Args>
-    _hdle_t construct_node(Args &&... args) {
-        _hdle_t node = _alloc_traits::template allocate_object<_node_t>(_alloc,
-                                                                        1);
-        _alloc_traits::construct(_alloc, ala::addressof(node->_data),
+    _hdle_t construct_node(Args &&...args) {
+        using holder_t = pointer_holder<_node_t*, Alloc>;
+        holder_t holder(_alloc, 1);
+        _alloc_traits::construct(_alloc, ala::addressof(holder.get()->_data),
                                  ala::forward<Args>(args)...);
-        return node;
+        return holder.release();
     }
 
     _hdle_t destruct_node(_hdle_t node) {
         _alloc_traits::destroy(_alloc, ala::addressof(node->_data));
-        _hdle_t rv = node->_suc;
+        _hdle_t result = node->_suc;
         _alloc_traits::template deallocate_object<_node_t>(_alloc, node, 1);
-        return rv;
+        return result;
     }
 
     void clone(const list &other) {
@@ -360,24 +360,45 @@ public:
     }
 
 protected:
-    template<class... Args>
-    void resize_helper(size_type sz, Args &&... args) {
+    template<class... V>
+    void nv_resize(size_type sz, V &&...v) {
+        static_assert(sizeof...(V) == 0 || sizeof...(V) == 1, "Internal error");
         if (size() > sz) {
             iterator pos = this->locate(sz);
             this->cut(pos);
         } else {
-            for (int i = size(); i < sz; ++i)
-                this->emplace_back(ala::forward<Args>(args)...);
+            size_t n = sz - size();
+            if (n == 0)
+                return;
+            _hdle_t head = nullptr, prev = nullptr;
+            try {
+                head = this->construct_node(ala::forward<V>(v)...);
+                head->_pre = head->_suc = nullptr;
+                prev = head;
+                size_t i = 1;
+                for (; i != n; ++i) {
+                    _hdle_t node = this->construct_node(ala::forward<V>(v)...);
+                    node->_suc = nullptr;
+                    link(prev, node);
+                    prev = node;
+                }
+                attach_range(tail(), head, prev, i);
+            } catch (...) {
+                // if (head != nullptr)
+                for (_hdle_t i = head; i != nullptr;)
+                    i = destruct_node(i);
+                throw;
+            }
         }
     }
 
 public:
     void resize(size_type sz) {
-        resize_helper(sz);
+        nv_resize(sz);
     }
 
     void resize(size_type sz, const value_type &v) {
-        resize_helper(sz, v);
+        nv_resize(sz, v);
     }
 
     ALA_NODISCARD bool empty() const noexcept {
@@ -403,12 +424,12 @@ public:
 
     // modifiers:
     template<class... Args>
-    reference emplace_front(Args &&... args) {
+    reference emplace_front(Args &&...args) {
         return *(this->emplace(begin(), ala::forward<Args>(args)...));
     }
 
     template<class... Args>
-    reference emplace_back(Args &&... args) {
+    reference emplace_back(Args &&...args) {
         return *(this->emplace(end(), ala::forward<Args>(args)...));
     }
 
@@ -437,8 +458,8 @@ public:
     }
 
     template<class... Args>
-    iterator emplace(const_iterator position, Args &&... args) {
-        _hdle_t node = construct_node(ala::forward<Args>(args)...);
+    iterator emplace(const_iterator position, Args &&...args) {
+        _hdle_t node = this->construct_node(ala::forward<Args>(args)...);
         attach(position._ptr, node);
         return iterator(node);
     }
@@ -452,22 +473,27 @@ public:
     }
 
     iterator insert(const_iterator position, size_type n, const value_type &v) {
-        size_type in = 0;
+        if (n == 0)
+            return position;
+        _hdle_t head = nullptr, prev = nullptr;
         try {
-            for (; in < n; ++in)
-                position = this->insert(position, v);
-        } catch (...) {
-            if (in == 1) {
-                this->destruct_node(this->detach(position._ptr));
-            } else if (in > 1) {
-                iterator last = ala::next(position, in - 1);
-                this->detach_range(position._ptr, last._ptr, in);
-                for (_hdle_t h = position._ptr; in != 0; --in)
-                    h = this->destruct_node(h);
+            head = this->construct_node(v);
+            head->_pre = head->_suc = nullptr;
+            prev = head;
+            for (size_t i = 1; i != n; ++i) {
+                _hdle_t node = this->construct_node(v);
+                node->_suc = nullptr;
+                link(prev, node);
+                prev = node;
             }
+            attach_range(position._ptr, head, prev, n);
+        } catch (...) {
+            for (_hdle_t i = head; i != nullptr;)
+                i = destruct_node(i);
+            throw;
             throw;
         }
-        return position;
+        return iterator(head);
     }
 
     template<class InputIter>
@@ -475,28 +501,28 @@ public:
                            typename iterator_traits<InputIter>::iterator_category>::value,
                 iterator>
     insert(const_iterator position, InputIter first, InputIter last) {
-        iterator rv = position;
-        size_type in = 0;
+        if (first == last)
+            return position;
+        _hdle_t head = nullptr, prev = nullptr;
         try {
-            if (first != last) {
-                rv = position = this->insert(position, *first++);
-                ++position;
-                ++in;
+            head = this->construct_node(*first++);
+            head->_pre = head->_suc = nullptr;
+            prev = head;
+            size_t i = 1;
+            for (; first != last; ++first, (void)++i) {
+                _hdle_t node = this->construct_node(*first);
+                node->_suc = nullptr;
+                link(prev, node);
+                prev = node;
             }
-            for (; first != last; ++position, (void)++in)
-                position = this->insert(position, *first++);
+            attach_range(position._ptr, head, prev, i);
         } catch (...) {
-            if (in == 1) {
-                this->destruct_node(this->detach(rv._ptr));
-            } else if (in > 1) {
-                iterator last = ala::next(rv, in - 1);
-                this->detach_range(rv._ptr, last._ptr, in);
-                for (_hdle_t h = rv._ptr; in != 0; --in)
-                    h = this->destruct_node(h);
-            }
+            for (_hdle_t i = head; i != nullptr;)
+                i = destruct_node(i);
+            throw;
             throw;
         }
-        return rv;
+        return iterator(head);
     }
 
     iterator insert(const_iterator position, initializer_list<value_type> il) {
@@ -569,39 +595,42 @@ public:
     template<class UnaryPredicate>
     size_type remove_if(UnaryPredicate pred) {
         size_type n = 0;
-        _hdle_t rmh = nullptr;
+        _hdle_t head = nullptr;
         for (iterator i = begin(); i != end();)
             if (pred(*i)) {
                 _hdle_t h = this->detach(i._ptr);
                 ++i;
-                h->_suc = rmh;
-                rmh = h;
+                h->_suc = head;
+                head = h;
                 ++n;
             } else {
                 ++i;
             }
-        for (_hdle_t i = rmh; i != nullptr;)
+        for (_hdle_t i = head; i != nullptr;)
             i = destruct_node(i);
         return n;
     }
 
-    void unique() {
-        this->unique(
+    size_type unique() {
+        return this->unique(
             [](const value_type &a, const value_type &b) { return a == b; });
     }
 
     template<class BinaryPredicate>
-    void unique(BinaryPredicate pred) {
+    size_type unique(BinaryPredicate pred) {
         if (size() < 2)
-            return;
+            return 0;
         iterator j = begin();
+        size_type erased = 0;
         for (iterator i = j++; j != end();)
-            if (pred(*i, *j))
+            if (pred(*i, *j)) {
                 j = destruct_node(detach(j._ptr));
-            else {
+                ++erased;
+            } else {
                 ++j;
                 ++i;
             }
+        return erased;
     }
 
     void merge(list &other) {
