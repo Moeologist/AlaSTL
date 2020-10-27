@@ -199,14 +199,12 @@
     </Expand>
   </Type>
 
-  <!-- VC 2015 -->
   <Type Name="ala::reference_wrapper&lt;*&gt;">
     <DisplayString>{*_ptr}</DisplayString>
     <Expand>
-      <Item Name="[ptr]">_ptr</Item>
+      <Item Name="[pointer]">_ptr</Item>
     </Expand>
   </Type>
-
 
   <Type Name="ala::plus&lt;void&gt;">
     <DisplayString>plus&lt;&gt;</DisplayString>
@@ -589,7 +587,7 @@
   </Type>
 
   <Type Name="ala::any">
-    <DisplayString Condition="_op_handle == 0">empty</DisplayString>
+    <DisplayString Condition="_op_handle == 0">[empty]</DisplayString>
     <DisplayString Condition="_op_handle != 0">{_op_handle,na}</DisplayString>
     <Expand>
       <Item Name="[handle]" Condition="_op_handle != 0">_op_handle,na</Item>
@@ -655,6 +653,41 @@
   <Type Name="ala::monostate">
     <DisplayString>monostate</DisplayString>
     <Expand />
+  </Type>
+
+  <Type Name="ala::unique_ptr&lt;*&gt;">
+    <SmartPointer Usage="Minimal">_ptr</SmartPointer>
+    <DisplayString Condition="_ptr == 0">[empty]</DisplayString>
+    <DisplayString Condition="_ptr != 0">{_ptr}</DisplayString>
+    <Expand>
+        <Item Condition="_ptr != 0" Name="[pointer]">_ptr</Item>
+        <Item Condition="_ptr != 0" Name="[deleter]">_deleter</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::shared_ptr&lt;*&gt;">
+    <SmartPointer Usage="Minimal">_ptr</SmartPointer>
+    <DisplayString Condition="_ptr == 0">[empty]</DisplayString>
+    <DisplayString Condition="_ptr != 0">{{ ptr={_ptr} }}</DisplayString>
+    <Expand>
+      <Item Condition="_ptr != 0" Name="[pointer]">_ptr</Item>
+      <Item Condition="_ptr != 0" Name="[shared]">_cb-&gt;_shared</Item>
+      <Item Condition="_ptr != 0" Name="[weak]">_cb-&gt;_weak</Item>
+      <Item Condition="_ptr != 0" Name="[control block]">*_cb</Item>
+    </Expand>
+  </Type>
+
+  <Type Name="ala::weak_ptr&lt;*&gt;">
+    <SmartPointer Usage="Minimal">_ptr</SmartPointer>
+    <DisplayString Condition="_ptr == 0">[empty]</DisplayString>
+    <DisplayString Condition="_ptr != 0 &amp;&amp; _cb-&gt;_shared == 0">[expired]</DisplayString>
+    <DisplayString Condition="_ptr != 0 &amp;&amp; _cb-&gt;_shared != 0">{{ ptr={_ptr} }}</DisplayString>
+    <Expand>
+      <Item Condition="_ptr != 0" Name="[pointer]">_ptr</Item>
+      <Item Condition="_ptr != 0" Name="[shared]">_cb-&gt;_shared</Item>
+      <Item Condition="_ptr != 0" Name="[weak]">_cb-&gt;_weak</Item>
+      <Item Condition="_ptr != 0" Name="[control block]">*_cb</Item>
+    </Expand>
   </Type>
 
 </AutoVisualizer>
