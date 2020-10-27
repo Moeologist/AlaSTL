@@ -7,13 +7,6 @@
 
 namespace ala {
 
-#if _ALA_ENABLE_ALIGNED_NEW
-using ::std::align_val_t;
-#endif
-
-using ::std::bad_array_new_length;
-using ::std::bad_alloc;
-
 template<typename Ptr>
 struct pointer_traits {
     ALA_HAS_MEM_TYPE(element_type)

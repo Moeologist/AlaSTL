@@ -5,6 +5,7 @@
 #include <ala/random.h>
 #include <ala/detail/algorithm_base.h>
 #include <ala/detail/sort.h>
+#include <iterator>
 
 namespace ala {
 
@@ -333,17 +334,65 @@ constexpr ForwardIter unique(ForwardIter first, ForwardIter last) {
 }
 
 // TODO: make this work with input iterator
-template<class ForwardIter, class OutputIter, class BinPred>
-constexpr OutputIter unique_copy(ForwardIter first, ForwardIter last,
-                                 OutputIter out, BinPred pred) {
-    if (first == last)
-        return out;
-    for (ForwardIter tmp; first != last;) {
-        *out++ = *first;
-        for (tmp = first++; first != last && pred(*tmp, *first);)
-            ++first;
+template<class InputIter, class ForwardIter, class BinPred>
+constexpr ForwardIter _unique_copy_dispatch(InputIter first, InputIter last,
+                                            ForwardIter out, BinPred pred,
+                                            false_type, true_type) {
+    if (first != last) {
+        *out = *first;
+        while (++first != last)
+            if (!pred(*out, *first))
+                *++out = *first;
+        ++out;
     }
     return out;
+}
+
+template<class ForwardIter, class OutputIter, class BinPred>
+constexpr OutputIter _unique_copy_dispatch(ForwardIter first, ForwardIter last,
+                                           OutputIter out, BinPred pred,
+                                           true_type, ...) {
+    if (first != last) {
+        ForwardIter t = first;
+        *out++ = *t;
+        while (++first != last) {
+            if (!pred(*t, *first)) {
+                t = first;
+                *out++ = *first;
+            }
+        }
+    }
+    return out;
+}
+
+template<class InputIter, class OutputIter, class BinPred>
+constexpr OutputIter _unique_copy_dispatch(InputIter first, InputIter last,
+                                           OutputIter out, BinPred pred,
+                                           false_type, false_type) {
+    using T = typename iterator_traits<InputIter>::value_type;
+    if (first != last) {
+        T tmp(*first);
+        *out++ = tmp;
+        while (++first != last) {
+            if (!pred(tmp, *first)) {
+                tmp = *first;
+                *out++ = tmp;
+            }
+        }
+    }
+    return out;
+}
+
+template<class InputIter, class OutputIter, class BinPred>
+constexpr OutputIter unique_copy(InputIter first, InputIter last,
+                                 OutputIter out, BinPred pred) {
+    using itag_t =
+        is_base_of<forward_iterator_tag,
+                   typename iterator_traits<InputIter>::iterator_category>;
+    using otag_t =
+        is_base_of<forward_iterator_tag,
+                   typename iterator_traits<OutputIter>::iterator_category>;
+    return ala::_unique_copy_dispatch(first, last, out, pred, itag_t(), otag_t());
 }
 
 template<class ForwardIter, class OutputIter>
@@ -413,13 +462,9 @@ constexpr void shuffle(RandomIter first, RandomIter last, URBG &&g) {
 }
 
 template<class ForwardIter, class OutputIter, class Distance, class URBG>
-constexpr enable_if_t<
-    is_base_of<input_iterator_tag,
-               typename iterator_traits<ForwardIter>::iterator_category>::value &&
-        !is_base_of<forward_iterator_tag,
-                    typename iterator_traits<ForwardIter>::iterator_category>::value,
-    OutputIter>
-sample(ForwardIter first, ForwardIter last, OutputIter out, Distance n, URBG &&g) {
+constexpr OutputIter _sample_dispatch(ForwardIter first, ForwardIter last,
+                                      OutputIter out, Distance n, URBG &&g,
+                                      false_type) {
     Distance i = 0;
     for (; first != last && i < n; ++first, (void)++i)
         *(out + i) = *first;
@@ -432,11 +477,9 @@ sample(ForwardIter first, ForwardIter last, OutputIter out, Distance n, URBG &&g
 }
 
 template<class ForwardIter, class OutputIter, class Distance, class URBG>
-constexpr enable_if_t<
-    is_base_of<forward_iterator_tag,
-               typename iterator_traits<ForwardIter>::iterator_category>::value,
-    OutputIter>
-sample(ForwardIter first, ForwardIter last, OutputIter out, Distance n, URBG &&g) {
+constexpr OutputIter _sample_dispatch(ForwardIter first, ForwardIter last,
+                                      OutputIter out, Distance n, URBG &&g,
+                                      true_type) {
     Distance len = ala::distance(first, last);
     for (n = ala::min(n, len); n != 0; ++first) {
         Distance r = ala::uniform_int_distribution<Distance>(0, --len)(g);
@@ -446,6 +489,20 @@ sample(ForwardIter first, ForwardIter last, OutputIter out, Distance n, URBG &&g
         }
     }
     return out;
+}
+
+template<class ForwardIter, class OutputIter, class Distance, class URBG>
+constexpr OutputIter sample(ForwardIter first, ForwardIter last, OutputIter out,
+                            Distance n, URBG &&g) {
+    static_assert(
+        is_base_of<input_iterator_tag,
+                   typename iterator_traits<ForwardIter>::iterator_category>::value,
+        "ala::sample need Input Iterator");
+    using tag_t =
+        is_base_of<forward_iterator_tag,
+                   typename iterator_traits<ForwardIter>::iterator_category>;
+    return ala::_sample_dispatch(first, last, out, n, ala::forward<URBG>(g),
+                                 tag_t{});
 }
 
 // Partitioning operations
@@ -696,10 +753,9 @@ constexpr pair<const T &, const T &> minmax(const T &a, const T &b) {
 }
 
 template<class ForwardIter, class Comp>
-enable_if_t<is_base_of<forward_iterator_tag,
-                       typename iterator_traits<ForwardIter>::iterator_category>::value,
-            ForwardIter> constexpr min_element(ForwardIter first,
-                                               ForwardIter last, Comp comp) {
+constexpr ForwardIter min_element(ForwardIter first, ForwardIter last, Comp comp) {
+    static_assert(is_base_of<forward_iterator_tag, ForwardIter>::value,
+                  "ala::min_element need Forward Iterator");
     if (first == last)
         return last;
     ForwardIter min = first;
@@ -716,11 +772,9 @@ constexpr ForwardIter min_element(ForwardIter first, ForwardIter last) {
 }
 
 template<class ForwardIter, class Comp>
-constexpr enable_if_t<
-    is_base_of<forward_iterator_tag,
-               typename iterator_traits<ForwardIter>::iterator_category>::value,
-    ForwardIter>
-max_element(ForwardIter first, ForwardIter last, Comp comp) {
+constexpr ForwardIter max_element(ForwardIter first, ForwardIter last, Comp comp) {
+    static_assert(is_base_of<forward_iterator_tag, ForwardIter>::value,
+                  "ala::max_element need Forward Iterator");
     if (first == last)
         return last;
     ForwardIter max = first;
@@ -737,11 +791,10 @@ constexpr ForwardIter max_element(ForwardIter first, ForwardIter last) {
 }
 
 template<class ForwardIter, class Comp>
-constexpr enable_if_t<
-    is_base_of<forward_iterator_tag,
-               typename iterator_traits<ForwardIter>::iterator_category>::value,
-    pair<ForwardIter, ForwardIter>>
+constexpr pair<ForwardIter, ForwardIter>
 minmax_element(ForwardIter first, ForwardIter last, Comp comp) {
+    static_assert(is_base_of<forward_iterator_tag, ForwardIter>::value,
+                  "ala::minmax_element need Forward Iterator");
     if (first == last)
         return pair<ForwardIter, ForwardIter>(last, last);
     ForwardIter min = first;
@@ -875,36 +928,9 @@ constexpr bool next_permutation(BidirIter first, BidirIter last) {
 }
 
 template<class ForwardIter1, class ForwardIter2, class BinPred>
-constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
-                              ForwardIter2 first2, BinPred pred) {
-    typedef typename iterator_traits<ForwardIter1>::value_type T;
-    ForwardIter2 last2 = first2;
-    ala::advance(last2, ala::distance(first1, last1));
-    for (ForwardIter1 i = first1; i != last1; ++i) {
-        auto unary = [&](const T &x) { return pred(x, *i); };
-        if (i != ala::find_if(first1, i, unary))
-            continue; // check i appear first time
-        if (ala::count_if(i, last1, unary) != ala::count_if(first2, last2, unary))
-            return false;
-    }
-    return true;
-}
-
-template<class ForwardIter1, class ForwardIter2>
-constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
-                              ForwardIter2 first2) {
-    return ala::is_permutation(first1, last1, first2, equal_to<>());
-}
-
-template<class ForwardIter1, class ForwardIter2, class BinPred>
-constexpr enable_if_t<
-    !(is_base_of<random_access_iterator_tag,
-                 typename iterator_traits<ForwardIter1>::iterator_category>::value &&
-      is_base_of<random_access_iterator_tag,
-                 typename iterator_traits<ForwardIter2>::iterator_category>::value),
-    bool>
-is_permutation(ForwardIter1 first1, ForwardIter1 last1, ForwardIter2 first2,
-               ForwardIter2 last2, BinPred pred) {
+constexpr bool _is_permutation_dispatch(ForwardIter1 first1, ForwardIter1 last1,
+                                        ForwardIter2 first2, ForwardIter2 last2,
+                                        BinPred pred, false_type) {
     typedef typename iterator_traits<ForwardIter1>::value_type T;
     ForwardIter1 i = first1;
     ForwardIter2 j = first2;
@@ -921,23 +947,46 @@ is_permutation(ForwardIter1 first1, ForwardIter1 last1, ForwardIter2 first2,
 }
 
 template<class ForwardIter1, class ForwardIter2, class BinPred>
-constexpr enable_if_t<
-    (is_base_of<random_access_iterator_tag,
-                typename iterator_traits<ForwardIter1>::iterator_category>::value &&
-     is_base_of<random_access_iterator_tag,
-                typename iterator_traits<ForwardIter2>::iterator_category>::value),
-    bool>
-is_permutation(ForwardIter1 first1, ForwardIter1 last1, ForwardIter2 first2,
-               ForwardIter2 last2, BinPred pred) {
+constexpr bool _is_permutation_dispatch(ForwardIter1 first1, ForwardIter1 last1,
+                                        ForwardIter2 first2, ForwardIter2 last2,
+                                        BinPred pred, true_type) {
     if (ala::distance(first1, last1) == ala::distance(first2, last2))
-        return is_permutation(first1, last1, first2, pred);
+        return _is_permutation_dispatch(first1, last1, first2, last2, pred,
+                                        false_type{});
     return false;
+}
+
+template<class ForwardIter1, class ForwardIter2, class BinPred>
+constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
+                              ForwardIter2 first2, ForwardIter2 last2,
+                              BinPred pred) {
+    using tag_t =
+        _and_<is_base_of<random_access_iterator_tag,
+                         typename iterator_traits<ForwardIter1>::iterator_category>,
+              is_base_of<random_access_iterator_tag,
+                         typename iterator_traits<ForwardIter2>::iterator_category>>;
+    return ala::_is_permutation_dispatch(first1, last1, first2, last2, pred,
+                                         tag_t{});
 }
 
 template<class ForwardIter1, class ForwardIter2>
 constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
                               ForwardIter2 first2, ForwardIter2 last2) {
     return ala::is_permutation(first1, last1, first2, last2, equal_to<>());
+}
+
+template<class ForwardIter1, class ForwardIter2, class BinPred>
+constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
+                              ForwardIter2 first2, BinPred pred) {
+    ForwardIter2 last2 = first2;
+    ala::advance(last2, ala::distance(first1, last1));
+    return ala::is_permutation(first1, last1, first2, last2, pred);
+}
+
+template<class ForwardIter1, class ForwardIter2>
+constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
+                              ForwardIter2 first2) {
+    return ala::is_permutation(first1, last1, first2, equal_to<>());
 }
 
 } // namespace ala

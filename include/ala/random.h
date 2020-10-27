@@ -5,6 +5,7 @@
 
 #include <ala/intrin/rdrand.h>
 #include <ala/intrin/rdseed.h>
+#include <ala/type_traits.h>
 
 namespace ala {
 

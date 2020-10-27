@@ -240,13 +240,9 @@ constexpr bool equal(Iter1 first1, Iter1 last1, Iter2 first2) {
 }
 
 template<class Iter1, class Iter2, class BinPred>
-constexpr enable_if_t<
-    !(is_base_of<random_access_iterator_tag,
-                 typename iterator_traits<Iter1>::iterator_category>::value &&
-      is_base_of<random_access_iterator_tag,
-                 typename iterator_traits<Iter2>::iterator_category>::value),
-    bool>
-equal(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2, BinPred pred) {
+constexpr bool
+_equal_dispatch(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2,
+                BinPred pred, false_type) {
     for (; first1 != last1 && first2 != last2; ++first1, (void)++first2)
         if (!pred(*first1, *first2))
             return false;
@@ -256,16 +252,23 @@ equal(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2, BinPred pred) {
 }
 
 template<class Iter1, class Iter2, class BinPred>
-constexpr enable_if_t<
-    (is_base_of<random_access_iterator_tag,
-                typename iterator_traits<Iter1>::iterator_category>::value &&
-     is_base_of<random_access_iterator_tag,
-                typename iterator_traits<Iter2>::iterator_category>::value),
-    bool>
-equal(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2, BinPred pred) {
+constexpr bool
+_equal_dispatch(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2,
+                BinPred pred, true_type) {
     if (ala::distance(first1, last1) != ala::distance(first2, last2))
         return false;
     return ala::equal(first1, last1, first2, pred);
+}
+
+template<class Iter1, class Iter2, class BinPred>
+constexpr bool equal(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2,
+                     BinPred pred) {
+    using tag_t =
+        _and_<is_base_of<random_access_iterator_tag,
+                         typename iterator_traits<Iter1>::iterator_category>,
+              is_base_of<random_access_iterator_tag,
+                         typename iterator_traits<Iter2>::iterator_category>>;
+    return ala::_equal_dispatch(first1, last1, first2, last2, pred, tag_t{});
 }
 
 template<class Iter1, class Iter2>

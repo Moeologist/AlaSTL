@@ -10,6 +10,13 @@
 
 namespace ala {
 
+#if _ALA_ENABLE_ALIGNED_NEW
+using ::std::align_val_t;
+#endif
+
+using ::std::bad_array_new_length;
+using ::std::bad_alloc;
+
 template<class T>
 struct allocator {
     typedef T value_type;

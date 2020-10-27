@@ -629,6 +629,8 @@ struct bad_weak_ptr: exception {
 };
 
 struct _ctblk_base {
+    size_t _weak = 0;
+    size_t _shared = 1;
     virtual ~_ctblk_base() {}
     virtual void inc_shared() = 0;
     virtual void dec_shared() = 0;
@@ -644,8 +646,6 @@ struct _ctblk_base {
 template<class Pointer, class Deleter, class Alloc>
 struct _ctblk: _ctblk_base {
     // TODO atomic
-    size_t _weak = 0;
-    size_t _shared = 1;
     Pointer _ptr;
     Deleter _deleter;
     Alloc _alloc;
