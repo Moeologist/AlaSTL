@@ -40,7 +40,7 @@ namespace intrin {
 
         #ifndef __RDRAND__
         #pragma clang attribute push (__attribute__((target("rdrnd"))), apply_to=function)
-        #define __POP_RDRAND__
+        #define ALA_POP__RDRAND__
         #endif // __RDRAND__
 
         static inline int _rdrand16(unsigned short *p)     { return __builtin_ia32_rdrand16_step(p); }
@@ -49,17 +49,17 @@ namespace intrin {
         static inline int _rdrand64(unsigned long long *p) { return __builtin_ia32_rdrand64_step(p); }
         #endif
 
-        #ifdef __POP_RDRAND__
+        #ifdef ALA_POP__RDRAND__
         #pragma clang attribute pop
-        #undef __POP_RDRAND__
-        #endif // __POP_RDRAND__
+        #undef ALA_POP__RDRAND__
+        #endif // ALA_POP__RDRAND__
 
     #elif defined(_ALA_GCC)
 
         #ifndef __RDRAND__
         #pragma GCC push_options
         #pragma GCC target("rdrnd")
-        #define __POP_RDRAND__
+        #define ALA_POP__RDRAND__
         #endif // __RDRAND__
 
         static inline int _rdrand16(unsigned short *p)     { return __builtin_ia32_rdrand16_step(p); }
@@ -68,10 +68,10 @@ namespace intrin {
         static inline int _rdrand64(unsigned long long *p) { return __builtin_ia32_rdrand64_step(p); }
         #endif
 
-        #ifdef __POP_RDRAND__
+        #ifdef ALA_POP__RDRAND__
         #pragma GCC push_options
-        #undef __POP_RDRAND__
-        #endif // __POP_RDRAND__
+        #undef ALA_POP__RDRAND__
+        #endif // ALA_POP__RDRAND__
 
     #endif // COMPILER
 

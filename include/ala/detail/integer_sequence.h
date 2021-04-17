@@ -11,10 +11,6 @@ struct integer_sequence {
     static constexpr size_t size() noexcept {
         return sizeof...(Is);
     }
-    static constexpr Int get(size_t i) noexcept {
-        Int tmp[] = {Is...};
-        return tmp[i];
-    }
 };
 
 template<size_t... Is>

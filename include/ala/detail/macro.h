@@ -29,12 +29,15 @@ struct ValueCheck;
 
 } // namespace ala
 
+#define ALA_STRINGIFY0(x) #x
+#define ALA_STRINGIFY(x) ALA_STRINGIFY0(x)
 #define ALA_CONCAT0(x, y) x##y
 #define ALA_CONCAT(x, y) ALA_CONCAT0(x, y)
-#define ALA_COUNTER_ID(x) ALA_CONCAT(x, __COUNTER__)
 
-#define ALA_TYPE(...) ala::TypeCheck<__VA_ARGS__> ALA_COUNTER_ID(id)
-#define ALA_VALUE(...) ala::ValueCheck<__VA_ARGS__> ALA_COUNTER_ID(id)
+#define ALA_COUNTER_ID ALA_CONCAT(_ala_id_, __COUNTER__)
+
+#define ALA_TYPE(...) ala::TypeCheck<__VA_ARGS__> ALA_COUNTER_ID
+#define ALA_VALUE(...) ala::ValueCheck<__VA_ARGS__> ALA_COUNTER_ID
 #define ALA_TYPEOF(...) ALA_TYPE(decltype(__VA_ARGS__))
 
 #endif

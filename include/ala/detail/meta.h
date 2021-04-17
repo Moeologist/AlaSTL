@@ -9,18 +9,18 @@ namespace ala {
 // clang-format off
 
 // short-circuit evaluation
-template<typename...> struct _lz_or_;
-template<> struct _lz_or_<>: false_type {};
-template<typename B1> struct _lz_or_<B1>: B1 {};
-template<typename B1, typename... Bs> struct _lz_or_<B1, Bs...>: conditional_t<bool(B1::value), B1, _lz_or_<Bs...>> {};
+template<typename...> struct _or_lazy_;
+template<> struct _or_lazy_<>: false_type {};
+template<typename B1> struct _or_lazy_<B1>: B1 {};
+template<typename B1, typename... Bs> struct _or_lazy_<B1, Bs...>: conditional_t<bool(B1::value), B1, _or_lazy_<Bs...>> {};
 
-template<typename...> struct _lz_and_;
-template<> struct _lz_and_<>: true_type {};
-template<typename B1> struct _lz_and_<B1>: B1 {};
-template<typename B1, typename... Bs> struct _lz_and_<B1, Bs...>: conditional_t<bool(B1::value), _lz_and_<Bs...>, B1> {};
+template<typename...> struct _and_lazy_;
+template<> struct _and_lazy_<>: true_type {};
+template<typename B1> struct _and_lazy_<B1>: B1 {};
+template<typename B1, typename... Bs> struct _and_lazy_<B1, Bs...>: conditional_t<bool(B1::value), _and_lazy_<Bs...>, B1> {};
 
 template<typename...Bools>
-constexpr bool _ce_or_helper_(Bools...bs) {
+constexpr bool _or_constexpr_helper_(Bools...bs) {
 #if _ALA_ENABLE_FOLD_EXPRESSIONS
     return (false || ... || bs);
 #else
@@ -33,7 +33,7 @@ constexpr bool _ce_or_helper_(Bools...bs) {
 }
 
 template<typename...Bools>
-constexpr bool _ce_and_helper(Bools...bs) {
+constexpr bool _and_constexpr_helper_(Bools...bs) {
 #if _ALA_ENABLE_FOLD_EXPRESSIONS
     return (true && ... && bs);
 #else
@@ -47,22 +47,22 @@ constexpr bool _ce_and_helper(Bools...bs) {
 
 // non-short-circuit evaluation
 template<typename... Bools>
-struct _ce_or_: bool_constant<_ce_or_helper_(Bools::value...)> {};
+struct _or_constexpr_: bool_constant<_or_constexpr_helper_(Bools::value...)> {};
 
 template<typename... Bools>
-struct _ce_and_: bool_constant<_ce_and_helper(Bools::value...)> {};
+struct _and_constexpr_: bool_constant<_and_constexpr_helper_(Bools::value...)> {};
 
 template<bool, typename... Bools>
-struct _or_helper_: _ce_or_<Bools...> {};
+struct _or_helper_: _or_constexpr_<Bools...> {};
 
 template<typename... Bools>
-struct _or_helper_<true, Bools...>: _lz_or_<Bools...> {};
+struct _or_helper_<true, Bools...>: _or_lazy_<Bools...> {};
 
 template<bool, typename... Bools>
-struct _and_helper_: _ce_and_<Bools...> {};
+struct _and_helper_: _and_constexpr_<Bools...> {};
 
 template<typename... Bools>
-struct _and_helper_<true, Bools...>: _lz_and_<Bools...> {};
+struct _and_helper_<true, Bools...>: _and_lazy_<Bools...> {};
 
 template<typename... Bools>
 struct _or_: _or_helper_<(sizeof...(Bools)<ALA_TEMPLATE_RECURSIVE_DEPTH), Bools...> {};
@@ -126,8 +126,10 @@ _convert_to_integral(Float val) {
 
 template<template<class...> class Templt, class... Ts>
 struct _meta_reduce_impl {};
-template<template<class...> class Templt, class B1>
-struct _meta_reduce_impl<Templt, B1>: B1 {};
+
+template<template<class...> class Templt, class T1>
+struct _meta_reduce_impl<Templt, T1>: T1 {};
+
 template<template<class...> class Templt, class T1, class T2, class... Rest>
 struct _meta_reduce_impl<Templt, T1, T2, Rest...>
     : _meta_reduce_impl<Templt, typename Templt<T1, T2>::type, Rest...> {};

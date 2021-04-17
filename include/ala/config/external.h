@@ -22,6 +22,7 @@ using ::std::numeric_limits;
 
 using ::std::memmove;
 using ::std::memcpy;
+using ::std::strcmp;
 
 using ::std::nullptr_t;
 

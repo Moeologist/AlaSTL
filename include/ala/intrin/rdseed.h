@@ -39,7 +39,7 @@ namespace intrin {
 
         #ifndef __RDSEED__
         #pragma clang attribute push (__attribute__((target("rdseed"))), apply_to=function)
-        #define __POP_RDSEED__
+        #define ALA_POP__RDSEED__
         #endif // __RDSEED__
 
         static inline int _rdseed16(unsigned short *p)     { return __builtin_ia32_rdseed16_step(p); }
@@ -48,10 +48,10 @@ namespace intrin {
         static inline int _rdseed64(unsigned long long *p) { return __builtin_ia32_rdseed64_step(p); }
         #endif
 
-        #ifdef __POP_RDSEED__
+        #ifdef ALA_POP__RDSEED__
         #pragma clang attribute pop
-        #undef __POP_RDSEED__
-        #endif // __POP_RDSEED__
+        #undef ALA_POP__RDSEED__
+        #endif // ALA_POP__RDSEED__
 
 
     #elif defined(_ALA_GCC)
@@ -59,7 +59,7 @@ namespace intrin {
         #ifndef __RDSEED__
         #pragma GCC push_options
         #pragma GCC target("rdseed")
-        #define __POP_RDSEED__
+        #define ALA_POP__RDSEED__
         #endif // __RDSEED__
 
         static inline int _rdseed16(unsigned short *p)     { return __builtin_ia32_rdseed_hi_step(p); }
@@ -68,10 +68,10 @@ namespace intrin {
         static inline int _rdseed64(unsigned long long *p) { return __builtin_ia32_rdseed_di_step(p); }
         #endif
 
-        #ifdef __POP_RDSEED__
+        #ifdef ALA_POP__RDSEED__
         #pragma GCC push_options
-        #undef __POP_RDSEED__
-        #endif // __POP_RDSEED__
+        #undef ALA_POP__RDSEED__
+        #endif // ALA_POP__RDSEED__
 
     #endif // COMPILER
 
