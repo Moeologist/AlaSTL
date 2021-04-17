@@ -334,13 +334,13 @@ public:
                                  is_copy_constructible<deleter_type>::value>>
     unique_ptr(U p, const deleter_type &lref) noexcept
         : _ptr(p), _deleter(ala::forward<decltype(lref)>(lref)) {}
-    template<class U, char = 0 class = enable_if_t<
+    template<class U, char = 0, class = enable_if_t<
                           (is_same<U, nullptr_t>::value || _ptr_checker<U>::value) &&
                           !is_reference<deleter_type>::value &&
                           is_move_constructible<deleter_type>::value>>
     unique_ptr(U p, remove_reference_t<deleter_type> &&rref) noexcept
         : _ptr(p), _deleter(ala::forward<decltype(rref)>(rref)) {}
-    template<class U, short = 0 class = enable_if_t<
+    template<class U, short = 0, class = enable_if_t<
                           (is_same<U, nullptr_t>::value || _ptr_checker<U>::value) &&
                           is_reference<deleter_type>::value &&
                           is_move_constructible<deleter_type>::value>>
@@ -645,7 +645,7 @@ struct _ctblk_base {
 
 template<class Pointer, class Deleter, class Alloc>
 struct _ctblk: _ctblk_base {
-    // TODO atomic
+    // TODO atomic, thread safety
     Pointer _ptr;
     Deleter _deleter;
     Alloc _alloc;
@@ -670,13 +670,12 @@ struct _ctblk: _ctblk_base {
             _ptr = nullptr;
             _deleter(tmp);
         }
-        --_shared;
-        if (_shared == 0 && _weak == 0) {
+        if (_shared == 1 && _weak == 0) {
             using traits_t = allocator_traits<Alloc>;
-            Alloc a = _alloc;
             traits_t::template destroy_object<_ctblk>(a, this);
             traits_t::template deallocate_object<_ctblk>(a, this);
         }
+        --_shared;
     }
 
     size_t get_shared() override {
@@ -690,8 +689,9 @@ struct _ctblk: _ctblk_base {
     void dec_weak() override {
         if (_shared == 0 && _weak == 1) {
             using traits_t = allocator_traits<Alloc>;
-            traits_t::template destroy_object<_ctblk>(_alloc, this);
-            traits_t::template deallocate_object<_ctblk>(_alloc, this);
+            Alloc a = _alloc;
+            traits_t::template destroy_object<_ctblk>(a, this);
+            traits_t::template deallocate_object<_ctblk>(a, this);
         }
         --_weak;
     }

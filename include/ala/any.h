@@ -2,10 +2,10 @@
 #define _ALA_ANY_H
 
 #include <ala/utility.h>
-#include <any>
 
 #if ALA_USE_RTTI
     #include <typeinfo>
+    using std::type_info;
 #endif
 
 namespace ala {
@@ -19,7 +19,7 @@ struct _any_handle {
     static void copy(void *dst, const void *src) {
         ::new (dst) T(*reinterpret_cast<const T *>(src));
     }
-
+// TODO static_cast
     static void move(void *dst, void *src) {
         ::new (dst) T(ala::move(*reinterpret_cast<T *>(src)));
     }
@@ -28,9 +28,11 @@ struct _any_handle {
         (*reinterpret_cast<T *>(dst)).~T();
     }
 
+#if ALA_USE_RTTI
     static const type_info &typeinfo() {
         return typeid(T);
     }
+#endif
 
     static bool local() {
         return sizeof(T) <= 2 * sizeof(size_t) &&
@@ -55,13 +57,15 @@ struct _any_handle {
 };
 
 class any {
-private:
+protected:
     static_assert(sizeof(void *) == sizeof(size_t), "Unsupported platform");
 
     typedef void (*op_copy_t)(void *, const void *);
     typedef void (*op_move_t)(void *, void *);
     typedef void (*op_destroy_t)(void *);
+#if ALA_USE_RTTI
     typedef const type_info &(*op_typeinfo_t)();
+#endif
     typedef bool (*op_local_t)();
 
     void *(*_op_handle)(AnyOP) = nullptr;
@@ -289,7 +293,7 @@ public:
 };
 
 // non-member functions
-void swap(any &lhs, any &rhs) noexcept(noexcept(lhs.swap(rhs))) {
+inline void swap(any &lhs, any &rhs) noexcept(noexcept(lhs.swap(rhs))) {
     lhs.swap(rhs);
 }
 
