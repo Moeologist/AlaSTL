@@ -66,58 +66,77 @@
 
 #include <ala/detail/pair.h>
 
-namespace ala {
-namespace city {
+namespace hash_util {
 
-typedef uint8_t uint8;
-typedef uint32_t uint32;
-typedef uint64_t uint64;
-typedef ala::pair<uint64, uint64> uint128;
-
-static uint64 Uint128Low64(const uint128 &x) {
-    return x.first;
+#if _ALA_ENABLE_INT128T
+#if !defined(uint128_t)
+#define uint128_t __uint128_t
+#endif
+inline uint64_t Uint128Low64(const uint128_t x) {
+  return static_cast<uint64_t>(x);
 }
-
-static uint64 Uint128High64(const uint128 &x) {
-    return x.second;
+inline uint64_t Uint128High64(const uint128_t x) {
+  return static_cast<uint64_t>(x >> 64);
 }
+inline uint128_t Uint128(uint64_t lo, uint64_t hi) {
+  return lo + (((uint128_t)hi) << 64);
+}
+#else
+typedef ala::pair<uint64_t, uint64_t> uint128_t;
+inline uint64_t Uint128Low64(const uint128_t x) { return x.first; }
+inline uint64_t Uint128High64(const uint128_t x) { return x.second; }
+inline uint128_t Uint128(uint64_t lo, uint64_t hi) { return uint128_t(lo, hi); }
+#endif
 
 // Hash function for a byte array.
-inline uint64 CityHash64(const char *buf, size_t len);
+inline uint64_t CityHash64(const char *buf, size_t len);
 
 // Hash function for a byte array.  For convenience, a 64-bit seed is also
 // hashed into the result.
-inline uint64 CityHash64WithSeed(const char *buf, size_t len, uint64 seed);
+inline uint64_t CityHash64WithSeed(const char *buf, size_t len, uint64_t seed);
 
 // Hash function for a byte array.  For convenience, two seeds are also
 // hashed into the result.
-inline uint64 CityHash64WithSeeds(const char *buf, size_t len, uint64 seed0,
-                                  uint64 seed1);
+inline uint64_t CityHash64WithSeeds(const char *buf, size_t len, uint64_t seed0,
+                                    uint64_t seed1);
 
 // Hash function for a byte array.
-inline uint128 CityHash128(const char *s, size_t len);
+inline uint128_t CityHash128(const char *s, size_t len);
 
 // Hash function for a byte array.  For convenience, a 128-bit seed is also
 // hashed into the result.
-inline uint128 CityHash128WithSeed(const char *s, size_t len, uint128 seed);
+inline uint128_t CityHash128WithSeed(const char *s, size_t len, uint128_t seed);
 
 // Hash function for a byte array.  Most useful in 32-bit binaries.
-inline uint32 CityHash32(const char *buf, size_t len);
+inline uint32_t CityHash32(const char *buf, size_t len);
 
 // Hash 128 input bits down to 64 bits of output.
 // This is intended to be a reasonably good hash function.
-inline uint64 Hash128to64(const uint128 &x) {
+inline uint64_t Hash128to64(const uint128_t &x) {
     // Murmur-inspired hashing.
-    const uint64 kMul = 0x9ddfea08eb382d69ULL;
-    uint64 a = (Uint128Low64(x) ^ Uint128High64(x)) * kMul;
+    const uint64_t kMul = 0x9ddfea08eb382d69ULL;
+    uint64_t a = (Uint128Low64(x) ^ Uint128High64(x)) * kMul;
     a ^= (a >> 47);
-    uint64 b = (Uint128High64(x) ^ a) * kMul;
+    uint64_t b = (Uint128High64(x) ^ a) * kMul;
     b ^= (b >> 47);
     b *= kMul;
     return b;
 }
 
-} // namespace city
-} // namespace ala
+#ifdef __SSE4_2__
+inline uint128_t CityHashCrc128(const char *s, size_t len);
+
+// Hash function for a byte array.  For convenience, a 128-bit seed is also
+// hashed into the result.
+inline uint128_t CityHashCrc128WithSeed(const char *s, size_t len,
+                                        uint128_t seed);
+
+// Hash function for a byte array.  Sets result[0] ... result[3].
+inline void CityHashCrc256(const char *s, size_t len, uint64_t *result);
+#endif
+
+}
+
+#include "city.cc"
 
 #endif

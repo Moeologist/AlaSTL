@@ -2,7 +2,8 @@
 #define _ALA_DETAIL_HASH_H
 
 #include <ala/detail/memory_base.h>
-#include <ala/detail/city_inl.h>
+#include <ala/detail/farmhash.h>
+#include <ala/detail/meow_hash_x64_aesni.h>
 
 namespace ala {
 
@@ -27,34 +28,58 @@ template<class T>
 struct _enum_hash<T, false>: _disabled_hash {};
 
 template<class T>
+struct _farm_hash {
+    using argument_type = T;
+    using result_type = size_t;
+
+    size_t _call(true_type, const char *p) const noexcept {
+        return ::hash_util::Hash64(p, sizeof(T));
+    }
+
+    size_t _call(false_type, const char *p) const noexcept {
+        return ::hash_util::Hash32(p, sizeof(T));
+    }
+
+    size_t operator()(T v) const noexcept {
+        const char *p = reinterpret_cast<const char *>(ala::addressof(v));
+        return _farm_hash::_call(bool_constant<sizeof(size_t) == 8>{}, p);
+    }
+};
+
+template<class T>
+struct _meow_hash {
+    using argument_type = T;
+    using result_type = size_t;
+
+    size_t _call(true_type, const char *p) const noexcept {
+#ifdef _ALA_X64
+        return _mm_extract_epi64(
+            ::hash_util::MeowHash(::hash_util::MeowDefaultSeed, sizeof(T), p), 0);
+#endif
+    }
+
+    size_t _call(false_type, const char *p) const noexcept {
+        return _mm_extract_epi32(
+            ::hash_util::MeowHash(::hash_util::MeowDefaultSeed, sizeof(T), p), 0);
+    }
+
+    size_t operator()(T v) const noexcept {
+        const char *p = reinterpret_cast<const char *>(ala::addressof(v));
+        return _meow_hash::_call(bool_constant<sizeof(size_t) == 8>{}, p);
+    }
+};
+
+template<class T, bool = (sizeof(T) > sizeof(size_t))>
 struct _identity_hash {
     using argument_type = T;
     using result_type = size_t;
-    static_assert(sizeof(T) <= sizeof(size_t),
-                  "_identity_hash only suport small scalar hash");
     constexpr size_t operator()(T v) const noexcept {
         return static_cast<size_t>(v);
     }
 };
 
 template<class T>
-struct _city_hash {
-    using argument_type = T;
-    using result_type = size_t;
-
-    size_t city(true_type, const char *p) const noexcept {
-        return ala::city::CityHash64(p, sizeof(T));
-    }
-
-    size_t city(false_type, const char *p) const noexcept {
-        return ala::city::CityHash32(p, sizeof(T));
-    }
-
-    size_t operator()(T v) const noexcept {
-        const char *p = reinterpret_cast<const char *>(ala::addressof(v));
-        return _city_hash::city(bool_constant<sizeof(size_t) == 8>{}, p);
-    }
-};
+struct _identity_hash<T, true>: _farm_hash<T> {};
 
 template<class T>
 struct _float_hash {
@@ -62,8 +87,8 @@ struct _float_hash {
     using result_type = size_t;
     constexpr size_t operator()(T v) const noexcept {
         if (v == static_cast<T>(0.))
-            return _city_hash<T>{}(0.);
-        return _city_hash<T>{}(v);
+            return _farm_hash<T>{}(0.);
+        return _farm_hash<T>{}(v);
     }
 };
 
@@ -85,12 +110,12 @@ template<> struct hash<unsigned int>:   _identity_hash<unsigned int> {};
 template<> struct hash<long>:           _identity_hash<long> {};
 template<> struct hash<unsigned long>:  _identity_hash<unsigned long> {};
 
-template<> struct hash<long long> :         _city_hash<long long> {};
-template<> struct hash<unsigned long long>: _city_hash<unsigned long long> {};
+template<> struct hash<long long> :         _identity_hash<long long> {};
+template<> struct hash<unsigned long long>: _identity_hash<unsigned long long> {};
 
 #if _ALA_ENABLE_INT128T
-template<> struct hash<__int128_t>:  _city_hash<__int128_t> {};
-template<> struct hash<__uint128_t>: _city_hash<__uint128_t> {};
+template<> struct hash<__int128_t>:  _farm_hash<__int128_t> {};
+template<> struct hash<__uint128_t>: _farm_hash<__uint128_t> {};
 #endif
 
 #if _ALA_ENABLE_CHAR8T
