@@ -29,8 +29,8 @@
 
     #endif // __clang__
 
-#elif defined(__GNUC__) // gcc or clang (gnu target)
-    #if defined(__clang__)
+#elif defined(__GNUC__) && !defined(__apple_build_version__) // gcc or clang (gnu target)
+    #if defined(__clang__) && !defined(__apple_build_version__)
 
         #define _ALA_CLANG
         #define _ALA_CLANG_GNU
@@ -65,6 +65,173 @@
 
     #endif // __clang__
 
+#elif defined(__clang__) && defined(__apple_build_version__) // AppleClang
+    #define _ALA_CLANG
+    #define _ALA_CLANG_APPLE
+
+    #ifdef __clang_patchlevel__
+        #define _ALA_APPLE_CLANG_VER \
+            (__clang_major__ * 10000 + __clang_minor * 100 + \
+             __clang_patchlevel__)
+    #else
+        #define _ALA_APPLE_CLANG_VER \
+            (__clang_major__ * 10000 + __clang_minor * 100)
+    #endif
+
+    // https://en.wikipedia.org/wiki/Xcode#Version_comparison_table
+    #if 0
+    #elif _ALA_CLANG_VER >= 120005
+        #define _ALA_CLANG_VER 100000
+    #elif _ALA_CLANG_VER >= 120000
+        #define _ALA_CLANG_VER 100000
+    #elif _ALA_CLANG_VER >= 120000
+        #define _ALA_CLANG_VER 100000
+    #elif _ALA_CLANG_VER >= 120000
+        #define _ALA_CLANG_VER 100000
+    #elif _ALA_CLANG_VER >= 120000
+        #define _ALA_CLANG_VER 100000
+    #elif _ALA_CLANG_VER >= 120000
+        #define _ALA_CLANG_VER 100000
+    #elif _ALA_CLANG_VER >= 120000
+        #define _ALA_CLANG_VER 100000
+    #elif _ALA_CLANG_VER >= 110003
+        #define _ALA_CLANG_VER 90000
+    #elif _ALA_CLANG_VER >= 110003
+        #define _ALA_CLANG_VER 90000
+    #elif _ALA_CLANG_VER >= 110003
+        #define _ALA_CLANG_VER 90000
+    #elif _ALA_CLANG_VER >= 110003
+        #define _ALA_CLANG_VER 90000
+    #elif _ALA_CLANG_VER >= 110003
+        #define _ALA_CLANG_VER 90000
+    #elif _ALA_CLANG_VER >= 110000
+        #define _ALA_CLANG_VER 80000
+    #elif _ALA_CLANG_VER >= 110000
+        #define _ALA_CLANG_VER 80000
+    #elif _ALA_CLANG_VER >= 110000
+        #define _ALA_CLANG_VER 80000
+    #elif _ALA_CLANG_VER >= 110000
+        #define _ALA_CLANG_VER 80000
+    #elif _ALA_CLANG_VER >= 110000
+        #define _ALA_CLANG_VER 80000
+    #elif _ALA_CLANG_VER >= 100001
+        #define _ALA_CLANG_VER 70000
+    #elif _ALA_CLANG_VER >= 100001
+        #define _ALA_CLANG_VER 70000
+    #elif _ALA_CLANG_VER >= 100001
+        #define _ALA_CLANG_VER 70000
+    #elif _ALA_CLANG_VER >= 100000
+        #define _ALA_CLANG_VER 60001
+    #elif _ALA_CLANG_VER >= 100000
+        #define _ALA_CLANG_VER 60001
+    #elif _ALA_CLANG_VER >= 90100
+        #define _ALA_CLANG_VER 50002
+    #elif _ALA_CLANG_VER >= 90100
+        #define _ALA_CLANG_VER 50002
+    #elif _ALA_CLANG_VER >= 90100
+        #define _ALA_CLANG_VER 50002
+    #elif _ALA_CLANG_VER >= 90100
+        #define _ALA_CLANG_VER 50002
+    #elif _ALA_CLANG_VER >= 90000
+        #define _ALA_CLANG_VER 40000
+    #elif _ALA_CLANG_VER >= 90000
+        #define _ALA_CLANG_VER 40000
+    #elif _ALA_CLANG_VER >= 90000
+        #define _ALA_CLANG_VER 40000
+    #elif _ALA_CLANG_VER >= 80100
+        #define _ALA_CLANG_VER 30900
+    #elif _ALA_CLANG_VER >= 80100
+        #define _ALA_CLANG_VER 30900
+    #elif _ALA_CLANG_VER >= 80100
+        #define _ALA_CLANG_VER 30900
+    #elif _ALA_CLANG_VER >= 80100
+        #define _ALA_CLANG_VER 30900
+    #elif _ALA_CLANG_VER >= 80000
+        #define _ALA_CLANG_VER 30900
+    #elif _ALA_CLANG_VER >= 80000
+        #define _ALA_CLANG_VER 30900
+    #elif _ALA_CLANG_VER >= 80000
+        #define _ALA_CLANG_VER 30900
+    #elif _ALA_CLANG_VER >= 80000
+        #define _ALA_CLANG_VER 30900
+    #elif _ALA_CLANG_VER >= 70300
+        #define _ALA_CLANG_VER 30800
+    #elif _ALA_CLANG_VER >= 70300
+        #define _ALA_CLANG_VER 30800
+    #elif _ALA_CLANG_VER >= 70002
+        #define _ALA_CLANG_VER 30700
+    #elif _ALA_CLANG_VER >= 70002
+        #define _ALA_CLANG_VER 30700
+    #elif _ALA_CLANG_VER >= 70000
+        #define _ALA_CLANG_VER 30700
+    #elif _ALA_CLANG_VER >= 70000
+        #define _ALA_CLANG_VER 30700
+    #elif _ALA_CLANG_VER >= 70000
+        #define _ALA_CLANG_VER 30700
+    #elif _ALA_CLANG_VER >= 60100
+        #define _ALA_CLANG_VER 30600
+    #elif _ALA_CLANG_VER >= 60100
+        #define _ALA_CLANG_VER 30600
+    #elif _ALA_CLANG_VER >= 60100
+        #define _ALA_CLANG_VER 30600
+    #elif _ALA_CLANG_VER >= 60100
+        #define _ALA_CLANG_VER 30600
+    #elif _ALA_CLANG_VER >= 60000
+        #define _ALA_CLANG_VER 30500
+    #elif _ALA_CLANG_VER >= 60000
+        #define _ALA_CLANG_VER 30500
+    #elif _ALA_CLANG_VER >= 60000
+        #define _ALA_CLANG_VER 30500
+    #elif _ALA_CLANG_VER >= 60000
+        #define _ALA_CLANG_VER 30500
+    #elif _ALA_CLANG_VER >= 50100
+        #define _ALA_CLANG_VER 30400
+    #elif _ALA_CLANG_VER >= 50100
+        #define _ALA_CLANG_VER 30400
+    #elif _ALA_CLANG_VER >= 50000
+        #define _ALA_CLANG_VER 30300
+    #elif _ALA_CLANG_VER >= 50000
+        #define _ALA_CLANG_VER 30300
+    #elif _ALA_CLANG_VER >= 50000
+        #define _ALA_CLANG_VER 30300
+    #elif _ALA_CLANG_VER >= 40200
+        #define _ALA_CLANG_VER 30200
+    #elif _ALA_CLANG_VER >= 40200
+        #define _ALA_CLANG_VER 30200
+    #elif _ALA_CLANG_VER >= 40200
+        #define _ALA_CLANG_VER 30200
+    #elif _ALA_CLANG_VER >= 40200
+        #define _ALA_CLANG_VER 30200
+    #elif _ALA_CLANG_VER >= 40100
+        #define _ALA_CLANG_VER 30100
+    #elif _ALA_CLANG_VER >= 40100
+        #define _ALA_CLANG_VER 30100
+    #elif _ALA_CLANG_VER >= 40100
+        #define _ALA_CLANG_VER 30100
+    #elif _ALA_CLANG_VER >= 40000
+        #define _ALA_CLANG_VER 30100
+    #elif _ALA_CLANG_VER >= 40000
+        #define _ALA_CLANG_VER 30100
+    #elif _ALA_CLANG_VER >= 30100
+        #define _ALA_CLANG_VER 30100
+    #elif _ALA_CLANG_VER >= 30100
+        #define _ALA_CLANG_VER 30100
+    #elif _ALA_CLANG_VER >= 30100
+        #define _ALA_CLANG_VER 30100
+    #elif _ALA_CLANG_VER >= 30100
+        #define _ALA_CLANG_VER 30100
+    #elif _ALA_CLANG_VER >= 30000
+        #define _ALA_CLANG_VER 30000
+    #elif _ALA_CLANG_VER >= 20100
+        #define _ALA_CLANG_VER 30000
+    #elif _ALA_CLANG_VER >= 20000
+        #define _ALA_CLANG_VER 20900
+    #elif _ALA_CLANG_VER >= 20000
+        #define _ALA_CLANG_VER 20900
+    #elif _ALA_CLANG_VER >= 10700
+        #define _ALA_CLANG_VER 20900
+    #endif
+
 #else // other compiler
     #error Unsupported compiler.
 #endif // Compilers
@@ -86,7 +253,7 @@
 #endif // Architectures
 
 #if defined(__clang__) && defined(__c2__)
-#define _ALA_CLANG_C2
+    #define _ALA_CLANG_C2
 #endif
 
 #ifdef _WIN32
