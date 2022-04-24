@@ -1,5 +1,5 @@
-#ifndef _ALA_INTRIN_CPUID_H
-#define _ALA_INTRIN_CPUID_H
+#ifndef _ALA_INTRIN_BIT_H
+#define _ALA_INTRIN_BIT_H
 
 #ifdef _ALA_MSVC
 extern unsigned char _BitScanForward(unsigned long *, unsigned long);
@@ -31,6 +31,10 @@ inline int _clzll(unsigned long long x) noexcept { return __builtin_clzll(x); }
 inline int _popcount(unsigned x)             noexcept { return __builtin_popcount(x); }
 inline int _popcountl(unsigned long x)       noexcept { return __builtin_popcountl(x); }
 inline int _popcountll(unsigned long long x) noexcept { return __builtin_popcountll(x); }
+
+inline uint16_t bswap16(uint16_t x) noexcept { return __builtin_bswap16(x); }
+inline uint32_t bswap32(uint32_t x) noexcept { return __builtin_bswap32(x); }
+inline uint64_t bswap64(uint64_t x) noexcept { return __builtin_bswap64(x); }
 
     // clang-format on
 
@@ -122,9 +126,13 @@ inline int _popcountll(unsigned long long x) noexcept {
            __popcnt(static_cast<unsigned int>(x >> 32));
     #endif
 }
-#endif
 
 // clang-format off
+inline uint16_t bswap16(uint16_t x) noexcept { return _byteswap_ushort(x); }
+inline uint32_t bswap32(uint32_t x) noexcept { return _byteswap_ulong(x);  }
+inline uint64_t bswap64(uint64_t x) noexcept { return _byteswap_uint64(x); }
+#endif
+
 inline int ctz(unsigned i)           noexcept { return ala::intrin::_ctz(i);  }
 inline int ctz(unsigned long i)      noexcept { return ala::intrin::_ctzl(i); }
 inline int ctz(unsigned long long i) noexcept { return ala::intrin::_ctzll(i);}
@@ -134,6 +142,10 @@ inline int clz(unsigned long long i) noexcept { return ala::intrin::_clzll(i);}
 inline int popcount(unsigned i)           noexcept { return ala::intrin::_popcount(i); }
 inline int popcount(unsigned long i)      noexcept { return ala::intrin::_popcountl(i); }
 inline int popcount(unsigned long long i) noexcept { return ala::intrin::_popcountll(i); }
+inline uint16_t bswap(uint16_t x) noexcept { return ala::intrin::bswap16(x); }
+inline uint32_t bswap(uint32_t x) noexcept { return ala::intrin::bswap32(x);  }
+inline uint64_t bswap(uint64_t x) noexcept { return ala::intrin::bswap64(x); }
+
 // clang-format on
 
 } // namespace intrin

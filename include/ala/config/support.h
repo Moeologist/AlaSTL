@@ -25,7 +25,7 @@
     #endif
 #endif
 
-#if ALA_HAS_BUILTIN(__make_integer_seq) || defined(_ALA_MSVC)
+#if defined(_ALA_CLANG) && ALA_HAS_BUILTIN(__make_integer_seq) || defined(_ALA_MSVC)
     #define _ALA_ENABLE_MAKE_INTEGER_SEQ 1
 #else
     #define _ALA_ENABLE_MAKE_INTEGER_SEQ 0
@@ -35,6 +35,12 @@
     #define _ALA_ENABLE_TYPE_PACK_ELEMENT 1
 #else
     #define _ALA_ENABLE_TYPE_PACK_ELEMENT 0
+#endif
+
+#if ALA_HAS_BUILTIN(__builtin_bit_cast) || (defined(_ALA_MSVC) && _MSC_VER >= 1927)
+    #define _ALA_ENABLE_BUILTIN_BIT_CAST 1
+#else
+    #define _ALA_ENABLE_BUILTIN_BIT_CAST 0
 #endif
 
 #if ALA_HAS_CPP_ATTRIBUTE(nodiscard) || \
