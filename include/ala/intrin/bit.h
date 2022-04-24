@@ -32,7 +32,7 @@ inline int _popcount(unsigned x)             noexcept { return __builtin_popcoun
 inline int _popcountl(unsigned long x)       noexcept { return __builtin_popcountl(x); }
 inline int _popcountll(unsigned long long x) noexcept { return __builtin_popcountll(x); }
 
-// clang-format on
+    // clang-format on
 
 #else
 
@@ -53,8 +53,8 @@ inline int _ctzl(unsigned long x) {
 }
 
 inline int _ctzll(unsigned long long x) {
-    static_assert(sizeof(unsigned long long) == 64, "Internal error");
-    static_assert(sizeof(unsigned long) == 32, "Internal error");
+    static_assert(sizeof(unsigned long long) * 8 == 64, "Internal error");
+    static_assert(sizeof(unsigned long) * 8 == 32, "Internal error");
     unsigned long result;
     #if defined(_ALA_ARM64) || defined(_ALA_X64)
     if (_BitScanForward64(&result, x))
@@ -86,8 +86,8 @@ inline int _clzl(unsigned long x) {
 }
 
 inline int _clzll(unsigned long long x) {
-    static_assert(sizeof(unsigned long long) == 64, "Internal error");
-    static_assert(sizeof(unsigned long) == 32, "Internal error");
+    static_assert(sizeof(unsigned long long) * 8 == 64, "Internal error");
+    static_assert(sizeof(unsigned long) * 8 == 32, "Internal error");
     unsigned long result;
     #if defined(_ALA_ARM64) || defined(_ALA_X64)
     if (_BitScanReverse64(&result, x))
@@ -113,8 +113,8 @@ inline int _popcountl(unsigned long x) noexcept {
 }
 
 inline int _popcountll(unsigned long long x) noexcept {
-    static_assert(sizeof(unsigned long long) == 64, "Internal error");
-    static_assert(sizeof(unsigned int) == 32, "Internal error");
+    static_assert(sizeof(unsigned long long) * 8 == 64, "Internal error");
+    static_assert(sizeof(unsigned int) * 8 == 32, "Internal error");
     #if defined(_ALA_ARM64) || defined(_ALA_X64)
     return __popcnt64(static_cast<unsigned __int64>(x));
     #else

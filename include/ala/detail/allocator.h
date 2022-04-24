@@ -252,7 +252,8 @@ struct allocator_traits {
             is_always_equal::value,
             "Your allocator has no allocate_object(or allocate_bytes), "
             "it is necessary for node-based container, "
-            "or use stateless(is_always_equal) allocator");
+            "or use stateless(is_always_equal) allocator"
+            "Never define ALA_USE_ALLOC_REBIND in your project!!!");
 #endif // always use rebind in always_equal allocator
         return ala::to_address(rebind_alloc<U>(a).allocate(n));
     }

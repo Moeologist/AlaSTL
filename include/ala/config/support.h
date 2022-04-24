@@ -31,6 +31,12 @@
     #define _ALA_ENABLE_MAKE_INTEGER_SEQ 0
 #endif
 
+#if defined(_ALA_CLANG) && ALA_HAS_BUILTIN(__type_pack_element)
+    #define _ALA_ENABLE_TYPE_PACK_ELEMENT 1
+#else
+    #define _ALA_ENABLE_TYPE_PACK_ELEMENT 0
+#endif
+
 #if ALA_HAS_CPP_ATTRIBUTE(nodiscard) || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_LANG >= 201703L)
     #define ALA_NODISCARD [[nodiscard]]

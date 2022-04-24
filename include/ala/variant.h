@@ -481,7 +481,7 @@ struct _variant_base
     constexpr _variant_base(const _variant_base &) = default;
     constexpr _variant_base &operator=(const _variant_base &) = default;
     constexpr _variant_base &operator=(_variant_base &&other) = default;
-}; // namespace ala
+};
 
 struct monostate {};
 

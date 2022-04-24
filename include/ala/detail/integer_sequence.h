@@ -31,9 +31,11 @@ struct _cat_int_seq_helper<void, integer_sequence<Int, Is...>,
 };
 
 template<typename IntSeq, typename... IntSeqs>
-struct _cat_int_seq_helper<void_t<typename _cat_int_seq_helper<void, IntSeqs...>::type>,
-                           IntSeq, IntSeqs...>
-    : _cat_int_seq_helper<void, IntSeq, typename _cat_int_seq_helper<void, IntSeqs...>::type> {};
+struct _cat_int_seq_helper<
+    void_t<typename _cat_int_seq_helper<void, IntSeqs...>::type>, IntSeq, IntSeqs...>
+    : _cat_int_seq_helper<void, IntSeq,
+                          typename _cat_int_seq_helper<void, IntSeqs...>::type> {
+};
 
 template<typename... IntSeq>
 using cat_integer_sequence = typename _cat_int_seq_helper<void, IntSeq...>::type;
@@ -64,7 +66,7 @@ struct _make_int_seq<Int, 0> {
 
 #if _ALA_ENABLE_MAKE_INTEGER_SEQ
 
-template <typename Int, Int N>
+template<typename Int, Int N>
 using make_integer_sequence = __make_integer_seq<integer_sequence, Int, N>;
 
 #else
@@ -130,6 +132,52 @@ using make_integer_range =
 
 template<typename... T>
 using index_sequence_for = make_index_sequence<sizeof...(T)>;
+
+template<size_t... Is>
+struct ndim_indexer;
+
+template<size_t I, size_t... Is>
+struct ndim_indexer<I, Is...> {
+    static constexpr size_t ndsize =
+        _prod_<integral_constant<size_t, 1>, integral_constant<size_t, Is>...>::value;
+
+    template<size_t Flat, class IntSeq>
+    struct _flat2nd_impl;
+
+    template<size_t Flat, size_t... Idx>
+    struct _flat2nd_impl<Flat, index_sequence<Idx...>> {
+        static_assert(Flat / ndsize < I, "Index out of range");
+        using type = typename ndim_indexer<Is...>::template _flat2nd_impl<
+            Flat % ndsize, index_sequence<Idx..., Flat / ndsize>>::type;
+    };
+
+    template<size_t Flat>
+    using flat2nd = typename _flat2nd_impl<Flat, index_sequence<>>::type;
+
+    template<size_t Idx, size_t... Idxs>
+    struct nd2flat
+        : integral_constant<size_t, ndim_indexer<Is...>::template nd2flat<Idxs...>::value +
+                                        Idx * ndsize> {
+        static_assert(Idx < I, "Index out of range");
+    };
+};
+
+template<>
+struct ndim_indexer<> {
+    template<size_t flat, class IntSeq>
+    struct _flat2nd_impl;
+
+    template<size_t flat, size_t... Idx>
+    struct _flat2nd_impl<flat, index_sequence<Idx...>> {
+        using type = index_sequence<Idx...>;
+    };
+
+    template<size_t flat>
+    using flat2nd = typename _flat2nd_impl<flat, index_sequence<>>::type;
+
+    template<size_t...>
+    struct nd2flat: integral_constant<size_t, 0> {};
+};
 
 } // namespace ala
 

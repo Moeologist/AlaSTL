@@ -566,8 +566,8 @@ template<size_t Size, size_t Align, bool> struct _alignshl: _alignshl<Size, Alig
 template<size_t Size, size_t Align> struct _alignshl<Size, Align, true>: integral_constant<size_t, Align> {};
 
 template<size_t Size>
-struct _maxalign: _max_integral_constant<_alignshl<Size>,
-                                         integral_constant<size_t, alignof(max_align_t)>> {};
+struct _maxalign: _max_<_alignshl<Size>,
+                        integral_constant<size_t, alignof(max_align_t)>> {};
 
 template<size_t Size, size_t Align = _maxalign<Size>::value>
 struct aligned_storage {
@@ -579,8 +579,7 @@ struct aligned_storage {
 template<size_t Size, typename... Ts>
 struct aligned_union {
     static_assert(sizeof...(Ts) != 0, "Undefined behaviour");
-    constexpr static size_t alignment_value = _meta_reduce<_max_integral_constant,
-                                                           integral_constant<size_t, alignof(Ts)>...>::value;
+    constexpr static size_t alignment_value = _max_<integral_constant<size_t, alignof(Ts)>...>::value;
     typedef aligned_storage_t<Size, alignment_value> type;
 };
 
@@ -758,7 +757,7 @@ struct is_nothrow_invocable_r: _and_<is_invocable_r<Ret, Fn, Args...>,
 
 template<typename... B> struct conjunction: _and_<B...> {};
 template<typename... B> struct disjunction: _or_<B...> {};
-template<typename B>    struct negation    : _not_<B> {};
+template<typename B>    struct negation   : _not_<B> {};
 
 enum class endian {
 #if defined(__ORDER_LITTLE_ENDIAN__) && defined(__ORDER_BIG_ENDIAN__) && defined(__BYTE_ORDER__)

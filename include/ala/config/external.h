@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <cstring>
+#include <cstdlib>
 
 namespace ala {
 using ::std::exception;

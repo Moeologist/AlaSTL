@@ -4,17 +4,19 @@
 #include <ala/type_traits.h>
 
 #ifdef _ALA_WIN32
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <Windows.h>
+    #ifndef NOMINMAX
+        #define NOMINMAX
+    #endif
+    #include <Windows.h>
 #elif defined _ALA_LINUX
-#include <time.h>
+    #include <time.h>
 #elif defined _ALA_APPLE
-#include <mach/mach_time.h>
+    #include <mach/mach_time.h>
 #endif
 
 namespace ala {
+
+namespace util {
 
 #ifdef _ALA_WIN32
 
@@ -61,6 +63,8 @@ long long timer(Fn &&fn, Args &&... args) {
 }
 
 #endif
+
+} // namespace util
 
 } // namespace ala
 

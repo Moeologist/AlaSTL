@@ -1,6 +1,8 @@
 #ifndef _ALA_RANDOM_H
 #define _ALA_RANDOM_H
 
+#include <ala/config.h>
+
 #include <ala/intrin/bit.h>
 
 #include <ala/intrin/rdrand.h>

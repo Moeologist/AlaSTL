@@ -144,25 +144,69 @@ struct _meta_reduce_sfinae<void_t<_meta_reduce_impl<Templt, Ts...>>, Templt, Ts.
 template<template<class...> class Templt, class... Ts>
 struct _meta_reduce: _meta_reduce_sfinae<void, Templt, Ts...> {};
 
+// template<typename VT>
+// struct _vtype_traits {};
+
+// template<typename T, T v, template<typename, T> class Templt>
+// struct _vtype_traits<Templt<T, v>> {
+//     template<typename T1, T1 v1>
+//     using rebind = Templt<T1, v1>;
+
+//     template<T v1>
+//     using rebind_val = Templt<T, v1>;
+// };
+
+// template<class T1, class T2>
+// struct _max_
+//     : _vtype_traits<T1>::template rebind<
+//           common_type_t<typename T1::value_type, typename T2::value_type>,
+//           (T1::value < T2::value ? T2::value : T1::value)> {};
+
+// template<class T1, class T2>
+// struct _min_
+//     : _vtype_traits<T1>::template rebind<
+//           common_type_t<typename T1::value_type, typename T2::value_type>,
+//           (T1::value < T2::value ? T1::value : T2::value)> {};
+
+// template<class T1, class T2>
+// struct _add_: _vtype_traits<T1>::template rebind<decltype(T1::value + T2::value),
+//                                                  T1::value + T2::value> {};
+
+// template<class T1, class T2>
+// struct _mul_: _vtype_traits<T1>::template rebind<decltype(T1::value * T2::value),
+//                                                  T1::value * T2::value> {};
+
 template<class T1, class T2>
-struct _max_integral_constant
+struct _max_
     : integral_constant<common_type_t<typename T1::value_type, typename T2::value_type>,
                         (T1::value < T2::value ? T2::value : T1::value)> {};
 
 template<class T1, class T2>
-struct _min_integral_constant
+struct _min_
     : integral_constant<common_type_t<typename T1::value_type, typename T2::value_type>,
                         (T1::value < T2::value ? T1::value : T2::value)> {};
 
 template<class T1, class T2>
-struct _add_integral_constant
+struct _add_
     : integral_constant<decltype(T1::value + T2::value), T1::value + T2::value> {
 };
 
 template<class T1, class T2>
-struct _mul_integral_constant
+struct _mul_
     : integral_constant<decltype(T1::value * T2::value), T1::value * T2::value> {
 };
+
+template<class... Ts>
+struct _maximal_: _meta_reduce<_max_, Ts...> {};
+
+template<class... Ts>
+struct _minimal_: _meta_reduce<_min_, Ts...> {};
+
+template<class... Ts>
+struct _sum_: _meta_reduce<_add_, Ts...> {};
+
+template<class... Ts>
+struct _prod_: _meta_reduce<_mul_, Ts...> {};
 
 }; // namespace ala
 
