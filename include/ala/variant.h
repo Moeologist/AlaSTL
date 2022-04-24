@@ -4,12 +4,7 @@
 #include <ala/array.h>
 #include <ala/utility.h>
 #include <ala/detail/controller.h>
-#include <ala/detail/hash.h>
-
-#ifdef _ALA_CLANG
-    #pragma clang diagnostic push
-    #pragma clang diagnostic ignored "-Wreturn-type"
-#endif
+#include <ala/detail/monostate.h>
 
 namespace ala {
 
@@ -483,18 +478,6 @@ struct _variant_base
     constexpr _variant_base &operator=(_variant_base &&other) = default;
 };
 
-struct monostate {};
-
-template<>
-struct hash<monostate> {
-    using argument_type = monostate;
-    using result_type = size_t;
-
-    constexpr size_t operator()(monostate) const noexcept {
-        return 10;
-    }
-};
-
 struct bad_variant_access: exception {
     bad_variant_access() noexcept {}
     virtual const char *what() const noexcept {
@@ -810,6 +793,7 @@ struct _visit_impl {
         template<class Visitor1, class... Variants1>
         static constexpr R _invoke_ol(char, Visitor1 &&vis, Variants1 &&... vars) {
             // never run into here;
+            assert(false);
             return R();
         }
 
@@ -986,31 +970,6 @@ constexpr bool operator>=(const variant<Ts...> &lhs, const variant<Ts...> &rhs) 
     return ala::visit_r<bool>(greater_equal<>{}, lhs, rhs);
 }
 
-// monostate relational operators
-constexpr bool operator<(monostate, monostate) noexcept {
-    return false;
-}
-
-constexpr bool operator>(monostate, monostate) noexcept {
-    return false;
-}
-
-constexpr bool operator<=(monostate, monostate) noexcept {
-    return true;
-}
-
-constexpr bool operator>=(monostate, monostate) noexcept {
-    return true;
-}
-
-constexpr bool operator==(monostate, monostate) noexcept {
-    return true;
-}
-
-constexpr bool operator!=(monostate, monostate) noexcept {
-    return false;
-}
-
 // specialized algorithms
 template<class... Ts>
 enable_if_t<_and_<is_move_constructible<Ts>..., is_swappable<Ts>...>::value>
@@ -1035,10 +994,6 @@ struct hash<_sfinae_checker<
         }
     }
 };
-
-#ifdef _ALA_CLANG
-    #pragma clang diagnostic pop
-#endif
 
 } // namespace ala
 

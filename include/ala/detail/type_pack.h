@@ -5,14 +5,6 @@
 
 namespace ala {
 
-// #if 0
-#if _ALA_ENABLE_TYPE_PACK_ELEMENT
-
-template<size_t I, typename... Ts>
-using type_pack_element_t = __type_pack_element<I, Ts...>;
-
-#else
-
 template<size_t I, typename T>
 struct _type_pack_element_base {
     using type = T;
@@ -30,10 +22,6 @@ template<size_t I, typename T>
 _type_pack_element_base<I, T>
 _type_pack_element_cast(_type_pack_element_base<I, T> &&);
 
-template<size_t I, typename... Ts>
-using type_pack_element_t = typename decltype(_type_pack_element_cast<I>(
-    _type_pack_element_index<index_sequence_for<Ts...>, Ts...>{}))::type;
-
 template<typename T, size_t I>
 _type_pack_element_base<I, T>
 _type_pack_index_cast(_type_pack_element_base<I, T> &&);
@@ -41,6 +29,18 @@ _type_pack_index_cast(_type_pack_element_base<I, T> &&);
 template<typename T, typename... Ts>
 using _type_pack_index_t = typename decltype(_type_pack_index_cast<T>(
     _type_pack_element_index<index_sequence_for<Ts...>, Ts...>{}))::index;
+
+// #if 0
+#if _ALA_ENABLE_TYPE_PACK_ELEMENT
+
+template<size_t I, typename... Ts>
+using type_pack_element_t = __type_pack_element<I, Ts...>;
+
+#else
+
+template<size_t I, typename... Ts>
+using type_pack_element_t = typename decltype(_type_pack_element_cast<I>(
+    _type_pack_element_index<index_sequence_for<Ts...>, Ts...>{}))::type;
 
 #endif
 

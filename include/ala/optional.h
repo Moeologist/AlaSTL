@@ -4,7 +4,7 @@
 #include <ala/utility.h>
 #include <ala/detail/memory_base.h>
 #include <ala/detail/controller.h>
-#include <ala/detail/hash.h>
+#include <ala/detail/monostate.h>
 
 namespace ala {
 
@@ -382,9 +382,9 @@ public:
         this->_reset();
     }
 
-    // Impelment p0798R3
-    // Monadic operations for std::optional
-    // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2019/p0798r3.html
+    // Impelment p0798R6
+    // Monadic operations for ala::optional
+    // http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2021/p0798r6.html
     template<class F>
     constexpr invoke_result_t<F, T &> and_then(F &&f) & {
         using result_t = invoke_result_t<F, T &>;
@@ -421,66 +421,72 @@ public:
                              result_t(nullopt);
     }
 
-    template<class F>
-    constexpr optional or_else(F &&f) & {
-        if (has_value())
-            return *this;
+    template<class Opt, class F, class Ret = invoke_result_t<F>,
+             class = enable_if_t<!is_void<Ret>::value>>
+    friend constexpr optional _optional_or_else_impl(Opt &&opt, F &&f) {
+        return opt.has_value() ? ala::forward<Opt>(opt) : ala::forward<F>(f)();
+    }
+
+    template<class Opt, class F, class Ret = invoke_result_t<F>,
+             class = enable_if_t<is_void<Ret>::value>, class = void>
+    friend constexpr optional _optional_or_else_impl(Opt &&opt, F &&f) {
+        if (opt.has_value())
+            return ala::forward<Opt>(opt);
         ala::forward<F>(f)();
         return nullopt;
     }
 
     template<class F>
     constexpr optional or_else(F &&f) && {
-        if (has_value())
-            return ala::move(*this);
-        ala::forward<F>(f)();
-        return nullopt;
+        static_assert(is_copy_constructible<T>::value,
+                      "T must return be copy_constructible");
+        return _optional_or_else_impl(ala::move(*this), f);
     }
 
     template<class F>
     constexpr optional or_else(F &&f) const & {
-        if (has_value())
-            return *this;
-        ala::forward<F>(f)();
-        return nullopt;
+        static_assert(is_copy_constructible<T>::value,
+                      "T must return be copy_constructible");
+        return _optional_or_else_impl(*this, f);
+    }
+
+    template<class Opt, class F, class Ret = invoke_result_t<F, typename Opt::value_type>,
+             class = enable_if_t<!is_void<Ret>::value>>
+    friend constexpr auto _optional_fmap_impl(Opt &&opt, F &&f) -> optional<Ret> {
+        return opt.has_value() ?
+                   ala::invoke(ala::forward<F>(f), *ala::forward<Opt>(opt)) :
+                   nullopt;
+    }
+
+    template<class Opt, class F, class Ret = invoke_result_t<F, typename Opt::value_type>,
+             class = enable_if_t<is_void<Ret>::value>>
+    friend constexpr auto _optional_fmap_impl(Opt &&opt, F &&f)
+        -> optional<monostate> {
+        if (opt.has_value()) {
+            ala::invoke(ala::forward<F>(f), *ala::forward<Opt>(opt));
+            return optional<monostate>(monostate{});
+        }
+        return optional<monostate>(nullopt);
     }
 
     template<class F>
-    constexpr optional or_else(F &&f) const && {
-        if (has_value())
-            return ala::move(*this);
-        ala::forward<F>(f)();
-        return nullopt;
+    constexpr auto transform(F &&f) & {
+        return _optional_fmap_impl(*this, ala::forward<F>(f));
     }
 
     template<class F>
-    constexpr optional transform(F &&f) & {
-        using result_t = optional;
-        return has_value() ? result_t(ala::invoke(ala::forward<F>(f), **this)) :
-                             result_t(nullopt);
+    constexpr auto transform(F &&f) && {
+        return _optional_fmap_impl(ala::move(*this), ala::forward<F>(f));
     }
 
     template<class F>
-    constexpr optional transform(F &&f) && {
-        using result_t = optional;
-        return has_value() ?
-                   result_t(ala::invoke(ala::forward<F>(f), ala::move(**this))) :
-                   result_t(nullopt);
+    constexpr auto transform(F &&f) const & {
+        return _optional_fmap_impl(*this, ala::forward<F>(f));
     }
 
     template<class F>
-    constexpr optional transform(F &&f) const & {
-        using result_t = optional;
-        return has_value() ? result_t(ala::invoke(ala::forward<F>(f), **this)) :
-                             result_t(nullopt);
-    }
-
-    template<class F>
-    constexpr optional transform(F &&f) const && {
-        using result_t = optional;
-        return has_value() ?
-                   result_t(ala::invoke(ala::forward<F>(f), ala::move(**this))) :
-                   result_t(nullopt);
+    constexpr auto transform(F &&f) const && {
+        return _optional_fmap_impl(ala::move(*this), ala::forward<F>(f));
     }
 };
 
