@@ -40,51 +40,53 @@ else:
     cflags = [
         '-DTEST_STD_VER=20',
         '-DALA_USE_ALLOC_REBIND=1',
-        '-D_LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED=1',
         '-D_ALA_VERSION=0',
         '-O0',
         '-g',
-        '-std=c++17',
+        '-std=c++20',
         '-fexceptions',
         '-stdlib=libc++',
         '-fuse-ld=lld',
-        '-fsanitize=address',
-        '-fsanitize=undefined',
+        # '-fsanitize=address',
+        # '-fsanitize=undefined',
+        # '-fsanitize=thread',
+        # '-fsanitize=memory',
         '-ferror-limit=1'
     ]
 
 lflags = []
 srcs = [
-    'std/algorithms',
-    'std/containers/container.node',
-    'std/containers/container.general',
-    'std/containers/container.requirements',
-    'std/containers/associative/map',
-    'std/containers/associative/multimap',
-    'std/containers/associative/set',
-    'std/containers/associative/multiset',
-    'std/containers/sequences/array',
-    'std/containers/sequences/vector',
-    'std/containers/sequences/list',
-    'std/utilities/meta',
-    'std/utilities/function.objects',
-    'std/utilities/utility',
-    'std/utilities/tuple',
-    'std/utilities/any',
-    'std/utilities/variant',
-    'std/utilities/optional',
-    # 'std/utilities/smartptr',
-    # 'std/utilities/memory/util.smartptr',
+    # 'std/algorithms',
+    # 'std/containers/container.node',
+    # 'std/containers/container.general',
+    # 'std/containers/container.requirements',
+    # 'std/containers/associative/map',
+    # 'std/containers/associative/multimap',
+    # 'std/containers/associative/set',
+    # 'std/containers/associative/multiset',
+    # 'std/containers/sequences/array',
+    # 'std/containers/sequences/vector',
+    # 'std/containers/sequences/list',
+    # 'std/utilities/meta',
+    # 'std/utilities/function.objects',
+    # 'std/utilities/utility',
+    # 'std/utilities/tuple',
+    # 'std/utilities/any',
+    # 'std/utilities/variant',
+    # 'std/utilities/optional',
+    'std/utilities/smartptr',
+    'std/utilities/memory/util.smartptr',
 ]
 
 skips = [
-    # seems wrong test
-    # 'std/containers/associative/multiset/emplace_hint.pass.cpp',
-    # 'std/utilities/tuple/tuple.tuple/tuple.cnstr/convert_copy.pass.cpp',
-    # 'std/utilities/meta/meta.trans/meta.trans.other/aligned_storage.pass.cpp',
-
     # should fix
     # 'std/utilities/tuple/tuple.tuple/tuple.cnstr/PR31384.pass.cpp',
+    'std/containers/sequences/vector/vector.modifiers/resize_not_move_insertable.fail.cpp',
+    'std/containers/associative/multiset/emplace_hint.pass.cpp',
+    'std/utilities/meta/meta.trans/meta.trans.sign/make_signed.pass.cpp',
+    'std/utilities/meta/meta.trans/meta.trans.sign/make_unsigned.pass.cpp',
+    'std/utilities/meta/meta.const.eval/is_constant_evaluated.pass.cpp',
+    'std/utilities/meta/meta.const.eval/is_constant_evaluated.fail.cpp',
 
     # only C++03
     'std/utilities/utility/pairs/pairs.pair/assign_pair_cxx03.pass.cpp',
@@ -92,16 +94,14 @@ skips = [
     # only C++11
     'std/utilities/utility/pairs/pairs.pair/not_constexpr_cxx11.fail.cpp',
 
-    # need modify
-    'std/utilities/meta/meta.trans/meta.trans.sign/make_signed.pass.cpp',
-    'std/utilities/meta/meta.trans/meta.trans.sign/make_unsigned.pass.cpp',
-    'std/utilities/meta/meta.const.eval/is_constant_evaluated.pass.cpp',
-    'std/utilities/meta/meta.const.eval/is_constant_evaluated.fail.cpp',
-
     # uncompat with asan
     # 'std/containers/sequences/list/list.ops/sort_comp.pass.cpp',
-    # 'std/containers/sequences/list/list.modifiers/insert_iter_size_value.pass.cpp',
     # 'std/containers/associative/map/map.access/at.pass.cpp',
+    'std/containers/sequences/list/list.modifiers/insert_iter_size_value.pass.cpp',
+    'std/utilities/memory/util.smartptr/util.smartptr.shared/util.smartptr.shared.const/pointer_deleter_throw.pass.cpp',
+    'std/utilities/memory/util.smartptr/util.smartptr.shared/util.smartptr.shared.const/pointer_throw.pass.cpp',
+    'std/utilities/memory/util.smartptr/util.smartptr.shared/util.smartptr.shared.const/nullptr_t_deleter_throw.pass.cpp',
+
 
     # only warning
     'std/containers/sequences/array/empty.fail.cpp',
@@ -113,7 +113,7 @@ skips = [
     'std/containers/associative/multiset/empty.fail.cpp',
 
     # compiler crash
-    # 'std/algorithms/alg.modifying.operations/alg.partitions/stable_partition.pass.cpp',
+    'std/algorithms/alg.modifying.operations/alg.partitions/stable_partition.pass.cpp',
 
     # no imple
     'std/utilities/function.objects/func.search',

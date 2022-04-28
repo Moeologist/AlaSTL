@@ -256,7 +256,7 @@ using minstd_rand = linear_congruential_engine<uint_fast32_t, 48271, 0, 21474836
 template<class URBG>
 conditional_t<(sizeof(typename remove_cvref_t<URBG>::result_type) * 8 >= 52),
               double, float>
-generate_real(URBG &&g) {
+generate_real(URBG &g) {
     using UInt = typename remove_cvref_t<URBG>::result_type;
     using Real =
         conditional_t<(sizeof(typename remove_cvref_t<URBG>::result_type) * 8 >= 52),

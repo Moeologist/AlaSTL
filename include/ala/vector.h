@@ -1,7 +1,6 @@
 #ifndef _ALA_VECTOR_H
 #define _ALA_VECTOR_H
 
-#include "ala/detail/traits_declare.h"
 #include <ala/detail/algorithm_base.h>
 #include <ala/detail/allocator.h>
 
