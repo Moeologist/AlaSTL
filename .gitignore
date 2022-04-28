@@ -37,6 +37,5 @@
 .vs
 out
 /compile_flags.txt
-/test
 /build
 /third_party

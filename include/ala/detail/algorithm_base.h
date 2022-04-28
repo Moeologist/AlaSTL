@@ -60,6 +60,13 @@ constexpr enable_if_t<
      is_pointer<InputIter>::value && is_pointer<OutputIter>::value),
     OutputIter>
 copy(InputIter first, InputIter last, OutputIter out) {
+#if _ALA_ENABLE_BUILTIN_IS_CONSTANT_EVALUATED
+    if (ala::is_constant_evaluated()) {
+        while (first != last)
+            *out++ = *first++;
+        return out + (last - first);
+    }
+#endif
     ala::memmove((void *)(out), (void *)(first),
                  sizeof(typename iterator_traits<InputIter>::value_type) *
                      (last - first));
@@ -87,6 +94,13 @@ constexpr enable_if_t<
      is_pointer<InputIter>::value && is_pointer<OutputIter>::value),
     OutputIter>
 move(InputIter first, InputIter last, OutputIter out) {
+#if _ALA_ENABLE_BUILTIN_IS_CONSTANT_EVALUATED
+    if (ala::is_constant_evaluated()) {
+        while (first != last)
+            *out++ = ala::move(*first++);
+        return out + (last - first);
+    }
+#endif
     ala::memmove((void *)(out), (void *)(first),
                  sizeof(typename iterator_traits<InputIter>::value_type) *
                      (last - first));
@@ -116,6 +130,13 @@ constexpr enable_if_t<
     OutputIter>
 copy_n(InputIter first, Size count, OutputIter out) {
     auto n = ala::_convert_to_integral(count);
+#if _ALA_ENABLE_BUILTIN_IS_CONSTANT_EVALUATED
+    if (ala::is_constant_evaluated()) {
+        for (; 0 < n; --n)
+            *out++ = *first++;
+        return out + count;
+    }
+#endif
     ala::memmove((void *)(out), (void *)(first),
                  sizeof(typename iterator_traits<InputIter>::value_type) * n);
     return out + count;
@@ -144,6 +165,13 @@ constexpr enable_if_t<
     OutputIter>
 move_n(InputIter first, Size count, OutputIter out) {
     auto n = ala::_convert_to_integral(count);
+#if _ALA_ENABLE_BUILTIN_IS_CONSTANT_EVALUATED
+    if (ala::is_constant_evaluated()) {
+        for (; 0 < n; --n)
+            *out++ = ala::move(*first++);
+        return out;
+    }
+#endif
     ala::memmove((void *)(out), (void *)(first),
                  sizeof(typename iterator_traits<InputIter>::value_type) * n);
     return out + count;
@@ -173,6 +201,13 @@ copy_backward(BidirIter1 first, BidirIter1 last, BidirIter2 out) {
     size_t len = last - first;
     size_t nbyte = sizeof(typename iterator_traits<BidirIter1>::value_type) *
                    (last - first);
+#if _ALA_ENABLE_BUILTIN_IS_CONSTANT_EVALUATED
+    if (ala::is_constant_evaluated()) {
+        while (first != last)
+            *--out = *--last;
+        return out;
+    }
+#endif
     ala::memmove((void *)(out - len), (void *)(first), nbyte);
     return out - len;
 }
@@ -201,6 +236,13 @@ move_backward(BidirIter1 first, BidirIter1 last, BidirIter2 out) {
     size_t len = last - first;
     size_t nbyte = sizeof(typename iterator_traits<BidirIter1>::value_type) *
                    (last - first);
+#if _ALA_ENABLE_BUILTIN_IS_CONSTANT_EVALUATED
+    if (ala::is_constant_evaluated()) {
+        while (first != last)
+            *--out = ala::move(*--last);
+        return out;
+    }
+#endif
     ala::memmove((void *)(out - len), (void *)(first), nbyte);
     return out - len;
 }
@@ -240,9 +282,8 @@ constexpr bool equal(Iter1 first1, Iter1 last1, Iter2 first2) {
 }
 
 template<class Iter1, class Iter2, class BinPred>
-constexpr bool
-_equal_dispatch(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2,
-                BinPred pred, false_type) {
+constexpr bool _equal_dispatch(Iter1 first1, Iter1 last1, Iter2 first2,
+                               Iter2 last2, BinPred pred, false_type) {
     for (; first1 != last1 && first2 != last2; ++first1, (void)++first2)
         if (!pred(*first1, *first2))
             return false;
@@ -252,9 +293,8 @@ _equal_dispatch(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2,
 }
 
 template<class Iter1, class Iter2, class BinPred>
-constexpr bool
-_equal_dispatch(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2,
-                BinPred pred, true_type) {
+constexpr bool _equal_dispatch(Iter1 first1, Iter1 last1, Iter2 first2,
+                               Iter2 last2, BinPred pred, true_type) {
     if (ala::distance(first1, last1) != ala::distance(first2, last2))
         return false;
     return ala::equal(first1, last1, first2, pred);

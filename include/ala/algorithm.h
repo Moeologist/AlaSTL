@@ -48,8 +48,9 @@ constexpr InputIter for_each_n(InputIter first, Size n, Fn f) {
 }
 
 template<class ForwardIter1, class ForwardIter2, class BinPred>
-ForwardIter1 search(ForwardIter1 first1, ForwardIter1 last1,
-                    ForwardIter2 first2, ForwardIter2 last2, BinPred pred) {
+constexpr ForwardIter1 search(ForwardIter1 first1, ForwardIter1 last1,
+                              ForwardIter2 first2, ForwardIter2 last2,
+                              BinPred pred) {
     for (;; ++first1) {
         ForwardIter1 i = first1;
         for (ForwardIter2 j = first2;; ++i, (void)++j) {
@@ -64,8 +65,8 @@ ForwardIter1 search(ForwardIter1 first1, ForwardIter1 last1,
 }
 
 template<class ForwardIter1, class ForwardIter2>
-ForwardIter1 search(ForwardIter1 first1, ForwardIter1 last1,
-                    ForwardIter2 first2, ForwardIter2 last2) {
+constexpr ForwardIter1 search(ForwardIter1 first1, ForwardIter1 last1,
+                              ForwardIter2 first2, ForwardIter2 last2) {
     return search(first1, last1, first2, last2, equal_to<>());
 }
 
@@ -754,8 +755,10 @@ constexpr pair<const T &, const T &> minmax(const T &a, const T &b) {
 
 template<class ForwardIter, class Comp>
 constexpr ForwardIter min_element(ForwardIter first, ForwardIter last, Comp comp) {
-    static_assert(is_base_of<forward_iterator_tag, ForwardIter>::value,
-                  "ala::min_element need Forward Iterator");
+    static_assert(
+        is_base_of<forward_iterator_tag,
+                   typename iterator_traits<ForwardIter>::iterator_category>::value,
+        "ala::min_element need Forward Iterator");
     if (first == last)
         return last;
     ForwardIter min = first;
@@ -773,8 +776,10 @@ constexpr ForwardIter min_element(ForwardIter first, ForwardIter last) {
 
 template<class ForwardIter, class Comp>
 constexpr ForwardIter max_element(ForwardIter first, ForwardIter last, Comp comp) {
-    static_assert(is_base_of<forward_iterator_tag, ForwardIter>::value,
-                  "ala::max_element need Forward Iterator");
+    static_assert(
+        is_base_of<forward_iterator_tag,
+                   typename iterator_traits<ForwardIter>::iterator_category>::value,
+        "ala::max_element need Forward Iterator");
     if (first == last)
         return last;
     ForwardIter max = first;
@@ -793,8 +798,10 @@ constexpr ForwardIter max_element(ForwardIter first, ForwardIter last) {
 template<class ForwardIter, class Comp>
 constexpr pair<ForwardIter, ForwardIter>
 minmax_element(ForwardIter first, ForwardIter last, Comp comp) {
-    static_assert(is_base_of<forward_iterator_tag, ForwardIter>::value,
-                  "ala::minmax_element need Forward Iterator");
+    static_assert(
+        is_base_of<forward_iterator_tag,
+                   typename iterator_traits<ForwardIter>::iterator_category>::value,
+        "ala::minmax_element need Forward Iterator");
     if (first == last)
         return pair<ForwardIter, ForwardIter>(last, last);
     ForwardIter min = first;

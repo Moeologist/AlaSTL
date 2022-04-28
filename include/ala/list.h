@@ -1,10 +1,87 @@
 #ifndef _ALA_LIST_H
 #define _ALA_LIST_H
 
-#include <ala/detail/linked_list.h>
+#include <ala/detail/allocator.h>
+#include <ala/iterator.h>
 #include <ala/detail/algorithm_base.h>
 
 namespace ala {
+
+template<class Derived>
+struct l_node {
+    Derived *_pre = nullptr, *_suc = nullptr;
+};
+
+template<class T>
+struct l_vnode: l_node<l_vnode<T>> {
+    T _data;
+};
+
+template<class Value, class Ptr>
+struct l_iterator {
+    typedef bidirectional_iterator_tag iterator_category;
+    typedef Value value_type;
+    typedef typename pointer_traits<Ptr>::difference_type difference_type;
+    typedef value_type *pointer;
+    typedef value_type &reference;
+
+    constexpr l_iterator() {}
+    constexpr l_iterator(const l_iterator &other): _ptr(other._ptr) {}
+    constexpr l_iterator(const Ptr &ptr): _ptr(ptr) {}
+
+    template<class Value1, class Ptr1>
+    constexpr l_iterator(const l_iterator<Value1, Ptr1> &other)
+        : _ptr(other._ptr) {}
+
+    constexpr reference operator*() const {
+        return _ptr->_data;
+    }
+
+    constexpr pointer operator->() const {
+        return ala::addressof(_ptr->_data);
+    }
+
+    template<class Value1, class Ptr1>
+    constexpr bool operator==(const l_iterator<Value1, Ptr1> &rhs) const {
+        return (_ptr == rhs._ptr);
+    }
+
+    template<class Value1, class Ptr1>
+    constexpr bool operator!=(const l_iterator<Value1, Ptr1> &rhs) const {
+        return !(_ptr == rhs._ptr);
+    }
+
+    constexpr l_iterator &operator++() {
+        _ptr = _ptr->_suc;
+        return *this;
+    }
+
+    constexpr l_iterator operator++(int) {
+        l_iterator tmp(*this);
+        ++*this;
+        return tmp;
+    }
+
+    constexpr l_iterator &operator--() {
+        _ptr = _ptr->_pre;
+        return *this;
+    }
+
+    constexpr l_iterator operator--(int) {
+        l_iterator tmp(*this);
+        --*this;
+        return tmp;
+    }
+
+protected:
+    template<class, class>
+    friend class l_iterator;
+
+    template<class, class>
+    friend class list;
+
+    Ptr _ptr = nullptr;
+};
 
 template<class T, class Alloc = allocator<T>>
 class list {
@@ -13,8 +90,8 @@ public:
     typedef T value_type;
     typedef value_type &reference;
     typedef const value_type &const_reference;
-    typedef l_iterator<value_type, l_vnode<value_type> *, false> iterator;
-    typedef l_iterator<value_type, l_vnode<value_type> *, true> const_iterator;
+    typedef l_iterator<value_type, l_vnode<value_type> *> iterator;
+    typedef l_iterator<const value_type, l_vnode<value_type> *> const_iterator;
     typedef Alloc allocator_type;
     typedef allocator_traits<Alloc> _alloc_traits;
     typedef typename _alloc_traits::size_type size_type;
@@ -99,8 +176,8 @@ protected:
     };
 
     template<class... Args>
-    _hdle_t construct_node(Args &&...args) {
-        using holder_t = pointer_holder<_node_t*, Alloc>;
+    _hdle_t construct_node(Args &&... args) {
+        using holder_t = pointer_holder<_node_t *, Alloc>;
         holder_t holder(_alloc, 1);
         _alloc_traits::construct(_alloc, ala::addressof(holder.get()->_data),
                                  ala::forward<Args>(args)...);
@@ -361,7 +438,7 @@ public:
 
 protected:
     template<class... V>
-    void nv_resize(size_type sz, V &&...v) {
+    void nv_resize(size_type sz, V &&... v) {
         static_assert(sizeof...(V) == 0 || sizeof...(V) == 1, "Internal error");
         if (size() > sz) {
             iterator pos = this->locate(sz);
@@ -424,12 +501,12 @@ public:
 
     // modifiers:
     template<class... Args>
-    reference emplace_front(Args &&...args) {
+    reference emplace_front(Args &&... args) {
         return *(this->emplace(begin(), ala::forward<Args>(args)...));
     }
 
     template<class... Args>
-    reference emplace_back(Args &&...args) {
+    reference emplace_back(Args &&... args) {
         return *(this->emplace(end(), ala::forward<Args>(args)...));
     }
 
@@ -458,7 +535,7 @@ public:
     }
 
     template<class... Args>
-    iterator emplace(const_iterator position, Args &&...args) {
+    iterator emplace(const_iterator position, Args &&... args) {
         _hdle_t node = this->construct_node(ala::forward<Args>(args)...);
         attach(position._ptr, node);
         return iterator(node);
@@ -490,7 +567,6 @@ public:
         } catch (...) {
             for (_hdle_t i = head; i != nullptr;)
                 i = destruct_node(i);
-            throw;
             throw;
         }
         return iterator(head);

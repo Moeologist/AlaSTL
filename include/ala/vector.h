@@ -1,10 +1,137 @@
 #ifndef _ALA_VECTOR_H
 #define _ALA_VECTOR_H
 
+#include "ala/detail/traits_declare.h"
 #include <ala/detail/algorithm_base.h>
 #include <ala/detail/allocator.h>
 
 namespace ala {
+
+template<class Value, class Ptr>
+struct v_iterator {
+    typedef random_access_iterator_tag iterator_category;
+    typedef Value value_type;
+    typedef typename pointer_traits<Ptr>::difference_type difference_type;
+    typedef Ptr pointer;
+    typedef value_type &reference;
+
+    constexpr v_iterator() {}
+    constexpr v_iterator(const v_iterator &other): _ptr(other._ptr) {}
+    constexpr v_iterator(const Ptr &ptr): _ptr(ptr) {}
+
+    template<class Value1, class Ptr1>
+    constexpr v_iterator(const v_iterator<Value1, Ptr1> &other)
+        : _ptr(other._ptr) {}
+
+    constexpr reference operator*() const {
+        return *_ptr;
+    }
+
+    constexpr pointer operator->() const {
+        return _ptr;
+    }
+
+    template<class Value1, class Ptr1>
+    constexpr bool operator==(const v_iterator<Value1, Ptr1> &rhs) const {
+        return (_ptr == rhs._ptr);
+    }
+
+    template<class Value1, class Ptr1>
+    constexpr bool operator!=(const v_iterator<Value1, Ptr1> &rhs) const {
+        return !(_ptr == rhs._ptr);
+    }
+
+    template<class Value1, class Ptr1>
+    constexpr bool operator<(const v_iterator<Value1, Ptr1> &rhs) const {
+        return _ptr < rhs._ptr;
+    }
+
+    template<class Value1, class Ptr1>
+    constexpr bool operator>(const v_iterator<Value1, Ptr1> &rhs) const {
+        return rhs._ptr < _ptr;
+    }
+
+    template<class Value1, class Ptr1>
+    constexpr bool operator<=(const v_iterator<Value1, Ptr1> &rhs) const {
+        return !(rhs._ptr < _ptr);
+    }
+
+    template<class Value1, class Ptr1>
+    constexpr bool operator>=(const v_iterator<Value1, Ptr1> &rhs) const {
+        return !(_ptr < rhs._ptr);
+    }
+
+    constexpr v_iterator &operator++() {
+        ++_ptr;
+        return *this;
+    }
+
+    constexpr v_iterator operator++(int) {
+        v_iterator tmp(*this);
+        ++*this;
+        return tmp;
+    }
+
+    constexpr v_iterator &operator--() {
+        --_ptr;
+        return *this;
+    }
+
+    constexpr v_iterator operator--(int) {
+        v_iterator tmp(*this);
+        --*this;
+        return tmp;
+    }
+
+    constexpr v_iterator &operator+=(difference_type n) {
+        _ptr += n;
+        return *this;
+    }
+
+    constexpr v_iterator &operator-=(difference_type n) {
+        _ptr -= n;
+        return *this;
+    }
+
+    constexpr v_iterator operator+(difference_type n) const {
+        v_iterator tmp(*this);
+        tmp += n;
+        return tmp;
+    }
+
+    constexpr v_iterator operator-(difference_type n) const {
+        v_iterator tmp(*this);
+        tmp -= n;
+        return tmp;
+    }
+
+    template<class Value1, class Ptr1>
+    constexpr difference_type operator-(const v_iterator<Value1, Ptr1> &rhs) const {
+        return _ptr - rhs._ptr;
+    }
+
+    constexpr reference operator[](difference_type n) const {
+        return *(*this + n);
+    }
+
+protected:
+    using _invc_t =
+        conditional_t<is_const<value_type>::value, remove_const_t<value_type>,
+                      add_const_t<value_type>>;
+
+    template<class, class>
+    friend class v_iterator;
+    // friend class v_iterator<_invc_t, Ptr>;
+
+    template<class, class>
+    friend class vector;
+
+    constexpr operator Ptr() {
+        return _ptr;
+    }
+
+    Ptr _ptr = nullptr;
+};
 
 template<class T, class Alloc = allocator<T>>
 class vector {
@@ -19,8 +146,8 @@ public:
     typedef typename _alloc_traits::difference_type difference_type;
     typedef typename _alloc_traits::pointer pointer;
     typedef typename _alloc_traits::const_pointer const_pointer;
-    typedef pointer iterator;
-    typedef const_pointer const_iterator;
+    typedef v_iterator<value_type, pointer> iterator;
+    typedef v_iterator<const value_type, const_pointer> const_iterator;
     typedef ala::reverse_iterator<iterator> reverse_iterator;
     typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
     static_assert(is_same<value_type, typename _alloc_traits::value_type>::value,
@@ -41,7 +168,7 @@ protected:
     }
 
     template<class... V>
-    pointer v_fill(pointer first, pointer last, V &&...v) {
+    pointer v_fill(pointer first, pointer last, V &&... v) {
         static_assert(sizeof...(V) == 0 || sizeof...(V) == 1, "Internal error");
         for (; first != last; (void)++first)
             _alloc_traits::construct(_alloc, first, ala::forward<V>(v)...);
@@ -100,8 +227,8 @@ protected:
     [mid, end)   move(copy) to dst2
     */
     void migrate2(pointer mid, pointer dst1, pointer dst2) {
-        this->migrate(begin(), mid, dst1);
-        this->migrate(mid, end(), dst2);
+        this->migrate((pointer)begin(), mid, dst1);
+        this->migrate(mid, (pointer)end(), dst2);
     }
 
     /*
@@ -113,7 +240,7 @@ protected:
     void shift_right(pointer first, difference_type diff) {
         pointer mid = end() - diff;
         mid = first < mid ? mid : first;
-        this->mv(mid, end(), end());
+        this->mv(mid, (pointer)end(), end());
         mid = mid - 1;
         if (first < mid)
             ala::move_backward(first, mid, end());
@@ -190,6 +317,7 @@ protected:
                 holder_t holder(_alloc, new_capa);
                 _alloc_traits::construct(_alloc, holder.get() + size(), *first);
                 this->migrate(holder.get());
+                this->destroy();
                 this->update(holder.release(), new_capa, new_size);
             } else {
                 _alloc_traits::construct(_alloc, end(), *first);
@@ -212,7 +340,7 @@ protected:
     }
 
     template<class... V>
-    void v_ctor_helper(size_type n, V &&...v) {
+    void v_ctor_helper(size_type n, V &&... v) {
         if (n < 1)
             return;
         size_type new_size = n;
@@ -490,7 +618,7 @@ public:
 
 protected:
     template<class... V>
-    void v_resize(size_type n, V &&...v) {
+    void v_resize(size_type n, V &&... v) {
         if (size() > n) {
             this->cut(begin() + n);
         } else if (n > capacity()) {
@@ -586,7 +714,7 @@ public:
 
     // modifiers:
     template<class... Args>
-    reference emplace_back(Args &&...args) {
+    reference emplace_back(Args &&... args) {
         size_type new_size = size() + 1;
         if (new_size > capacity()) {
             size_type new_capa = expand();
@@ -597,7 +725,8 @@ public:
             this->destroy();
             this->update(holder.release(), new_capa, new_size);
         } else {
-            _alloc_traits::construct(_alloc, end(), ala::forward<Args>(args)...);
+            _alloc_traits::construct(_alloc, (pointer)end(),
+                                     ala::forward<Args>(args)...);
             ++_size;
         }
         return back();
@@ -617,7 +746,7 @@ public:
     }
 
     template<class... Args>
-    iterator emplace(const_iterator position, Args &&...args) {
+    iterator emplace(const_iterator position, Args &&... args) {
         difference_type offset = position - cbegin();
         pointer pos = begin() + offset;
         size_type new_size = size() + 1;
@@ -718,7 +847,7 @@ public:
         pointer pos = begin() + (position - cbegin());
         if (pos == end())
             return end();
-        ala::move(pos + 1, end(), pos);
+        ala::move(pos + 1, (pointer)end(), pos);
         pop_back();
         return pos;
     }
@@ -726,8 +855,10 @@ public:
     iterator erase(const_iterator first, const_iterator last) {
         pointer left = begin() + (first - cbegin());
         pointer rght = begin() + (last - cbegin());
+        if (first == last)
+            return left;
         difference_type n = rght - left;
-        ala::move(rght, end(), left);
+        ala::move(rght, (pointer)end(), left);
         this->cut(end() - n);
         return left;
     }
