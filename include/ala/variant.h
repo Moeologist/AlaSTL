@@ -198,9 +198,9 @@ struct _union_op {
         if (I < (Size >> 1))
             return left_t::fmap(I, ala::forward<Fn>(fn),
                                 ala::forward<Union>(un)._left);
-        if (Size >> 1 <= I && I < Size)
-            return rght_t::fmap(I - (Size >> 1), ala::forward<Fn>(fn),
-                                ala::forward<Union>(un)._rght);
+        assert(Size >> 1 <= I && I < Size);
+        return rght_t::fmap(I - (Size >> 1), ala::forward<Fn>(fn),
+                            ala::forward<Union>(un)._rght);
     }
 
     template<size_t I, class Fn, class Union>
@@ -227,8 +227,8 @@ struct _union_op<Trivial, T> {
     template<class Fn, class Union>
     static constexpr auto fmap(size_t I, Fn &&fn, Union &&un)
         -> decltype(ala::forward<Fn>(fn)(ala::forward<Union>(un)._value)) {
-        if (I == 0)
-            return ala::forward<Fn>(fn)(ala::forward<Union>(un)._value);
+        assert(I == 0);
+        return ala::forward<Fn>(fn)(ala::forward<Union>(un)._value);
     }
 
     template<size_t I, class Fn, class Union>
@@ -485,6 +485,24 @@ struct bad_variant_access: exception {
     }
 };
 
+template<size_t I, class... Us>
+constexpr add_pointer_t<variant_alternative_t<I, variant<Us...>>>
+get_if(variant<Us...> *v) noexcept;
+template<size_t I, class... Us>
+constexpr add_pointer_t<const variant_alternative_t<I, variant<Us...>>>
+get_if(const variant<Us...> *v) noexcept;
+
+template<size_t I, class... Us>
+constexpr variant_alternative_t<I, variant<Us...>> &get(variant<Us...> &);
+template<size_t I, class... Us>
+constexpr variant_alternative_t<I, variant<Us...>> &&get(variant<Us...> &&);
+template<size_t I, class... Us>
+constexpr const variant_alternative_t<I, variant<Us...>> &
+get(const variant<Us...> &);
+template<size_t I, class... Us>
+constexpr const variant_alternative_t<I, variant<Us...>> &&
+get(const variant<Us...> &&);
+
 template<class... Ts>
 class variant: _make_controller_t<_variant_base<Ts...>, Ts...> {
     static_assert(_and_<_not_<is_array<Ts>>...>::value &&
@@ -518,27 +536,41 @@ class variant: _make_controller_t<_variant_base<Ts...>, Ts...> {
 
     friend class hash<variant>;
 
+public:
+
+    template<class Dst>
+    static Dst _convert(Dst(&&)[1]);
+
+    template<size_t I, class Ti, class T, class = void>
+    struct _overload_set_sfinae {
+        static void _test();
+    };
+
+    template<size_t I, class Ti, class T>
+    struct _overload_set_sfinae<I, Ti, T,
+                                void_t<decltype(_convert<Ti>({declval<T>()}))>> {
+        static integral_constant<size_t, I> _test(Ti);
+    };
+
+    // is_arithmetic is necessary
+    // see libcxx/test/std/utilities/variant/variant.variant/variant.ctor/T.pass.cpp
     template<size_t I, class Ti, class T,
-             bool = is_same<bool, remove_cvref_t<Ti>>::value, class = void>
+             bool = (is_same<bool, remove_cvref_t<Ti>>::value !=
+                     is_same<bool, remove_cvref_t<T>>::value),
+             bool = is_arithmetic<Ti>::value>
     struct _overload_set_base {
-        void _test();
-    };
-
-    // avoid narrowing
-    template<size_t I, class Ti, class T>
-    struct _overload_set_base<I, Ti, T, false,
-                              void_t<decltype(ala::array<Ti, 1>{{declval<T>()}})>> {
-        using F = integral_constant<size_t, I> (&)(Ti);
-        operator F();
         static integral_constant<size_t, I> _test(Ti);
     };
 
     template<size_t I, class Ti, class T>
-    struct _overload_set_base<
-        I, Ti, T, true, enable_if_t<is_same<bool, remove_cvref_t<T>>::value>> {
-        using F = integral_constant<size_t, I> (&)(Ti);
-        operator F();
-        static integral_constant<size_t, I> _test(Ti);
+    struct _overload_set_base<I, Ti, T, false, true>
+        : _overload_set_sfinae<I, Ti, T> {
+        using _overload_set_sfinae<I, Ti, T>::_test;
+    };
+
+    template<size_t I, class Ti, class T, bool B>
+    struct _overload_set_base<I, Ti, T, true, B> {
+        static void _test();
     };
 
     template<class T, class Seq>
@@ -547,14 +579,12 @@ class variant: _make_controller_t<_variant_base<Ts...>, Ts...> {
     template<class T, size_t... Is>
     struct _overload_set<T, index_sequence<Is...>>
         : _overload_set_base<Is, Ts, T>... {
-        // using _overload_set_base<Is, Ts, T>::_test...;
+        using _overload_set_base<Is, Ts, T>::_test...;
     };
 
     template<class T>
     using _fuzzy_i = decltype(
-        _overload_set<T, index_sequence_for<Ts...>>{}(declval<T>()));
-    // using _fuzzy_i = decltype(
-    //     _overload_set<T, index_sequence_for<Ts...>>::_test(declval<T>()));
+        _overload_set<T, index_sequence_for<Ts...>>::_test(declval<T>()));
 
     template<class T>
     using _fuzzy_t = type_pack_element_t<_fuzzy_i<T>::value, Ts...>;

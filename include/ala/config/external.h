@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <initializer_list>
 #include <limits>
+#include <iterator>
 
 #include <cassert>
 #include <cstdint>

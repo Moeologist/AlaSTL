@@ -10,6 +10,23 @@
 
 #include <ala/detail/traits_declare.h>
 
+namespace std {
+
+#if defined(_LIBCPP_ABI_NAMESPACE)
+inline namespace _LIBCPP_ABI_NAMESPACE {
+#endif
+
+template<typename...>
+struct common_type;
+
+template<typename, typename, template<typename> class, template<typename> class>
+struct basic_common_reference {};
+
+#if defined(_LIBCPP_ABI_NAMESPACE)
+}
+#endif
+} // namespace std
+
 // clang-format off
 
 namespace ala {
@@ -227,8 +244,13 @@ template<typename T>
 struct is_destructible: _and_<_not_<is_unbounded_array<T>>,
                               _is_destructible_helper<remove_all_extents_t<T>>> {};
 
+
+#if _ALA_ENABLE_IS_TRIVIALLY_DESTRUCTIBLE
+template <class T> struct is_trivially_destructible: integral_constant<bool, __is_trivially_destructible(T)> {};
+#else
 template<typename T>
 struct is_trivially_destructible: _and_<is_destructible<T>, bool_constant<__has_trivial_destructor(remove_all_extents_t<T>)>> {};
+#endif
 
 template<typename T, bool = is_reference<T>::value,
                      bool = is_object<T>::value>
@@ -318,11 +340,24 @@ struct _is_nt_a_constructible_impl: conditional_t<is_reference<T>::value,
                                                   is_nothrow_convertible<Arg, T>,
                                                   bool_constant<noexcept(T(declval<Arg>()))>> {};
 
+template<typename T>
+struct _is_nt_def_constructible_impl: bool_constant<noexcept(T())> {};
+
+template<typename T, bool = is_array<T>::value>
+struct _is_nt_def_constructible_helper: _is_nt_def_constructible_impl<T> {};
+
+template<typename T>
+struct _is_nt_def_constructible_helper<T, true>: _and_<is_bounded_array<T>,
+                                                 _is_nt_def_constructible_helper<remove_extent_t<T>>> {};
+
 template<typename T, typename... Args>
 struct _is_nt_constructible: _is_nt_va_constructible_impl<T, Args...> {};
 
 template<typename T, typename Arg>
 struct _is_nt_constructible<T, Arg>: _is_nt_a_constructible_impl<T, Arg> {};
+
+template<typename T>
+struct _is_nt_constructible<T>: _is_nt_def_constructible_helper<T> {};
 
 template<typename T, typename... Args>
 struct is_nothrow_constructible: _and_<is_constructible<T, Args...>,
@@ -388,6 +423,14 @@ struct _is_convertible_helper<From, To, false>: _and_<typename _is_convertible_i
 
 template<typename From, typename To>
 struct is_convertible: _is_convertible_helper<From, To> {};
+
+template<typename From, typename To, typename = void>
+struct is_explicit_convertible_impl: false_type {};
+template<typename From, typename To>
+struct is_explicit_convertible_impl<From, To, void_t<decltype(static_cast<To>(declval<From>()))>>: true_type {};
+
+template<typename From, typename To>
+struct is_explicit_convertible: is_explicit_convertible_impl<From, To> {};
 
 template<typename T> struct is_default_constructible: is_constructible<T> {};
 template<typename T> struct is_trivially_default_constructible: is_trivially_constructible<T> {};
@@ -521,8 +564,10 @@ template<> struct _make_signed_i<__uint128_t>        { typedef __int128_t       
 
 template<typename T, bool = is_enum<T>::value> struct _make_signed_helper
 { typedef _copy_cv_t<T, make_signed_t<underlying_type_t<T>>> type; };
+
 template<typename T> struct _make_signed_helper<T, false>
 { typedef _copy_cv_t<T, typename _make_signed_i<remove_cv_t<T>>::type> type; };
+
 template<typename T> struct make_signed: _make_signed_helper<T> {};
 
 template<typename T> struct _make_unsigned_i         { typedef T                  type; };
@@ -539,8 +584,10 @@ template<> struct _make_unsigned_i<__int128_t>       { typedef __uint128_t      
 
 template<typename T, bool = is_enum<T>::value> struct _make_unsigned_helper
 { typedef _copy_cv_t<T, make_unsigned_t<underlying_type_t<T>>> type; };
+
 template<typename T> struct _make_unsigned_helper<T, false>
 { typedef _copy_cv_t<T, typename _make_unsigned_i<remove_cv_t<T>>::type> type; };
+
 template<typename T> struct make_unsigned: _make_unsigned_helper<T> {};
 
 template<typename T>           struct remove_extent       { typedef T type; };
@@ -566,7 +613,7 @@ template<size_t Size, size_t Align, bool> struct _alignshl: _alignshl<Size, Alig
 template<size_t Size, size_t Align> struct _alignshl<Size, Align, true>: integral_constant<size_t, Align> {};
 
 template<size_t Size>
-struct _maxalign: _max_<_alignshl<Size>,
+struct _maxalign: _min_<_alignshl<Size>,
                         integral_constant<size_t, alignof(max_align_t)>> {};
 
 template<size_t Size, size_t Align = _maxalign<Size>::value>
@@ -579,7 +626,7 @@ struct aligned_storage {
 template<size_t Size, typename... Ts>
 struct aligned_union {
     static_assert(sizeof...(Ts) != 0, "Undefined behaviour");
-    constexpr static size_t alignment_value = _max_<integral_constant<size_t, alignof(Ts)>...>::value;
+    constexpr static size_t alignment_value = _maximal_<integral_constant<size_t, alignof(Ts)>...>::value;
     typedef aligned_storage_t<Size, alignment_value> type;
 };
 
@@ -624,10 +671,17 @@ template<typename T1, typename T2>
 struct _common_type_2_sfinae<T1, T2, void_t<_cond_tp_t<T1, T2>>>
 { typedef _cond_tp_t<T1, T2> type; };
 
+template<typename T1, typename T2, typename = void>
+struct _common_type_2_std: _common_type_2_sfinae<T1, T2> {};
+
+template<typename T1, typename T2>
+struct _common_type_2_std<T1, T2, void_t<std::common_type<T1, T2>>>
+    : std::common_type<T1, T2> {};
+
 template<typename T1, typename T2>
 struct _common_type_2: conditional_t<is_same<T1, decay_t<T1>>::value &&
                                      is_same<T2, decay_t<T2>>::value,
-                                     _common_type_2_sfinae<T1, T2>,
+                                     _common_type_2_std<T1, T2>,
                                      common_type<decay_t<T1>, decay_t<T2>>> {};
 
 template<typename, typename T1, typename T2, typename... Ts>
@@ -923,6 +977,12 @@ template<typename T> struct common_reference<T> { typedef T type; };
 template<typename T1, typename T2> struct common_reference<T1, T2>: _common_reference_2<T1, T2> {};
 template<typename T1, typename T2, typename... Ts>
 struct common_reference<T1, T2, Ts...>: _common_reference_n<T1, T2, Ts...> {};
+
+#if _ALA_ENABLE_BUILTIN_IS_CONSTANT_EVALUATED
+inline constexpr bool is_constant_evaluated() noexcept {
+    return __builtin_is_constant_evaluated();
+}
+#endif
 
 // Extra
 

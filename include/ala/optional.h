@@ -423,13 +423,13 @@ public:
 
     template<class Opt, class F, class Ret = invoke_result_t<F>,
              class = enable_if_t<!is_void<Ret>::value>>
-    friend constexpr optional _optional_or_else_impl(Opt &&opt, F &&f) {
+    static constexpr optional _optional_or_else_impl(Opt &&opt, F &&f) {
         return opt.has_value() ? ala::forward<Opt>(opt) : ala::forward<F>(f)();
     }
 
     template<class Opt, class F, class Ret = invoke_result_t<F>,
              class = enable_if_t<is_void<Ret>::value>, class = void>
-    friend constexpr optional _optional_or_else_impl(Opt &&opt, F &&f) {
+    static constexpr optional _optional_or_else_impl(Opt &&opt, F &&f) {
         if (opt.has_value())
             return ala::forward<Opt>(opt);
         ala::forward<F>(f)();
@@ -452,15 +452,15 @@ public:
 
     template<class Opt, class F, class Ret = invoke_result_t<F, typename Opt::value_type>,
              class = enable_if_t<!is_void<Ret>::value>>
-    friend constexpr auto _optional_fmap_impl(Opt &&opt, F &&f) -> optional<Ret> {
+    constexpr auto _optional_fmap_impl(Opt &&opt, F &&f) -> optional<Ret> {
         return opt.has_value() ?
                    ala::invoke(ala::forward<F>(f), *ala::forward<Opt>(opt)) :
                    nullopt;
     }
 
     template<class Opt, class F, class Ret = invoke_result_t<F, typename Opt::value_type>,
-             class = enable_if_t<is_void<Ret>::value>>
-    friend constexpr auto _optional_fmap_impl(Opt &&opt, F &&f)
+             class = enable_if_t<is_void<Ret>::value>, class = void>
+    constexpr auto _optional_fmap_impl(Opt &&opt, F &&f)
         -> optional<monostate> {
         if (opt.has_value()) {
             ala::invoke(ala::forward<F>(f), *ala::forward<Opt>(opt));

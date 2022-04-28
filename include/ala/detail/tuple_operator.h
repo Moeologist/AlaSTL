@@ -18,22 +18,14 @@ template<typename Tuple>
 struct _tuple_size_sfinae<Tuple, void_t<decltype(tuple_size<Tuple>::value)>>
     : integral_constant<size_t, tuple_size<Tuple>::value> {};
 
-template<typename Tuple, typename = void>
-struct _tuple_size_helper {};
-
-template<typename Tuple>
-struct _tuple_size_helper<
-    Tuple, void_t<integral_constant<size_t, sizeof(tuple_size<Tuple>)>>>
-    : _tuple_size_sfinae<Tuple> {};
+template<typename T>
+struct tuple_size<_sfinae_checker<const T, decltype(sizeof(tuple_size<T>))>>: _tuple_size_sfinae<T> {};
 
 template<typename T>
-struct tuple_size<const T>: _tuple_size_helper<T> {};
+struct tuple_size<_sfinae_checker<volatile T, decltype(sizeof(tuple_size<T>))>>: _tuple_size_sfinae<T> {};
 
 template<typename T>
-struct tuple_size<volatile T>: _tuple_size_helper<T> {};
-
-template<typename T>
-struct tuple_size<const volatile T>: _tuple_size_helper<T> {};
+struct tuple_size<_sfinae_checker<const volatile T, decltype(sizeof(tuple_size<T>))>>: _tuple_size_sfinae<T> {};
 
 template<size_t I, typename T>
 struct tuple_element;

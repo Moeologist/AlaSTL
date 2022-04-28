@@ -70,6 +70,12 @@ struct _or_: _or_helper_<(sizeof...(Bools)<ALA_TEMPLATE_RECURSIVE_DEPTH), Bools.
 template<typename... Bools>
 struct _and_: _and_helper_<(sizeof...(Bools)<ALA_TEMPLATE_RECURSIVE_DEPTH), Bools...> {};
 
+// template<typename... Bools>
+// struct _or_: _or_lazy_<Bools...> {};
+
+// template<typename... Bools>
+// struct _and_: _and_lazy_<Bools...> {};
+
 template<typename B>
 struct _not_: bool_constant<!bool(B::value)> {};
 
@@ -98,6 +104,9 @@ template<typename T> struct _get_cvref {
 
 template<typename From, typename To>
 using _copy_cv_t = typename _get_cv<From>::template rebind<To>;
+
+template<typename From, typename To>
+using _copy_cvref_t = typename _get_cvref<From>::template rebind<To>;
 
 constexpr int                _convert_to_integral(char val)               { return val; }
 constexpr unsigned           _convert_to_integral(unsigned char val)      { return val; }
@@ -207,6 +216,9 @@ struct _sum_: _meta_reduce<_add_, Ts...> {};
 
 template<class... Ts>
 struct _prod_: _meta_reduce<_mul_, Ts...> {};
+
+template<class T, class...>
+using _sfinae_checker = T;
 
 }; // namespace ala
 

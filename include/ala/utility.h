@@ -6,9 +6,9 @@
 namespace ala {
 
 template<class T, class U = T>
-T exchange(T &obj, U &&new_value) {
+constexpr T exchange(T &obj, U &&new_value) {
     T old_value = ala::move(obj);
-    obj = std::forward<U>(new_value);
+    obj = ala::forward<U>(new_value);
     return old_value;
 }
 

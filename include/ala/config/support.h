@@ -25,19 +25,33 @@
     #endif
 #endif
 
-#if defined(_ALA_CLANG) && ALA_HAS_BUILTIN(__make_integer_seq) || defined(_ALA_MSVC)
+#if ALA_HAS_BUILTIN(__is_trivially_destructible) || defined(_ALA_MSVC)
+    #define _ALA_ENABLE_IS_TRIVIALLY_DESTRUCTIBLE 1
+#else
+    #define _ALA_ENABLE_IS_TRIVIALLY_DESTRUCTIBLE 0
+#endif
+
+#if ALA_HAS_BUILTIN(__builtin_is_constant_evaluated) || \
+    (defined(_ALA_MSVC) && _MSC_VER >= 1925)
+    #define _ALA_ENABLE_BUILTIN_IS_CONSTANT_EVALUATED 1
+#else
+    #define _ALA_ENABLE_BUILTIN_IS_CONSTANT_EVALUATED 0
+#endif
+
+#if ALA_HAS_BUILTIN(__make_integer_seq) || defined(_ALA_MSVC)
     #define _ALA_ENABLE_MAKE_INTEGER_SEQ 1
 #else
     #define _ALA_ENABLE_MAKE_INTEGER_SEQ 0
 #endif
 
-#if defined(_ALA_CLANG) && ALA_HAS_BUILTIN(__type_pack_element)
+#if ALA_HAS_BUILTIN(__type_pack_element)
     #define _ALA_ENABLE_TYPE_PACK_ELEMENT 1
 #else
     #define _ALA_ENABLE_TYPE_PACK_ELEMENT 0
 #endif
 
-#if ALA_HAS_BUILTIN(__builtin_bit_cast) || (defined(_ALA_MSVC) && _MSC_VER >= 1927)
+#if ALA_HAS_BUILTIN(__builtin_bit_cast) || \
+    (defined(_ALA_MSVC) && _MSC_VER >= 1927)
     #define _ALA_ENABLE_BUILTIN_BIT_CAST 1
 #else
     #define _ALA_ENABLE_BUILTIN_BIT_CAST 0
@@ -106,8 +120,9 @@
 #endif
 
 #if __cpp_constexpr >= 201907L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1930 && _ALA_LANG >= 202002L)
-    #define _ALA_CONSTEXPR 20  // no compiler implement all C++20 constexpr features
+    (defined(_ALA_MSVC) && _MSC_VER >= 1929 && _ALA_LANG >= 202002L)
+    #define _ALA_CONSTEXPR \
+        20 // no compiler implement all C++20 constexpr features
 #elif __cpp_constexpr >= 201603L || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_LANG >= 201703L)
     #define _ALA_CONSTEXPR 17 // constexpr lambda

@@ -93,11 +93,10 @@ skips = [
     'std/utilities/utility/pairs/pairs.pair/not_constexpr_cxx11.fail.cpp',
 
     # need modify
-    # 'std/utilities/optional/optional.specalg/make_optional_explicit_initializer_list.pass.cpp',
-    # 'std/containers/associative/map/map.access/index_key.pass.cpp',
-    # 'std/containers/associative/map/map.access/index_rv_key.pass.cpp',
-    # 'std/utilities/tuple/tuple.tuple/tuple.helper/tuple_size_structured_bindings.pass.cpp',
-    # 'std/utilities/tuple/tuple.tuple/tuple.helper/tuple_size_incomplete.pass.cpp',
+    'std/utilities/meta/meta.trans/meta.trans.sign/make_signed.pass.cpp',
+    'std/utilities/meta/meta.trans/meta.trans.sign/make_unsigned.pass.cpp',
+    'std/utilities/meta/meta.const.eval/is_constant_evaluated.pass.cpp',
+    'std/utilities/meta/meta.const.eval/is_constant_evaluated.fail.cpp',
 
     # uncompat with asan
     # 'std/containers/sequences/list/list.ops/sort_comp.pass.cpp',

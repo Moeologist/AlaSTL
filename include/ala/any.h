@@ -5,7 +5,7 @@
 
 #if ALA_USE_RTTI
     #include <typeinfo>
-    using std::type_info;
+using std::type_info;
 #endif
 
 namespace ala {
@@ -19,7 +19,7 @@ struct _any_handle {
     static void copy(void *dst, const void *src) {
         ::new (dst) T(*reinterpret_cast<const T *>(src));
     }
-// TODO static_cast
+    // TODO static_cast
     static void move(void *dst, void *src) {
         ::new (dst) T(ala::move(*reinterpret_cast<T *>(src)));
     }
@@ -130,28 +130,27 @@ protected:
         return _op_local()();
     }
 
-    void *alloc(size_t sz) {
-        void *p = ::operator new(sz);
-        this->_addref() = p;
-        this->_size() = sz;
-        return p;
-    }
-
-    void dealloc() {
-        if (!is_local()) {
-            void *p = this->_address();
-            ::operator delete(p);
-        }
-    }
-
     void _copy(const any &other) {
         if (other.has_value()) {
             _op_handle = other._op_handle;
             if (other.is_local()) {
                 _op_copy()(this->_address(), other._address());
             } else {
-                this->alloc(other._size());
-                _op_copy()(this->_address(), other._address());
+                void *p = nullptr;
+                try {
+                    p = ::operator new(other._size());
+                    if (p == nullptr) {
+                        _op_handle = nullptr;
+                        return;
+                    }
+                    _op_copy()(p, other._address());
+                    this->_addref() = p;
+                    this->_size() = other._size();
+                } catch (...) {
+                    ::operator delete(p);
+                    _op_handle = nullptr;
+                    throw;
+                }
             }
         }
     }
@@ -178,11 +177,24 @@ protected:
         using handle_t = _any_handle<value_t>;
         reset();
         _op_handle = &handle_t::operate;
-        if (sizeof(value_t) > sizeof(_placehold) ||
-            !is_nothrow_move_constructible<value_t>::value)
-            this->alloc(sizeof(value_t));
-        _op_handle = _any_handle<value_t>::operate;
-        ::new (this->_address()) value_t(ala::forward<Args>(args)...);
+        void *p = nullptr;
+        try {
+            if (sizeof(value_t) > sizeof(_placehold) ||
+                !is_nothrow_move_constructible<value_t>::value) {
+                p = ::operator new(sizeof(value_t));
+                if (p == nullptr) {
+                    _op_handle = nullptr;
+                    return;
+                }
+                this->_addref() = p;
+                this->_size() = sizeof(value_t);
+            }
+            ::new (this->_address()) value_t(ala::forward<Args>(args)...);
+        } catch (...) {
+            ::operator delete(p);
+            _op_handle = nullptr;
+            throw;
+        }
     }
 
 public:
@@ -268,11 +280,16 @@ public:
     void reset() noexcept {
         if (has_value())
             _op_destroy()(this->_address());
-        dealloc();
+        if (!is_local()) {
+            void *p = this->_address();
+            ::operator delete(p);
+        }
         _op_handle = nullptr;
     }
 
     void swap(any &other) noexcept {
+        if (ala::addressof(other) == this)
+            return;
         any tmp(ala::move(*this));
         this->_move(ala::move(other));
         other._move(ala::move(tmp));

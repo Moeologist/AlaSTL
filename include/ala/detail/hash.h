@@ -5,6 +5,21 @@
 #include <ala/detail/farmhash.h>
 #include <ala/detail/meow_hash_x64_aesni.h>
 
+namespace std {
+
+#if defined(_LIBCPP_ABI_NAMESPACE)
+inline namespace _LIBCPP_ABI_NAMESPACE {
+#endif
+
+template<class>
+struct hash;
+
+#if defined(_LIBCPP_ABI_NAMESPACE)
+}
+#endif
+
+}
+
 namespace ala {
 
 struct _disabled_hash {
@@ -14,6 +29,12 @@ struct _disabled_hash {
     constexpr _disabled_hash &operator=(const _disabled_hash &) = delete;
     constexpr _disabled_hash &operator=(_disabled_hash &&) = delete;
 };
+
+template<class T, bool = is_invocable_r<size_t, std::hash<T>, T>::value>
+struct _std_hash: std::hash<T> {};
+
+template<class T>
+struct _std_hash<T, false>: _disabled_hash {};
 
 template<class T, bool = is_enum<T>::value>
 struct _enum_hash {
@@ -25,7 +46,7 @@ struct _enum_hash {
 };
 
 template<class T>
-struct _enum_hash<T, false>: _disabled_hash {};
+struct _enum_hash<T, false>: _std_hash<T> {};
 
 template<class T>
 struct _farm_hash {
@@ -155,9 +176,6 @@ template<typename Hashable>
 struct _is_hashable<
     Hashable, enable_if_t<is_invocable_r<size_t, hash<Hashable>, Hashable>::value>>
     : true_type {};
-
-template<class T, class...>
-using _sfinae_checker = T;
 
 } // namespace ala
 #endif
