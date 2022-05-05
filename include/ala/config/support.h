@@ -1,6 +1,34 @@
 #ifndef _ALA_CONFIG_SUPPORT_H
 #define _ALA_CONFIG_SUPPORT_H
 
+#ifndef ALA_LANG
+    #ifdef _MSVC_LANG
+        #define ALA_LANG _MSVC_LANG
+    #else
+        #define ALA_LANG __cplusplus
+    #endif
+#endif
+
+#ifdef ALA_API_VER
+#if ALA_API_VER != 17 && ALA_API_VER !=20
+#error ala only support c++17 stdlib version
+#endif
+#else
+#if ALA_LANG > 201703L
+    #define ALA_API_VER 20
+#else
+    #define ALA_API_VER 17
+#endif
+#endif
+
+#if ALA_API_VER > 17
+#define ALA_ENABLE_CXX20(...) x
+#define ALA_RETURN_CXX20(...) return __VA_ARGS__
+#else
+#define ALA_ENABLE_CXX20(...) void
+#define ALA_RETURN_CXX20(...) return (void)__VA_ARGS__
+#endif
+
 #if defined(__is_identifier)
     #define ALA_IS_IDENTIFIER(x) __is_identifier(x)
 #else
@@ -58,7 +86,7 @@
 #endif
 
 #if ALA_HAS_CPP_ATTRIBUTE(nodiscard) || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_LANG >= 201703L)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && ALA_LANG >= 201703L)
     #define ALA_NODISCARD [[nodiscard]]
 #else
     #define ALA_NODISCARD
@@ -71,63 +99,63 @@
 #endif
 
 #if __cpp_deduction_guides >= 201606L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1914 && _ALA_LANG >= 201703L)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1914 && ALA_LANG >= 201703L)
     #define _ALA_ENABLE_DEDUCTION_GUIDES 1
 #else
     #define _ALA_ENABLE_DEDUCTION_GUIDES 0
 #endif
 
 #if __cpp_if_constexpr >= 201606L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_LANG >= 201703L)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && ALA_LANG >= 201703L)
     #define _ALA_ENABLE_IF_CONSTEXPR 1
 #else
     #define _ALA_ENABLE_IF_CONSTEXPR 0
 #endif
 
 #if __cpp_inline_variables >= 201606L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1912 && _ALA_LANG >= 201703L)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1912 && ALA_LANG >= 201703L)
     #define _ALA_ENABLE_INLINE_VAR 1
 #else
     #define _ALA_ENABLE_INLINE_VAR 0
 #endif
 
 #if __cpp_noexcept_function_type >= 201510L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1912 && _ALA_LANG >= 201703L)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1912 && ALA_LANG >= 201703L)
     #define _ALA_ENABLE_NOEXCEPT_TYPE 1
 #else
     #define _ALA_ENABLE_NOEXCEPT_TYPE 0
 #endif
 
 #if __cpp_structured_bindings >= 201606L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_LANG >= 201703L)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && ALA_LANG >= 201703L)
     #define _ALA_ENABLE_STRUCT_BIND 1
 #else
     #define _ALA_ENABLE_STRUCT_BIND 0
 #endif
 
 #if __cpp_variable_templates >= 201304L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1910 && _ALA_LANG >= 201103L)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1910 && ALA_LANG >= 201103L)
     #define _ALA_ENABLE_TEMPLATE_VAR 1
 #else
     #define _ALA_ENABLE_TEMPLATE_VAR 0
 #endif
 
 #if __cpp_fold_expressions >= 201603L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1912 && _ALA_LANG >= 201703L)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1912 && ALA_LANG >= 201703L)
     #define _ALA_ENABLE_FOLD_EXPRESSIONS 1
 #else
     #define _ALA_ENABLE_FOLD_EXPRESSIONS 0
 #endif
 
 #if __cpp_constexpr >= 201907L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1929 && _ALA_LANG >= 202002L)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1929 && ALA_LANG >= 202002L)
     #define _ALA_CONSTEXPR \
         20 // no compiler implement all C++20 constexpr features
 #elif __cpp_constexpr >= 201603L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && _ALA_LANG >= 201703L)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && ALA_LANG >= 201703L)
     #define _ALA_CONSTEXPR 17 // constexpr lambda
 #elif __cpp_constexpr >= 201304L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1910 && _ALA_LANG >= 201103L)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1910 && ALA_LANG >= 201103L)
     #define _ALA_CONSTEXPR 14
 #else
     #define _ALA_CONSTEXPR 11
@@ -150,14 +178,6 @@
         #define ALA_EXPECT(x) (__builtin_expect(!!(x), 1))
     #else
         #define ALA_EXPECT(x) (x)
-    #endif
-#endif
-
-#ifndef ALA_LANG
-    #ifdef _MSVC_LANG
-        #define ALA_LANG _MSVC_LANG
-    #else
-        #define ALA_LANG __cplusplus
     #endif
 #endif
 

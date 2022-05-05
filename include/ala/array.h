@@ -209,19 +209,19 @@ struct array<T, 0> {
         return crend();
     }
 
-    const_iterator cbegin() const noexcept {
+    constexpr const_iterator cbegin() const noexcept {
         return const_iterator(const_cast<array *>(this)->begin());
     }
 
-    const_iterator cend() const noexcept {
+    constexpr const_iterator cend() const noexcept {
         return const_iterator(const_cast<array *>(this)->end());
     }
 
-    const_reverse_iterator crbegin() const noexcept {
+    constexpr const_reverse_iterator crbegin() const noexcept {
         return const_reverse_iterator(cend());
     }
 
-    const_reverse_iterator crend() const noexcept {
+    constexpr const_reverse_iterator crend() const noexcept {
         return const_reverse_iterator(cbegin());
     }
 
@@ -359,6 +359,26 @@ template<size_t I, class T, size_t N>
 constexpr const T &&get(const array<T, N> &&a) noexcept {
     static_assert(I < N, "ala::array index out of range");
     return static_cast<const T &&>(a[I]);
+}
+
+template<class T, size_t N, size_t ...Is>
+constexpr array<remove_cv_t<T>, N> _to_array_helper(T (&a)[N], index_sequence<Is...>) {
+    return array<remove_cv_t<T>, N>{ a[Is]... };
+}
+
+template<class T, size_t N, size_t ...Is>
+constexpr array<remove_cv_t<T>, N> _to_array_helper(T (&&a)[N], index_sequence<Is...>) {
+    return array<remove_cv_t<T>, N>{ ala::move(a[Is])... };
+}
+
+template<class T, size_t N>
+constexpr array<remove_cv_t<T>, N> to_array(T (&a)[N]) {
+    return _to_array_helper(a, make_index_sequence<N>{});
+}
+
+template<class T, size_t N>
+constexpr array<remove_cv_t<T>, N> to_array(T (&&a)[N]) {
+    return _to_array_helper(ala::move(a), make_index_sequence<N>{});
 }
 
 } // namespace ala

@@ -5,7 +5,8 @@
 #include <ala/random.h>
 #include <ala/detail/algorithm_base.h>
 #include <ala/detail/sort.h>
-#include <iterator>
+#include <ala/detail/allocator.h>
+#include <ala/detail/uninitialized_memory.h>
 
 namespace ala {
 
@@ -41,8 +42,9 @@ constexpr Fn for_each(InputIter first, InputIter last, Fn f) {
 }
 
 template<class InputIter, class Size, class Fn>
-constexpr InputIter for_each_n(InputIter first, Size n, Fn f) {
-    for (Size i = 0; i < n; ++first, (void)++i)
+constexpr InputIter for_each_n(InputIter first, Size count, Fn f) {
+    auto n = ala::_convert_to_integral(count);
+    for (decltype(n) i = 0; i < n; ++first, (void)++i)
         f(*first);
     return first;
 }
@@ -67,7 +69,7 @@ constexpr ForwardIter1 search(ForwardIter1 first1, ForwardIter1 last1,
 template<class ForwardIter1, class ForwardIter2>
 constexpr ForwardIter1 search(ForwardIter1 first1, ForwardIter1 last1,
                               ForwardIter2 first2, ForwardIter2 last2) {
-    return search(first1, last1, first2, last2, equal_to<>());
+    return ala::search(first1, last1, first2, last2, equal_to<>());
 }
 
 template<class ForwardIter, class Searcher>
@@ -98,7 +100,7 @@ constexpr ForwardIter1 find_end(ForwardIter1 first1, ForwardIter1 last1,
 template<class ForwardIter1, class ForwardIter2>
 constexpr ForwardIter1 find_end(ForwardIter1 first1, ForwardIter1 last1,
                                 ForwardIter2 first2, ForwardIter2 last2) {
-    return find_end(first1, last1, first2, last2, equal_to<>());
+    return ala::find_end(first1, last1, first2, last2, equal_to<>());
 }
 
 template<class InputIter, class ForwardIter, class BinPred>
@@ -115,7 +117,7 @@ constexpr InputIter find_first_of(InputIter first1, InputIter last1,
 template<class InputIter, class ForwardIter>
 constexpr InputIter find_first_of(InputIter first1, InputIter last1,
                                   ForwardIter first2, ForwardIter last2) {
-    return find_first_of(first1, last1, first2, last2, equal_to<>());
+    return ala::find_first_of(first1, last1, first2, last2, equal_to<>());
 }
 
 template<class ForwardIter, class BinPred>
@@ -132,7 +134,7 @@ constexpr ForwardIter adjacent_find(ForwardIter first, ForwardIter last,
 
 template<class ForwardIter>
 constexpr ForwardIter adjacent_find(ForwardIter first, ForwardIter last) {
-    return adjacent_find(first, last, ala::equal_to<>());
+    return ala::adjacent_find(first, last, ala::equal_to<>());
 }
 
 template<class InputIter, class T>
@@ -168,7 +170,7 @@ mismatch(InputIter1 first1, InputIter1 last1, InputIter2 first2, BinPred pred) {
 template<class InputIter1, class InputIter2>
 constexpr pair<InputIter1, InputIter2>
 mismatch(InputIter1 first1, InputIter1 last1, InputIter2 first2) {
-    return mismatch(first1, last1, first2, equal_to<>());
+    return ala::mismatch(first1, last1, first2, equal_to<>());
 }
 
 template<class InputIter1, class InputIter2, class BinPred>
@@ -184,7 +186,7 @@ template<class InputIter1, class InputIter2>
 constexpr pair<InputIter1, InputIter2>
 mismatch(InputIter1 first1, InputIter1 last1, InputIter2 first2,
          InputIter2 last2) {
-    return mismatch(first1, last1, first2, last2, equal_to<>());
+    return ala::mismatch(first1, last1, first2, last2, equal_to<>());
 }
 
 template<class ForwardIter, class Size, class T, class BinPred>
@@ -215,7 +217,7 @@ constexpr ForwardIter search_n(ForwardIter first, ForwardIter last, Size count,
 template<class ForwardIter, class Size, class T>
 constexpr ForwardIter search_n(ForwardIter first, ForwardIter last, Size count,
                                const T &value) {
-    return search_n(first, last, count, value, equal_to<>());
+    return ala::search_n(first, last, count, value, equal_to<>());
 }
 
 // Modifying sequence operations
@@ -538,7 +540,9 @@ constexpr BidirIter stable_partition(BidirIter first, BidirIter last,
                                      UnaryPred pred) {
     typedef typename iterator_traits<BidirIter>::value_type T;
     auto len = ala::distance(first, last);
-    T *tmp = new T[len];
+    allocator<T> alloc;
+    pointer_holder<T *, allocator<T>> ph(alloc, len);
+    T *tmp = ph.get();
     auto out = tmp;
 
     first = ala::find_if_not(first, last, pred);
@@ -546,15 +550,15 @@ constexpr BidirIter stable_partition(BidirIter first, BidirIter last,
         return first;
 
     BidirIter i = first;
-    *out++ = ala::move(*first);
+    ala::construct_at(out++, ala::move(*first));
     for (++i; i != last; ++i)
         if (pred(*i))
             *first++ = ala::move(*i);
         else
-            *out++ = ala::move(*i);
+            ala::construct_at(out++, ala::move(*i));
 
-    ala::copy(tmp, out, first);
-    delete[] tmp;
+    ala::move(tmp, out, first);
+    ala::destroy(tmp, out);
     return first;
 }
 
@@ -866,7 +870,7 @@ constexpr pair<T, T> minmax(initializer_list<T> t, Comp comp) {
 
 template<class T>
 constexpr pair<T, T> minmax(initializer_list<T> t) {
-    return minmax(t, less<>());
+    return ala::minmax(t, less<>());
 }
 
 template<class T, class Compare>
@@ -876,7 +880,7 @@ constexpr const T &clamp(const T &v, const T &lo, const T &hi, Compare comp) {
 
 template<class T>
 constexpr const T &clamp(const T &v, const T &lo, const T &hi) {
-    return clamp(v, lo, hi, less<>());
+    return ala::clamp(v, lo, hi, less<>());
 }
 
 // Permutation operations
@@ -891,7 +895,7 @@ constexpr bool prev_permutation(BidirIter first, BidirIter last, Comp comp) {
             BidirIter j = last;
             while (!comp(*--j, *i))
                 ;
-            ala::swap(*i, *j);
+            ala::_swap_adl(*i, *j);
             ala::reverse(i1, last);
             return true;
         }
@@ -918,7 +922,7 @@ constexpr bool next_permutation(BidirIter first, BidirIter last, Comp comp) {
             BidirIter j = last;
             while (!comp(*i, *--j))
                 ;
-            ala::swap(*i, *j);
+            ala::_swap_adl(*i, *j);
             ala::reverse(i1, last);
             return true;
         }
@@ -958,8 +962,8 @@ constexpr bool _is_permutation_dispatch(ForwardIter1 first1, ForwardIter1 last1,
                                         ForwardIter2 first2, ForwardIter2 last2,
                                         BinPred pred, true_type) {
     if (ala::distance(first1, last1) == ala::distance(first2, last2))
-        return _is_permutation_dispatch(first1, last1, first2, last2, pred,
-                                        false_type{});
+        return ala::_is_permutation_dispatch(first1, last1, first2, last2, pred,
+                                             false_type{});
     return false;
 }
 
@@ -994,6 +998,84 @@ template<class ForwardIter1, class ForwardIter2>
 constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
                               ForwardIter2 first2) {
     return ala::is_permutation(first1, last1, first2, equal_to<>());
+}
+
+template<class ForwardIter>
+constexpr ForwardIter
+shift_left(ForwardIter first, ForwardIter last,
+           typename iterator_traits<ForwardIter>::difference_type n) {
+    typedef typename iterator_traits<ForwardIter>::difference_type diff_t;
+    diff_t len = ala::distance(first, last);
+    if (!(0 < n))
+        return last;
+    if (!(n < len))
+        return first;
+    ForwardIter mid = first;
+    ala::advance(mid, n);
+    return ala::move(mid, last, first);
+}
+
+template<class BidirIter>
+constexpr BidirIter
+_shift_right_dispatch(true_type, BidirIter first, BidirIter last,
+                      typename iterator_traits<BidirIter>::difference_type n) {
+    typedef typename iterator_traits<BidirIter>::difference_type diff_t;
+    diff_t len = ala::distance(first, last);
+    if (!(0 < n))
+        return first;
+    if (!(n < len))
+        return last;
+    BidirIter mid = first;
+    ala::advance(mid, len - n);
+    return ala::move_backward(first, mid, last);
+}
+
+template<class ForwardIter>
+constexpr ForwardIter
+_shift_right_dispatch(false_type, ForwardIter first, ForwardIter last,
+                      typename iterator_traits<ForwardIter>::difference_type n) {
+    typedef typename iterator_traits<ForwardIter>::difference_type diff_t;
+    diff_t len = ala::distance(first, last);
+    if (!(0 < n))
+        return first;
+    if (!(n < len))
+        return last;
+    ForwardIter mid = first;
+    ala::advance(mid, n);
+
+    auto left = first;
+    auto right = mid;
+    while (left != mid) {
+        if (right == last) {
+            ala::move(first, left, mid);
+            return mid;
+        }
+        ++left;
+        ++right;
+    }
+
+    ForwardIter i = first;
+    while (true) {
+        if (right == last) {
+            left = ala::move(i, mid, left);
+            ala::move(first, i, left);
+            return mid;
+        }
+        ala::_swap_adl(*i++, *left++);
+        ++right;
+        if (i == mid)
+            i = first;
+    }
+}
+
+template<class ForwardIter>
+constexpr ForwardIter
+shift_right(ForwardIter first, ForwardIter last,
+            typename iterator_traits<ForwardIter>::difference_type n) {
+    using itag_t =
+        is_base_of<bidirectional_iterator_tag,
+                   typename iterator_traits<ForwardIter>::iterator_category>;
+    return ala::_shift_right_dispatch(itag_t{}, first, last, n);
 }
 
 } // namespace ala

@@ -5,7 +5,6 @@
 #include <ala/detail/uninitialized_memory.h>
 #include <ala/detail/hash.h>
 #include <ala/detail/functional_base.h>
-#include <cstddef>
 
 #if ALA_USE_RTTI
     #include <typeinfo>
@@ -35,7 +34,7 @@ inline constexpr bool uses_allocator_v = uses_allocator<T, Alloc>::value;
 // uses-allocator construction
 template<class T, class Alloc, class... Args>
 constexpr auto uses_allocator_construction_args(const Alloc &alloc,
-                                                Args &&... args) noexcept
+                                                Args &&...args) noexcept
     -> enable_if_t<!is_specification<T, pair>::value>;
 
 template<class T, class Alloc, class Tuple1, class Tuple2>
@@ -64,11 +63,11 @@ constexpr auto uses_allocator_construction_args(const Alloc &alloc,
     -> enable_if_t<is_specification<T, pair>::value>;
 
 template<class T, class Alloc, class... Args>
-constexpr T make_obj_using_allocator(const Alloc &alloc, Args &&... args);
+constexpr T make_obj_using_allocator(const Alloc &alloc, Args &&...args);
 
 template<class T, class Alloc, class... Args>
 T *uninitialized_construct_using_allocator(T *p, const Alloc &alloc,
-                                           Args &&... args);
+                                           Args &&...args);
 
 // pointer alignment
 inline void *align(size_t alignment, size_t size, void *&ptr, size_t &space) {
@@ -562,7 +561,7 @@ enable_if_t<is_bounded_array<T>::value, unique_ptr<T>>
 make_unique(Args &&...) = delete;
 
 template<class T, class... Args>
-enable_if_t<!is_array<T>::value, unique_ptr<T>> make_unique(Args &&... args) {
+enable_if_t<!is_array<T>::value, unique_ptr<T>> make_unique(Args &&...args) {
     return unique_ptr<T>(new T(ala::forward<Args>(args)...));
 }
 
@@ -708,7 +707,8 @@ struct _ctblk: _ctblk_base {
     Deleter _deleter;
     Alloc _alloc;
 
-    _ctblk(Pointer p, Deleter d, Alloc a): _ptr(p), _deleter(d), _alloc(a) {}
+    _ctblk(Pointer p, Deleter d, Alloc a)
+        : _ptr(p), _deleter(ala::move(d)), _alloc(a) {}
 
     ~_ctblk(){};
 
@@ -770,8 +770,13 @@ class enable_shared_from_this;
 
 template<class T>
 class shared_ptr {
+public:
+    using element_type = remove_extent_t<T>;
+    using weak_type = weak_ptr<T>;
+
+private:
     _ctblk_base *_cb = nullptr;
-    T *_ptr = nullptr;
+    element_type *_ptr = nullptr;
 
     template<class Y, class = void>
     struct _is_del_plain: false_type {};
@@ -785,7 +790,7 @@ class shared_ptr {
 
     template<class Y>
     struct _is_del_array<Y, void_t<decltype(delete[] declval<Y *&>())>>
-        : true_type {};
+        : true_type{};
 
     template<class Y>
     struct _is_deletable
@@ -840,7 +845,8 @@ class shared_ptr {
         using holder_t = pointer_holder<blk_t *, A>;
         try {
             holder_t holder(a, 1);
-            traits_t::template construct_object<blk_t>(a, holder.get(), p, d, a);
+            traits_t::template construct_object<blk_t>(a, holder.get(), p,
+                                                       ala::move(d), a);
             _cb = holder.release();
             _ptr = p;
             _weak_this();
@@ -870,7 +876,7 @@ class shared_ptr {
     }
 
     template<class U, class A, class... Args>
-    friend shared_ptr<U> allocate_shared(const A &a, Args &&... args);
+    friend shared_ptr<U> allocate_shared(const A &a, Args &&...args);
 
     template<class D, class U>
     friend D *get_deleter(const shared_ptr<U> &p) noexcept;
@@ -882,16 +888,14 @@ class shared_ptr {
     friend class shared_ptr;
 
 public:
-    using element_type = remove_extent_t<T>;
-    using weak_type = weak_ptr<T>;
-
     // constructors
     constexpr shared_ptr() noexcept {}
     constexpr shared_ptr(nullptr_t) noexcept: shared_ptr() {}
     template<class Y,
              class = enable_if_t<_is_deletable<Y>::value && _is_convable<Y>::value>>
     explicit shared_ptr(Y *p) {
-        using D = default_delete<Y>;
+        using D = conditional_t<is_array<T>::value, default_delete<Y[]>,
+                                default_delete<Y>>;
         using A = allocator<T>;
         this->_construct(p, D(), A());
     }
@@ -900,25 +904,25 @@ public:
                                  _is_convable<Y>::value && _check_deleter<Y *, D>::value>>
     shared_ptr(Y *p, D d) {
         using A = allocator<T>;
-        this->_construct(p, d, A());
+        this->_construct(p, ala::move(d), A());
     }
     template<class Y, class D, class A,
              class = enable_if_t<is_move_constructible<D>::value &&
                                  _is_convable<Y>::value && _check_deleter<Y *, D>::value>>
     shared_ptr(Y *p, D d, A a) {
-        this->_construct(p, d, a);
+        this->_construct(p, ala::move(d), a);
     }
     template<class D, class = enable_if_t<is_move_constructible<D>::value &&
                                           _check_deleter<nullptr_t, D>::value>>
     shared_ptr(nullptr_t p, D d) {
         using A = allocator<T>;
-        this->_construct(p, d, A());
+        this->_construct(p, ala::move(d), A());
     }
     template<class D, class A,
              class = enable_if_t<is_move_constructible<D>::value &&
                                  _check_deleter<nullptr_t, D>::value>>
     shared_ptr(nullptr_t p, D d, A a) {
-        this->_construct(p, d, a);
+        this->_construct(p, ala::move(d), a);
     }
     template<class Y>
     shared_ptr(const shared_ptr<Y> &other, element_type *p) noexcept
@@ -1013,8 +1017,8 @@ public:
 
     // modifiers
     void swap(shared_ptr &other) noexcept {
-        ala::swap(_ptr, other._ptr);
-        ala::swap(_cb, other._cb);
+        ala::_swap_adl(_ptr, other._ptr);
+        ala::_swap_adl(_cb, other._cb);
     }
 
     void reset() noexcept {
@@ -1070,20 +1074,21 @@ public:
 
 // shared_ptr creation
 
-template<class T>
-struct dtor_deleter {
-    constexpr dtor_deleter() noexcept = default;
-    void operator()(T *ptr) const {
-        static_assert(sizeof(T) > 0,
-                      "dtor_deleter can not delete incomplete type");
-        if (ptr)
-            (*ptr).~T();
+template<class Alloc>
+struct _allocator_deleter {
+    Alloc &_alloc;
+    constexpr _allocator_deleter(Alloc &a): _alloc(a) {}
+    template<class Pointer>
+    void operator()(Pointer ptr) const {
+        using traits_t = allocator_traits<Alloc>;
+        // no dealloc operation
+        traits_t::destroy(_alloc, ptr);
     }
 };
 
 template<class T, class A, class... Args>
-shared_ptr<T> allocate_shared(const A &a, Args &&... args) {
-    using D = dtor_deleter<T>;
+shared_ptr<T> allocate_shared(const A &a, Args &&...args) {
+    using D = _allocator_deleter<A>;
     using traits_t = allocator_traits<A>;
     using _blk_t = _ctblk<T *, D, A>;
     using blk_t = _ctblk<T *, D, A, sizeof(_blk_t) + sizeof(T)>;
@@ -1093,9 +1098,8 @@ shared_ptr<T> allocate_shared(const A &a, Args &&... args) {
     holder_t holder(alloc, 1);
     blk_t *blk = reinterpret_cast<blk_t *>(holder.get());
     T *ptr = reinterpret_cast<T *>(reinterpret_cast<char *>(blk) + sizeof(blk_t));
-    traits_t::template construct_object<blk_t>(alloc, blk, ptr, D(), alloc);
-    traits_t::template construct_object<T>(blk->_alloc, ptr,
-                                           ala::forward<Args>(args)...);
+    traits_t::template construct_object<blk_t>(alloc, blk, ptr, D(alloc), alloc);
+    traits_t::construct(blk->_alloc, ptr, ala::forward<Args>(args)...);
     shared_ptr<T> sp;
     sp._cb = reinterpret_cast<blk_t *>(holder.release());
     sp._ptr = ptr;
@@ -1104,7 +1108,7 @@ shared_ptr<T> allocate_shared(const A &a, Args &&... args) {
 }
 
 template<class T, class... Args>
-enable_if_t<!is_array<T>::value, shared_ptr<T>> make_shared(Args &&... args) {
+enable_if_t<!is_array<T>::value, shared_ptr<T>> make_shared(Args &&...args) {
     return ala::allocate_shared<T>(allocator<T>(), ala::forward<Args>(args)...);
 }
 

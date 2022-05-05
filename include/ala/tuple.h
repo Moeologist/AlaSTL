@@ -32,7 +32,7 @@ struct _tuple_base<I, T, false> {
     }
 
     void swap(_tuple_base &tb) noexcept(is_nothrow_swappable<_tuple_base>::value) {
-        ala::swap(value, tb.value);
+        ala::_swap_adl(value, tb.value);
     }
 };
 
@@ -58,7 +58,7 @@ struct _tuple_base<I, T, true>: private T {
     }
 
     void swap(_tuple_base &tb) noexcept(is_nothrow_swappable<_tuple_base>::value) {
-        ala::swap(get(), tb.get());
+        ala::_swap_adl(get(), tb.get());
     }
 };
 
@@ -153,9 +153,6 @@ private:
     get(const tuple<Us...> &&) noexcept;
 
 public:
-    tuple(tuple const &) = default;
-    tuple(tuple &&) = default;
-
     // Fix libc++ PR23256
     template<class Tuple, class... Args>
     struct _is_copy_move_ctor: false_type {};
@@ -267,68 +264,72 @@ public:
     constexpr tuple(const tuple<Us...> &&other)
         : _impl(false_type{}, ala::move(other)) {}
 
-    template<class U1, class U2,
+    template<class U1, class U2, class Dummy = true_type,
+             class = enable_if_t<Dummy::value && 2 == sizeof...(Ts)>,
              typename = enable_if_t<_ctor_check<pair<U1, U2> &, pair<U1, U2>>::imp>>
     constexpr tuple(pair<U1, U2> &p): _impl(false_type{}, p) {}
 
-    template<class U1, class U2,
+    template<class U1, class U2, class Dummy = true_type,
+             class = enable_if_t<Dummy::value && 2 == sizeof...(Ts)>,
              typename = enable_if_t<_ctor_check<const pair<U1, U2> &, pair<U1, U2>>::imp>>
     constexpr tuple(const pair<U1, U2> &p): _impl(false_type{}, p) {}
 
-    template<class U1, class U2,
+    template<class U1, class U2, class Dummy = true_type,
+             class = enable_if_t<Dummy::value && 2 == sizeof...(Ts)>,
              typename = enable_if_t<_ctor_check<pair<U1, U2> &&, pair<U1, U2>>::imp>>
     constexpr tuple(pair<U1, U2> &&p): _impl(false_type{}, ala::move(p)) {}
 
-    template<class U1, class U2,
+    template<class U1, class U2, class Dummy = true_type,
+             class = enable_if_t<Dummy::value && 2 == sizeof...(Ts)>,
              typename = enable_if_t<_ctor_check<const pair<U1, U2> &&, pair<U1, U2>>::imp>>
     constexpr tuple(const pair<U1, U2> &&p)
         : _impl(false_type{}, ala::move(p)) {}
 
-    template<class... Us,
+    template<class... Us, class = void,
              class = enable_if_t<sizeof...(Us) == sizeof...(Ts) &&
                                  !is_same<tuple, tuple<Us...>>::value>,
-             class = void,
              typename = enable_if_t<_ctor_check<tuple<Us...> &, tuple<Us...>>::exp>>
     explicit constexpr tuple(tuple<Us...> &other): _impl(false_type{}, other) {}
 
-    template<class... Us,
+    template<class... Us, class = void,
              class = enable_if_t<sizeof...(Us) == sizeof...(Ts) &&
                                  !is_same<tuple, tuple<Us...>>::value>,
-             class = void,
              typename = enable_if_t<_ctor_check<const tuple<Us...> &, tuple<Us...>>::exp>>
     explicit constexpr tuple(const tuple<Us...> &other)
         : _impl(false_type{}, other) {}
 
-    template<class... Us,
+    template<class... Us, class = void,
              class = enable_if_t<sizeof...(Us) == sizeof...(Ts) &&
                                  !is_same<tuple, tuple<Us...>>::value>,
-             class = void,
              typename = enable_if_t<_ctor_check<tuple<Us...> &&, tuple<Us...>>::exp>>
     explicit constexpr tuple(tuple<Us...> &&other)
         : _impl(false_type{}, ala::move(other)) {}
 
-    template<class... Us,
+    template<class... Us, class = void,
              class = enable_if_t<sizeof...(Us) == sizeof...(Ts) &&
                                  !is_same<tuple, tuple<Us...>>::value>,
-             class = void,
              typename = enable_if_t<_ctor_check<const tuple<Us...> &&, tuple<Us...>>::exp>>
     explicit constexpr tuple(const tuple<Us...> &&other)
         : _impl(false_type{}, ala::move(other)) {}
 
-    template<class U1, class U2, class = void,
+    template<class U1, class U2, class = void, class Dummy = true_type,
+             class = enable_if_t<Dummy::value && 2 == sizeof...(Ts)>,
              typename = enable_if_t<_ctor_check<pair<U1, U2> &, pair<U1, U2>>::exp>>
     explicit constexpr tuple(pair<U1, U2> &p): _impl(false_type{}, p) {}
 
-    template<class U1, class U2, class = void,
+    template<class U1, class U2, class = void, class Dummy = true_type,
+             class = enable_if_t<Dummy::value && 2 == sizeof...(Ts)>,
              typename = enable_if_t<_ctor_check<const pair<U1, U2> &, pair<U1, U2>>::exp>>
     explicit constexpr tuple(const pair<U1, U2> &p): _impl(false_type{}, p) {}
 
-    template<class U1, class U2, class = void,
+    template<class U1, class U2, class = void, class Dummy = true_type,
+             class = enable_if_t<Dummy::value && 2 == sizeof...(Ts)>,
              typename = enable_if_t<_ctor_check<pair<U1, U2> &&, pair<U1, U2>>::exp>>
     explicit constexpr tuple(pair<U1, U2> &&p)
         : _impl(false_type{}, ala::move(p)) {}
 
-    template<class U1, class U2, class = void,
+    template<class U1, class U2, class = void, class Dummy = true_type,
+             class = enable_if_t<Dummy::value && 2 == sizeof...(Ts)>,
              typename = enable_if_t<_ctor_check<const pair<U1, U2> &&, pair<U1, U2>>::exp>>
     explicit constexpr tuple(const pair<U1, U2> &&p)
         : _impl(false_type{}, ala::move(p)) {}
@@ -352,29 +353,31 @@ public:
         return *this;
     }
 
-    template<class... Us, class = enable_if_t<_asgn_check<
-                              const tuple<Us...> &, tuple<Us...>>::ok>>
+    template<class... Us, class = enable_if_t<sizeof...(Us) == sizeof...(Ts)>,
+             class = enable_if_t<_asgn_check<const tuple<Us...> &, tuple<Us...>>::ok>>
     constexpr tuple &operator=(const tuple<Us...> &other) noexcept(
         noexcept(tuple::_operator_eq(other))) {
         return _operator_eq(other);
     }
 
-    template<class... Us,
-             class = enable_if_t<_asgn_check<tuple<Us...> &&, tuple<Us...>>::value>>
+    template<class... Us, class = enable_if_t<sizeof...(Us) == sizeof...(Ts)>,
+             class = enable_if_t<_asgn_check<tuple<Us...> &&, tuple<Us...>>::ok>>
     constexpr tuple &operator=(tuple<Us...> &&other) noexcept(
         noexcept(tuple::_operator_eq(ala::move(other)))) {
         return _operator_eq(ala::move(other));
     }
 
-    template<class U1, class U2,
-             class = enable_if_t<_asgn_check<const pair<U1, U2> &, pair<U1, U2>>::value>>
+    template<class U1, class U2, class Dummy = true_type,
+             class = enable_if_t<Dummy::value && 2 == sizeof...(Ts)>,
+             class = enable_if_t<_asgn_check<const pair<U1, U2> &, pair<U1, U2>>::ok>>
     constexpr tuple &
     operator=(const pair<U1, U2> &p) noexcept(noexcept(tuple::_operator_eq(p))) {
         return _operator_eq(p);
     }
 
-    template<class U1, class U2,
-             class = enable_if_t<_asgn_check<pair<U1, U2> &&, pair<U1, U2> &>::value>>
+    template<class U1, class U2, class Dummy = true_type,
+             class = enable_if_t<Dummy::value && 2 == sizeof...(Ts)>,
+             class = enable_if_t<_asgn_check<pair<U1, U2> &&, pair<U1, U2>>::ok>>
     constexpr tuple &operator=(pair<U1, U2> &&p) noexcept(
         noexcept(tuple::_operator_eq(ala::move(p)))) {
         return _operator_eq(ala::move(p));
@@ -392,6 +395,9 @@ public:
 
     template<int>
     struct _dummy {};
+
+    tuple(tuple const &) = default;
+    tuple(tuple &&) = default;
 
     constexpr tuple &
     operator=(conditional_t<_and_<is_copy_assignable<Ts>...>::value,

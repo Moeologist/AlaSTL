@@ -167,7 +167,7 @@ protected:
     }
 
     template<class... V>
-    pointer v_fill(pointer first, pointer last, V &&... v) {
+    pointer v_fill(pointer first, pointer last, V &&...v) {
         static_assert(sizeof...(V) == 0 || sizeof...(V) == 1, "Internal error");
         for (; first != last; (void)++first)
             _alloc_traits::construct(_alloc, first, ala::forward<V>(v)...);
@@ -339,7 +339,7 @@ protected:
     }
 
     template<class... V>
-    void v_ctor_helper(size_type n, V &&... v) {
+    void v_ctor_helper(size_type n, V &&...v) {
         if (n < 1)
             return;
         size_type new_size = n;
@@ -387,11 +387,13 @@ public:
         this->possess(ala::move(other));
     }
 
-    vector(const vector &other, const allocator_type &a): _alloc(a) {
+    vector(const vector &other, const type_identity_t<allocator_type> &a)
+        : _alloc(a) {
         this->clone(other);
     }
 
-    vector(vector &&other, const allocator_type &a): _alloc(a) {
+    vector(vector &&other, const type_identity_t<allocator_type> &a)
+        : _alloc(a) {
         if (_alloc == other._alloc)
             this->possess(ala::move(other));
         else
@@ -441,7 +443,7 @@ protected:
 
     template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
     enable_if_t<Dummy> swap_helper(vector &other) noexcept {
-        ala::swap(_alloc, other._alloc);
+        ala::_swap_adl(_alloc, other._alloc);
     }
 
     template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
@@ -474,9 +476,9 @@ public:
     swap(vector &other) noexcept(_alloc_traits::propagate_on_container_swap::value ||
                                  _alloc_traits::is_always_equal::value) {
         this->swap_helper(other);
-        ala::swap(_data, other._data);
-        ala::swap(_capacity, other._capacity);
-        ala::swap(_size, other._size);
+        ala::_swap_adl(_data, other._data);
+        ala::_swap_adl(_capacity, other._capacity);
+        ala::_swap_adl(_size, other._size);
     }
 
 protected:
@@ -617,7 +619,7 @@ public:
 
 protected:
     template<class... V>
-    void v_resize(size_type n, V &&... v) {
+    void v_resize(size_type n, V &&...v) {
         if (size() > n) {
             this->cut(begin() + n);
         } else if (n > capacity()) {
@@ -713,7 +715,7 @@ public:
 
     // modifiers:
     template<class... Args>
-    reference emplace_back(Args &&... args) {
+    reference emplace_back(Args &&...args) {
         size_type new_size = size() + 1;
         if (new_size > capacity()) {
             size_type new_capa = expand();
@@ -745,7 +747,7 @@ public:
     }
 
     template<class... Args>
-    iterator emplace(const_iterator position, Args &&... args) {
+    iterator emplace(const_iterator position, Args &&...args) {
         difference_type offset = position - cbegin();
         pointer pos = begin() + offset;
         size_type new_size = size() + 1;

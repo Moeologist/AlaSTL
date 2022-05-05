@@ -96,7 +96,7 @@ public:
     template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
     enable_if_t<Dummy> swap_helper(NODE &other) noexcept {
         if (*this && other)
-            ala::swap(_alloc(), other._alloc());
+            ala::_swap_adl(_alloc(), other._alloc());
         else if (*this)
             other.alloc_ctor(ala::move(this->_alloc()));
         else if (other)
@@ -113,7 +113,7 @@ public:
     swap(NODE &other) noexcept(_alloc_traits::propagate_on_container_swap::value ||
                                _alloc_traits::is_always_equal::value) {
         this->swap_helper(other);
-        ala::swap(_ptr, other._ptr);
+        ala::_swap_adl(_ptr, other._ptr);
     }
 
 protected:

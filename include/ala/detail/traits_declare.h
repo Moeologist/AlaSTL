@@ -162,7 +162,7 @@ template<typename T>                                         using underlying_ty
 template<typename T>                                         using result_of_t       = typename result_of<T>::type;
 template<typename F, typename... Args>                       using invoke_result_t   = typename invoke_result<F, Args...>::type;
 
-#if _ALA_LANG >= 201703L
+#if ALA_LANG >= 201703L
 template<typename...> using void_t = void;
 #else
 // http://open-std.org/JTC1/SC22/WG21/docs/cwg_defects.html#1558

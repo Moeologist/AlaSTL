@@ -176,7 +176,7 @@ protected:
     };
 
     template<class... Args>
-    _hdle_t construct_node(Args &&... args) {
+    _hdle_t construct_node(Args &&...args) {
         using holder_t = pointer_holder<_node_t *, Alloc>;
         holder_t holder(_alloc, 1);
         _alloc_traits::construct(_alloc, ala::addressof(holder.get()->_data),
@@ -257,12 +257,12 @@ public:
         this->possess(ala::move(other));
     }
 
-    list(const list &other, const allocator_type &a): _alloc(a) {
+    list(const list &other, const type_identity_t<allocator_type> &a): _alloc(a) {
         initialize();
         this->clone(other);
     }
 
-    list(list &&other, const allocator_type &a): _alloc(a) {
+    list(list &&other, const type_identity_t<allocator_type> &a): _alloc(a) {
         initialize();
         if (_alloc == other._alloc)
             this->possess(ala::move(other));
@@ -313,7 +313,7 @@ protected:
 
     template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
     enable_if_t<Dummy> swap_helper(list &other) {
-        ala::swap(_alloc, other._alloc);
+        ala::_swap_adl(_alloc, other._alloc);
     }
 
     template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
@@ -438,7 +438,7 @@ public:
 
 protected:
     template<class... V>
-    void nv_resize(size_type sz, V &&... v) {
+    void nv_resize(size_type sz, V &&...v) {
         static_assert(sizeof...(V) == 0 || sizeof...(V) == 1, "Internal error");
         if (size() > sz) {
             iterator pos = this->locate(sz);
@@ -501,12 +501,12 @@ public:
 
     // modifiers:
     template<class... Args>
-    reference emplace_front(Args &&... args) {
+    reference emplace_front(Args &&...args) {
         return *(this->emplace(begin(), ala::forward<Args>(args)...));
     }
 
     template<class... Args>
-    reference emplace_back(Args &&... args) {
+    reference emplace_back(Args &&...args) {
         return *(this->emplace(end(), ala::forward<Args>(args)...));
     }
 
@@ -535,7 +535,7 @@ public:
     }
 
     template<class... Args>
-    iterator emplace(const_iterator position, Args &&... args) {
+    iterator emplace(const_iterator position, Args &&...args) {
         _hdle_t node = this->construct_node(ala::forward<Args>(args)...);
         attach(position._ptr, node);
         return iterator(node);
@@ -775,7 +775,7 @@ public:
     void reverse() noexcept {
         _hdle_t first = head()->_suc, last = tail()->_pre;
         for (iterator i = begin(); i != end(); --i)
-            ala::swap(i._ptr->_suc, i._ptr->_pre);
+            ala::_swap_adl(i._ptr->_suc, i._ptr->_pre);
         link(head(), last);
         link(first, tail());
     }

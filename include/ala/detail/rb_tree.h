@@ -90,19 +90,21 @@ constexpr rb_vnode<T> *prev_node(rb_vnode<T> *_ptr) {
     }
 }
 
-template<class Value, class Ptr, bool IsConst = false>
+template<class Value, class Ptr>
 struct rb_iterator {
     typedef bidirectional_iterator_tag iterator_category;
     typedef Value value_type;
     typedef typename pointer_traits<Ptr>::difference_type difference_type;
-    typedef conditional_t<IsConst, const value_type, value_type> *pointer;
-    typedef conditional_t<IsConst, const value_type, value_type> &reference;
+    typedef value_type *pointer;
+    typedef value_type &reference;
 
     constexpr rb_iterator() {}
     constexpr rb_iterator(const rb_iterator &other): _ptr(other._ptr) {}
-    constexpr rb_iterator(const rb_iterator<Value, Ptr, !IsConst> &other)
-        : _ptr(other._ptr) {}
     constexpr rb_iterator(const Ptr &ptr): _ptr(ptr) {}
+
+    template<class Value1, class Ptr1>
+    constexpr rb_iterator(const rb_iterator<Value1, Ptr1> &other)
+        : _ptr(other._ptr) {}
 
     constexpr reference operator*() const {
         return _ptr->_data;
@@ -120,11 +122,13 @@ struct rb_iterator {
         return !(_ptr == rhs._ptr);
     }
 
-    constexpr bool operator==(const rb_iterator<Value, Ptr, !IsConst> &rhs) const {
+    template<class Value1, class Ptr1>
+    constexpr bool operator==(const rb_iterator<Value1, Ptr1> &rhs) const {
         return (_ptr == rhs._ptr);
     }
 
-    constexpr bool operator!=(const rb_iterator<Value, Ptr, !IsConst> &rhs) const {
+    template<class Value1, class Ptr1>
+    constexpr bool operator!=(const rb_iterator<Value1, Ptr1> &rhs) const {
         return !(_ptr == rhs._ptr);
     }
 
@@ -151,15 +155,21 @@ struct rb_iterator {
     }
 
 protected:
-    friend class rb_iterator<Value, Ptr, !IsConst>;
+    template<class, class>
+    friend class rb_iterator;
+
     template<class, class, class, class>
     friend class map;
+
     template<class, class, class, class>
     friend class multimap;
+
     template<class, class, class>
     friend class set;
+
     template<class, class, class>
     friend class multiset;
+
     Ptr _ptr = nullptr;
 };
 
@@ -173,8 +183,8 @@ public:
     typedef allocator_traits<allocator_type> _alloc_traits;
     typedef typename _alloc_traits::size_type size_type;
     typedef _node_t *_hdle_t;
-    typedef rb_iterator<value_type, _hdle_t, false> iterator;
-    typedef rb_iterator<value_type, _hdle_t, true> const_iterator;
+    typedef rb_iterator<value_type, _hdle_t> iterator;
+    typedef rb_iterator<const value_type, _hdle_t> const_iterator;
 
 protected:
     template<class, class, class, bool, bool>
@@ -414,7 +424,7 @@ public:
 
     template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
     enable_if_t<Dummy> swap_helper(rb_tree &other) {
-        ala::swap(_alloc, other._alloc);
+        ala::_swap_adl(_alloc, other._alloc);
     }
 
     template<bool Dummy = _alloc_traits::propagate_on_container_swap::value>
@@ -426,9 +436,9 @@ public:
     swap(rb_tree &other) noexcept(_alloc_traits::is_always_equal::value &&
                                       is_nothrow_swappable<value_compare>::value) {
         this->swap_helper(other);
-        ala::swap(_comp, other._comp);
-        ala::swap(_root, other._root);
-        ala::swap(_size, other._size);
+        ala::_swap_adl(_comp, other._comp);
+        ala::_swap_adl(_root, other._root);
+        ala::_swap_adl(_size, other._size);
         this->fix_nil();
         other.fix_nil();
     }

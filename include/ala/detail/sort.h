@@ -4,6 +4,8 @@
 #define _ALA_DETAIL_SORT_H
 
 #include <ala/detail/algorithm_base.h>
+#include <ala/detail/allocator.h>
+#include <ala/detail/uninitialized_memory.h>
 
 namespace ala {
 
@@ -140,7 +142,7 @@ void shell_sort(RandomIter first, RandomIter last, Comp comp) {
 
 template<class RandomIter>
 void shell_sort(RandomIter first, RandomIter last) {
-    return shell_sort(first, last, less<>());
+    return ala::shell_sort(first, last, less<>());
 }
 
 namespace detail {
@@ -149,13 +151,13 @@ template<class T, class Comp>
 void set_median(T &a, T &b, T &c, Comp comp) {
     if (comp(a, b)) {
         if (comp(b, c))
-            ala::swap(a, b);
+            ala::_swap_adl(a, b);
         else if (comp(a, c))
-            ala::swap(a, c);
+            ala::_swap_adl(a, c);
     } else if (comp(c, b))
-        ala::swap(a, b);
+        ala::_swap_adl(a, b);
     else if (comp(c, a))
-        ala::swap(a, c);
+        ala::_swap_adl(a, c);
 }
 
 template<class RandomIter, class Comp>
@@ -165,7 +167,7 @@ RandomIter partition_c(RandomIter first, RandomIter last, Comp comp) {
     assert(!(len < 3));
     ala::detail::set_median(*first, *(first + len / 2), *(last - 1), comp);
     RandomIter left = first + 1, right = last - 1;
-    for (;; ++left, --right) {
+    for (;; (void)++left, --right) {
         while (comp(*left, *first))
             ++left;
         while (comp(*first, *right))
@@ -200,9 +202,9 @@ void quick_sort_three_way_impl(RandomIter first, RandomIter last, Comp comp) {
     // [first, left) < pivot, [left, right) == pivot, [right, end) > pivot
     while (i < right) {
         if (comp(*i, *left))
-            iter_swap(left++, i++);
+            ala::iter_swap(left++, i++);
         else if (comp(*left, *i))
-            iter_swap(i, --right);
+            ala::iter_swap(i, --right);
         else
             ++i;
     }
@@ -232,15 +234,15 @@ void quick_sort(RandomIter first, RandomIter last, Comp comp) {
 #if ALA_ENABLE_THREE_WAY_QUICK_SORT
         detail::quick_sort_three_way_impl(first, last, comp);
 #else
-        detail::quick_sort_impl(first, last, comp);
+        ala::detail::quick_sort_impl(first, last, comp);
 #endif
-        insertion_sort(first, last, comp);
+        ala::insertion_sort(first, last, comp);
     }
 }
 
 template<class RandomIter>
 void quick_sort(RandomIter first, RandomIter last) {
-    return quick_sort(first, last, less<>());
+    return ala::quick_sort(first, last, less<>());
 }
 
 // a quick-sort variety form eastl
@@ -298,26 +300,45 @@ constexpr OutputIter merge_mv(InputIter1 first1, InputIter1 last1,
         return ala::move(first2, last2, out);
 }
 
-template<class RandomIter, class Size, class Comp>
-bool merge_sort_impl(RandomIter first, RandomIter tmp, Size len, Comp comp) {
+template<class InputIter1, class InputIter2, class OutputIter, class Comp>
+constexpr OutputIter merge_umv(InputIter1 first1, InputIter1 last1,
+                               InputIter2 first2, InputIter2 last2,
+                               OutputIter out, Comp comp) {
+    while (first1 != last1 && first2 != last2)
+        if (comp(*first2, *first1))
+            ala::construct_at(out++, ala::move(*first2++));
+        else
+            ala::construct_at(out++, ala::move(*first1++));
+    if (first1 != last1)
+        return ala::uninitialized_move(first1, last1, out);
+    else
+        return ala::uninitialized_move(first2, last2, out);
+}
+
+template<class RandomIter1, class RandomIter2, class Size, class Comp>
+bool merge_sort_impl(RandomIter1 first, RandomIter2 tmp, Size len, Comp comp) {
     if (len <= ALA_INSERTION_THRESHOLD) {
-        insertion_sort(first, first + len);
+        ala::insertion_sort(first, first + len);
         return false;
     }
     Size llen = len / 2, rlen = len - len / 2;
-    bool l_tmp = merge_sort_impl(first, tmp, llen, comp);
-    bool r_tmp = merge_sort_impl(first + llen, tmp + llen, rlen, comp);
+    bool l_tmp = ala::detail::merge_sort_impl(first, tmp, llen, comp);
+    bool r_tmp = ala::detail::merge_sort_impl(first + llen, tmp + llen, rlen,
+                                              comp);
     bool tmp_in = l_tmp || r_tmp; // merge tmp into first or merge fisrt into tmp
-    RandomIter in = tmp, out = first;
     if (!tmp_in) {
-        in = first;
-        out = tmp;
+        RandomIter1 in = first;
+        RandomIter2 out = tmp;
+        ala::detail::merge_mv(in, in + llen, in + llen, in + len, out, comp);
+        return !tmp_in;
     } else if (!l_tmp) {
-        move(first, first + llen, tmp);
+        ala::move(first, first + llen, tmp);
     } else if (!r_tmp) {
-        move(first + llen, first + len, tmp + llen);
+        ala::move(first + llen, first + len, tmp + llen);
     }
-    merge(in, in + llen, in + llen, in + len, out, comp);
+    RandomIter2 in = tmp;
+    RandomIter1 out = first;
+    ala::detail::merge_mv(in, in + llen, in + llen, in + len, out, comp);
     return !tmp_in;
 }
 
@@ -328,10 +349,12 @@ void inplace_merge(BidirIter first, BidirIter middle, BidirIter last, Comp comp)
     typedef typename iterator_traits<BidirIter>::difference_type diff_t;
     typedef typename iterator_traits<BidirIter>::value_type T;
     diff_t len = ala::distance(first, last);
-    T *tmp = new T[len];
-    ala::detail::merge_mv(first, middle, middle, last, tmp, comp);
+    allocator<T> alloc;
+    pointer_holder<T *, allocator<T>> ph(alloc, len);
+    T *tmp = ph.get();
+    ala::detail::merge_umv(first, middle, middle, last, tmp, comp);
     ala::move(tmp, tmp + len, first);
-    delete[] tmp;
+    ala::destroy_n(tmp, len);
 }
 
 template<class BidirIter>
@@ -345,54 +368,59 @@ void merge_sort(RandomIter first, RandomIter last, Comp comp) {
     typedef typename iterator_traits<RandomIter>::value_type T;
     typedef typename iterator_traits<RandomIter>::difference_type diff_t;
     diff_t len = last - first;
-    T *tmp = new T[len];
-    if (ala::detail::merge_sort_impl(first, tmp, len, comp))
+    allocator<T> alloc;
+    pointer_holder<T *, allocator<T>> ph(alloc, len);
+    T *tmp = ph.get();
+    ala::uninitialized_move(first, last, tmp);
+    if (!ala::detail::merge_sort_impl(tmp, first, len, comp))
         ala::move(tmp, tmp + len, first);
-    delete[] tmp;
-    return;
+    ala::destroy_n(tmp, len);
 }
 
 template<class RandomIter>
 void merge_sort(RandomIter first, RandomIter last) {
-    merge_sort(first, last, less<>());
+    ala::merge_sort(first, last, less<>());
 }
 
 // bottom-up merge-sort, no-copyback
 template<class RandomIter, class Comp>
 constexpr void stable_sort(RandomIter first, RandomIter last, Comp comp) {
-    typedef typename iterator_traits<RandomIter>::value_type T;
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
-    diff_t len = last - first;
-    T *tmp = new T[len];
-    for (RandomIter left = first; left < last; left += ALA_INSERTION_THRESHOLD) {
-        RandomIter next = left + ALA_INSERTION_THRESHOLD;
-        ala::insertion_sort(left, ala::min(next, last), comp);
-    }
-    bool flag = true;
-    for (diff_t size = ALA_INSERTION_THRESHOLD; size < len; size <<= 1) {
-        diff_t size2 = size << 1;
-        if (flag) {
-            RandomIter left = first, right = last;
-            T *out = tmp;
-            for (; left < right; left += size2, (void)(out += size2))
-                ala::detail::merge_mv(left, ala::min(left + size, right),
-                                      ala::min(left + size, right),
-                                      ala::min(left + size2, right), out, comp);
-        } else {
-            T *left = tmp, *right = tmp + len;
-            RandomIter out = first;
-            for (; left < right; left += size2, (void)(out += size2))
-                ala::detail::merge_mv(left, ala::min(left + size, right),
-                                      ala::min(left + size, right),
-                                      ala::min(left + size2, right), out, comp);
-        }
-        flag = !flag;
-    }
-    if (!flag)
-        for (T *i = tmp; first < last; ++first, ++i)
-            *first = ala::move(*i);
-    delete[] tmp;
-    return;
+    return merge_sort(first, last, comp);
+    // typedef typename iterator_traits<RandomIter>::value_type T;
+    // typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+    // diff_t len = last - first;
+    // allocator<T> alloc;
+    // pointer_holder<T *, allocator<T>> ph(alloc, len);
+    // T *tmp = ph.get();
+    // ala::uninitialized_move(first, last, tmp);
+    // for (T* left = tmp; left < tmp+len; left += ALA_INSERTION_THRESHOLD) {
+    //     RandomIter next = left + ALA_INSERTION_THRESHOLD;
+    //     ala::insertion_sort(left, ala::min(next, tmp+len), comp);
+    // }
+    // bool flag = false;
+    // for (diff_t size = ALA_INSERTION_THRESHOLD; size < len; size <<= 1) {
+    //     diff_t size2 = size << 1;
+    //     if (flag) {
+    //         RandomIter left = first, right = last;
+    //         T *out = tmp;
+    //         for (; left < right; left += size2, (void)(out += size2))
+    //             ala::detail::merge_mv(left, ala::min(left + size, right),
+    //                                   ala::min(left + size, right),
+    //                                   ala::min(left + size2, right), out, comp);
+    //     } else {
+    //         T *left = tmp, *right = tmp + len;
+    //         RandomIter out = first;
+    //         for (; left < right; left += size2, (void)(out += size2))
+    //             ala::detail::merge_mv(left, ala::min(left + size, right),
+    //                                   ala::min(left + size, right),
+    //                                   ala::min(left + size2, right), out, comp);
+    //     }
+    //     flag = !flag;
+    // }
+    // if (!flag)
+    //     for (T *i = tmp; first < last; ++first, ++i)
+    //         *first = ala::move(*i);
+    // ala::destroy_n(tmp, len);
 }
 
 template<class RandomIter>
@@ -502,7 +530,7 @@ constexpr bool is_heap(RandomIter first, RandomIter last, Comp comp) {
 
 template<class RandomIter>
 constexpr bool is_heap(RandomIter first, RandomIter last) {
-    return is_heap(first, last, less<>());
+    return ala::is_heap(first, last, less<>());
 }
 
 template<class RandomIter, class Comp>
@@ -568,7 +596,7 @@ constexpr void partial_sort(RandomIter first, RandomIter middle,
 
 template<class RandomIter>
 constexpr void partial_sort(RandomIter first, RandomIter middle, RandomIter last) {
-    partial_sort(first, middle, last, less<>());
+    ala::partial_sort(first, middle, last, less<>());
 }
 
 template<class RandomIter, class Comp>
@@ -595,7 +623,7 @@ constexpr void nth_element(RandomIter first, RandomIter nth, RandomIter last,
 
 template<class RandomIter>
 constexpr void nth_element(RandomIter first, RandomIter nth, RandomIter last) {
-    nth_element(first, nth, last, less<>());
+    ala::nth_element(first, nth, last, less<>());
 }
 
 template<class Iter, class RandomIter, class Comp>

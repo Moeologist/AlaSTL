@@ -161,8 +161,8 @@ struct pair {
     constexpr void
     swap(pair &p) noexcept(is_nothrow_swappable<first_type>::value
                                &&is_nothrow_swappable<second_type>::value) {
-        ala::swap(first, p.first);
-        ala::swap(second, p.second);
+        ala::_swap_adl(first, p.first);
+        ala::_swap_adl(second, p.second);
     }
 };
 

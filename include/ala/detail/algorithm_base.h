@@ -27,14 +27,15 @@ constexpr const T &min(const T &a, const T &b) {
     #warning "undef max macro"
     #undef max
 #endif
-template<class T>
-constexpr const T &max(const T &a, const T &b) {
-    return max(a, b, less<>());
-}
 
 template<class T, class Comp>
 constexpr const T &max(const T &a, const T &b, Comp comp) {
     return comp(a, b) ? b : a;
+}
+
+template<class T>
+constexpr const T &max(const T &a, const T &b) {
+    return ala::max(a, b, less<>());
 }
 
 // Modifying sequence operations
@@ -134,12 +135,12 @@ copy_n(InputIter first, Size count, OutputIter out) {
     if (ala::is_constant_evaluated()) {
         for (; 0 < n; --n)
             *out++ = *first++;
-        return out + count;
+        return out + n;
     }
 #endif
     ala::memmove((void *)(out), (void *)(first),
                  sizeof(typename iterator_traits<InputIter>::value_type) * n);
-    return out + count;
+    return out + n;
 }
 
 template<class InputIter, class Size, class OutputIter>
@@ -174,7 +175,7 @@ move_n(InputIter first, Size count, OutputIter out) {
 #endif
     ala::memmove((void *)(out), (void *)(first),
                  sizeof(typename iterator_traits<InputIter>::value_type) * n);
-    return out + count;
+    return out + n;
 }
 
 template<class BidirIter1, class BidirIter2>
@@ -255,7 +256,8 @@ constexpr void fill(ForwardIter first, ForwardIter last, const T &value) {
 
 template<class Iter1, class Iter2>
 constexpr void iter_swap(Iter1 a, Iter2 b) {
-    ala::swap(*a, *b);
+    using std::swap;
+    swap(*a, *b);
 }
 
 template<class ForwardIter1, class ForwardIter2>

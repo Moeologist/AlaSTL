@@ -706,65 +706,13 @@ template<typename T> struct _underlying_type_helper<T, true> { typedef __underly
 
 template<typename T> struct underlying_type: _underlying_type_helper<T> {};
 
-template<bool Noexcept, typename Base, typename T, typename Derived, typename... Args>
-auto _invoke_result_test(T Base::*pmf, Derived &&ref, Args &&... args) -> enable_if_t<
-    is_function<T>::value &&
-    !is_reference_wrapper<decay_t<Derived>>::value &&
-    is_base_of<Base, decay_t<Derived>>::value,
-    conditional_t<Noexcept,bool_constant<noexcept((ala::forward<Derived>(ref).*pmf)(ala::forward<Args>(args)...))>,
-                                         decltype((ala::forward<Derived>(ref).*pmf)(ala::forward<Args>(args)...))>>;
-
-template<bool Noexcept, typename Base, typename T, typename Ptr, typename... Args>
-auto _invoke_result_test(T Base::*pmf, Ptr &&ptr, Args &&... args) -> enable_if_t<
-    is_function<T>::value &&
-    !is_reference_wrapper<decay_t<Ptr>>::value &&
-    !is_base_of<Base, decay_t<Ptr>>::value,
-    conditional_t<Noexcept, bool_constant<noexcept(((*ala::forward<Ptr>(ptr)).*pmf)(ala::forward<Args>(args)...))>,
-                                          decltype(((*ala::forward<Ptr>(ptr)).*pmf)(ala::forward<Args>(args)...))>>;
-
-template<bool Noexcept, typename Base, typename T, typename RefWrap, typename... Args>
-auto _invoke_result_test(T Base::*pmf, RefWrap &&ref, Args &&... args) -> enable_if_t<
-    is_function<T>::value &&
-    is_reference_wrapper<decay_t<RefWrap>>::value,
-    conditional_t<Noexcept, bool_constant<noexcept((ref.get().*pmf)(ala::forward<Args>(args)...))>,
-                                          decltype((ref.get().*pmf)(ala::forward<Args>(args)...))>>;
-
-template<bool Noexcept, typename Base, typename T, typename Derived>
-auto _invoke_result_test(T Base::*pmd, Derived &&ref) -> enable_if_t<
-    !is_function<T>::value &&
-    !is_reference_wrapper<decay_t<Derived>>::value &&
-    is_base_of<Base, decay_t<Derived>>::value,
-    conditional_t<Noexcept, bool_constant<noexcept(ala::forward<Derived>(ref).*pmd)>,
-                                          decltype(ala::forward<Derived>(ref).*pmd)>>;
-
-template<bool Noexcept, typename Base, typename T, typename Ptr>
-auto _invoke_result_test(T Base::*pmd, Ptr &&ptr) -> enable_if_t<
-    !is_function<T>::value &&
-    !is_reference_wrapper<decay_t<Ptr>>::value &&
-    !is_base_of<Base, decay_t<Ptr>>::value,
-    conditional_t<Noexcept, bool_constant<noexcept((*ala::forward<Ptr>(ptr)).*pmd)>,
-                                          decltype((*ala::forward<Ptr>(ptr)).*pmd)>>;
-
-template<bool Noexcept, typename Base, typename T, typename RefWrap>
-auto _invoke_result_test(T Base::*pmd, RefWrap &&ref) -> enable_if_t<
-    !is_function<T>::value &&
-    is_reference_wrapper<decay_t<RefWrap>>::value,
-    conditional_t<Noexcept, bool_constant<noexcept(ref.get().*pmd)>,
-                                          decltype(ref.get().*pmd)>>;
-
-template<bool Noexcept, typename Fn, typename... Args>
-auto _invoke_result_test(Fn &&f, Args &&... args) -> enable_if_t<
-    !is_member_pointer<decay_t<Fn>>::value,
-    conditional_t<Noexcept, bool_constant<noexcept(ala::forward<Fn>(f)(ala::forward<Args>(args)...))>,
-                                          decltype(ala::forward<Fn>(f)(ala::forward<Args>(args)...))>>;
-
 template<typename Void, typename, typename...>
 struct _invoke_result_sfinae {};
 
 template<typename Fn, typename... Args>
 struct _invoke_result_sfinae<
-    void_t<decltype(_invoke_result_test<false>(declval<Fn>(), declval<Args>()...))>, Fn, Args...> {
-    using type = decltype(_invoke_result_test<false>(declval<Fn>(), declval<Args>()...));
+    void_t<decltype(ala::_invoke(declval<Fn>(), declval<Args>()...))>, Fn, Args...> {
+    using type = decltype(ala::_invoke(declval<Fn>(), declval<Args>()...));
 };
 
 template<typename Fn, typename... Args>
@@ -790,7 +738,7 @@ template<typename Ret, typename Fn, typename... Args>
 struct is_invocable_r: _is_invocable_r_impl<invoke_result<Fn, Args...>, Ret> {};
 
 template<typename Fn, typename... Args>
-struct _is_nt_invocable: decltype(_invoke_result_test<true>(declval<Fn>(), declval<Args>()...)) {};
+struct _is_nt_invocable: bool_constant<noexcept(ala::_invoke(declval<Fn>(), declval<Args>()...))> {};
 
 template<typename Result, typename Ret, typename = void>
 struct _is_nt_invocable_r_impl: false_type {};

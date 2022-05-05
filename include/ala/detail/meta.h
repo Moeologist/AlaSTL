@@ -21,7 +21,8 @@ template<typename B1, typename... Bs> struct _and_lazy_<B1, Bs...>: conditional_
 
 template<typename...Bools>
 constexpr bool _or_constexpr_helper_(Bools...bs) {
-#if _ALA_ENABLE_FOLD_EXPRESSIONS
+#if 0
+// #if _ALA_ENABLE_FOLD_EXPRESSIONS
     return (false || ... || bs);
 #else
     bool a[] = {bs...};
@@ -34,7 +35,8 @@ constexpr bool _or_constexpr_helper_(Bools...bs) {
 
 template<typename...Bools>
 constexpr bool _and_constexpr_helper_(Bools...bs) {
-#if _ALA_ENABLE_FOLD_EXPRESSIONS
+#if 0
+// #if _ALA_ENABLE_FOLD_EXPRESSIONS
     return (true && ... && bs);
 #else
     bool a[] = {bs...};

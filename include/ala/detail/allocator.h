@@ -57,7 +57,7 @@ struct allocator {
     }
 
     template<class U, class... Args>
-    void construct(U *p, Args &&...args) {
+    void construct(U *p, Args &&... args) {
         ::new ((void *)p) U(ala::forward<Args>(args)...);
     }
 
@@ -180,41 +180,41 @@ struct allocator_traits {
 
     template<typename A, typename P, typename... Args>
     struct _has_construct<
-        void_t<decltype(declval<A &>().construct(declval<P>(), declval<Args>()...))>,
+        void_t<decltype(declval<A>().construct(declval<P>(), declval<Args>()...))>,
         A, P, Args...>: true_type {};
 
     template<typename Void, typename A, typename P>
     struct _has_destroy: false_type {};
 
     template<typename A, typename P>
-    struct _has_destroy<void_t<decltype(declval<A &>().destroy(declval<P>()))>, A, P>
+    struct _has_destroy<void_t<decltype(declval<A>().destroy(declval<P>()))>, A, P>
         : true_type {};
 
     template<typename Pointer, typename... Args>
     static enable_if_t<_has_construct<void, allocator_type &, Pointer, Args...>::value>
-    construct(allocator_type &a, Pointer p, Args &&...args) {
+    construct(allocator_type &a, Pointer p, Args &&... args) {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
-        static_assert(is_same<T, value_type>::value,
-                      "Can not process incompatible type");
+        // static_assert(is_same<T, value_type>::value,
+        //               "Can not process incompatible type");
         a.construct(p, ala::forward<Args>(args)...);
     }
 
     template<typename Pointer, typename... Args>
     static enable_if_t<!_has_construct<void, allocator_type &, Pointer, Args...>::value>
-    construct(allocator_type &a, Pointer p, Args &&...args) {
+    construct(allocator_type &a, Pointer p, Args &&... args) {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
-        static_assert(is_same<T, value_type>::value,
-                      "Can not process incompatible type");
+        // static_assert(is_same<T, value_type>::value,
+        //               "Can not process incompatible type");
         void *raw = static_cast<void *>(ala::to_address(p));
-        ::new (raw) value_type(ala::forward<Args>(args)...);
+        ::new (raw) T(ala::forward<Args>(args)...);
     }
 
     template<typename Pointer>
     static enable_if_t<_has_destroy<void, allocator_type &, Pointer>::value>
     destroy(allocator_type &a, Pointer p) {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
-        static_assert(is_same<T, value_type>::value,
-                      "Can not process incompatible type");
+        // static_assert(is_same<T, value_type>::value,
+        //               "Can not process incompatible type");
         a.destroy(p);
     }
 
@@ -222,8 +222,8 @@ struct allocator_traits {
     static enable_if_t<!_has_destroy<void, allocator_type &, Pointer>::value>
     destroy(allocator_type &a, Pointer p) {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
-        static_assert(is_same<T, value_type>::value,
-                      "Can not process incompatible type");
+        // static_assert(is_same<T, value_type>::value,
+        //               "Can not process incompatible type");
         (*p).~T();
     }
 
@@ -338,7 +338,7 @@ struct allocator_traits {
     template<typename U, typename Pointer, typename... Args>
     static enable_if_t<
         _has_construct_obj<void, U, allocator_type &, Pointer, Args...>::value>
-    construct_object(allocator_type &a, Pointer p, Args &&...args) {
+    construct_object(allocator_type &a, Pointer p, Args &&... args) {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
         static_assert(is_same<T, remove_cv_t<U>>::value,
                       "Can not process incompatible type");
@@ -348,7 +348,7 @@ struct allocator_traits {
     template<typename U, typename Pointer, typename... Args>
     static enable_if_t<
         !_has_construct_obj<void, U, allocator_type &, Pointer, Args...>::value>
-    construct_object(allocator_type &a, Pointer p, Args &&...args) {
+    construct_object(allocator_type &a, Pointer p, Args &&... args) {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
         static_assert(is_same<T, remove_cv_t<U>>::value,
                       "Can not process incompatible type");

@@ -5,6 +5,11 @@
 
 namespace ala {
 
+template<class Enum>
+constexpr underlying_type_t<Enum> to_underlying(Enum e) noexcept {
+    return static_cast<std::underlying_type_t<Enum>>(e);
+}
+
 template<class T, class U = T>
 constexpr T exchange(T &obj, U &&new_value) {
     T old_value = ala::move(obj);
@@ -75,13 +80,13 @@ inline constexpr in_place_index_t<I> in_place_index{};
 #else
 constexpr in_place_t in_place{};
 
-#ifdef _ALA_ENABLE_TEMPLATE_VAR
+    #ifdef _ALA_ENABLE_TEMPLATE_VAR
 template<class T>
 constexpr in_place_type_t<T> in_place_type{};
 
 template<size_t I>
 constexpr in_place_index_t<I> in_place_index{};
-#endif
+    #endif
 
 #endif
 
