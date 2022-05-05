@@ -516,6 +516,16 @@ template<size_t I, class... Us>
 constexpr const variant_alternative_t<I, variant<Us...>> &&
 get(const variant<Us...> &&);
 
+template<class Dst>
+constexpr Dst _no_narrow_convert(Dst (&&)[1]);
+
+template<class Ti, class T, class = void>
+struct _is_no_narrow: false_type {};
+
+template<class Ti, class T>
+struct _is_no_narrow<Ti, T, void_t<decltype(_no_narrow_convert<Ti>({declval<T>()}))>>
+    : true_type {};
+
 template<class... Ts>
 class variant: _make_controller_t<_variant_base<Ts...>, Ts...> {
     static_assert(_and_<_not_<is_array<Ts>>...>::value &&
@@ -548,16 +558,6 @@ class variant: _make_controller_t<_variant_base<Ts...>, Ts...> {
     get(const variant<Us...> &&);
 
     friend class hash<variant>;
-
-    template<class Dst>
-    static Dst _convert(Dst (&&)[1]);
-
-    template<class Ti, class T, class = void>
-    struct _is_no_narrow: false_type {};
-
-    template<class Ti, class T>
-    struct _is_no_narrow<Ti, T, void_t<decltype(_convert<Ti>({declval<T>()}))>>
-        : true_type {};
 
     // is_arithmetic is necessary
     // see libcxx/test/std/utilities/variant/variant.variant/variant.ctor/T.pass.cpp
@@ -814,6 +814,7 @@ struct _visit_impl {
         template<class... Args>
         static constexpr void _invoke_ol(char, Args &&...) {
             assert(false);
+            // ala::visit not available for these variants
         }
 
         static constexpr auto _invoke(Visitor &&vis, Variants &&...vars)
@@ -837,6 +838,7 @@ struct _visit_impl {
         template<class... Args>
         static constexpr R _invoke_ol(char, Args &&...) {
             assert(false);
+            // ala::visit not available for these variants
         }
 
         static constexpr R _invoke(Visitor &&vis, Variants &&...vars) {
@@ -858,6 +860,7 @@ struct _visit_impl {
         template<class... Args>
         static constexpr R _invoke_ol(char, Args &&...) {
             assert(false);
+            // ala::visit not available for these variants
         }
 
         static constexpr R _invoke(Visitor &&vis, Variants &&...vars) {
@@ -868,10 +871,9 @@ struct _visit_impl {
 
     template<size_t... Is>
     using dispatcher_t =
-        conditional_t<is_void<R>::value,
-                      _dispatcher_rvoid<Is...>,
-                          conditional_t<is_same<R, _visit_no_return>::value,
-                                        _dispatcher<Is...>, _dispatcher_r<Is...>>>;
+        conditional_t<is_void<R>::value, _dispatcher_rvoid<Is...>,
+                      conditional_t<is_same<R, _visit_no_return>::value,
+                                    _dispatcher<Is...>, _dispatcher_r<Is...>>>;
 
     template<size_t... Is>
     static constexpr auto _make_visit(index_sequence<Is...>) {
@@ -944,10 +946,11 @@ template<class Variant, class = void>
 struct _can_visit1: false_type {};
 
 template<class Variant>
-struct _can_visit1<Variant, void_t<decltype(ala::_convert_to_variant(declval<Variant>()))>>
+struct _can_visit1<Variant,
+                   void_t<decltype(ala::_convert_to_variant(declval<Variant>()))>>
     : true_type {
-    using variant_type =
-        _copy_cvref_t<Variant, decltype(ala::_convert_to_variant(declval<Variant>()))>;
+    using variant_type = _copy_cvref_t<Variant, decltype(ala::_convert_to_variant(
+                                                    declval<Variant>()))>;
 };
 
 template<class... Variants>

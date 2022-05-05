@@ -33,7 +33,7 @@ struct _copy_ctor_ctl<Base, true, false>: Base {
     ~_copy_ctor_ctl() = default;
     constexpr _copy_ctor_ctl() = default;
     constexpr _copy_ctor_ctl(const _copy_ctor_ctl &other) noexcept(
-        noexcept(Base::_ctor(static_cast<const Base &>(other)))) {
+        noexcept(declval<Base>()._ctor(static_cast<const Base &>(other)))) {
         Base::_ctor(static_cast<const Base &>(other));
     }
     constexpr _copy_ctor_ctl(_copy_ctor_ctl &&) = default;
@@ -75,7 +75,7 @@ struct _move_ctor_ctl<Base, true, false>: Base {
     constexpr _move_ctor_ctl() = default;
     constexpr _move_ctor_ctl(const _move_ctor_ctl &) = default;
     constexpr _move_ctor_ctl(_move_ctor_ctl &&other) noexcept(
-        noexcept(Base::_ctor(static_cast<Base &&>(other)))) {
+        noexcept(declval<Base>()._ctor(static_cast<Base &&>(other)))) {
         Base::_ctor(static_cast<Base &&>(other));
     }
     constexpr _move_ctor_ctl &operator=(const _move_ctor_ctl &) = default;
@@ -117,7 +117,7 @@ struct _copy_asgn_ctl<Base, true, false>: Base {
     constexpr _copy_asgn_ctl(_copy_asgn_ctl &&) = default;
     constexpr _copy_asgn_ctl(const _copy_asgn_ctl &) = default;
     constexpr _copy_asgn_ctl &operator=(const _copy_asgn_ctl &other) noexcept(
-        noexcept(Base::_asgn(static_cast<const Base &>(other)))) {
+        noexcept(declval<Base>()._asgn(static_cast<const Base &>(other)))) {
         Base::_asgn(static_cast<const Base &>(other));
         return *this;
     }
@@ -161,7 +161,7 @@ struct _move_asgn_ctl<Base, true, false>: Base {
     constexpr _move_asgn_ctl(const _move_asgn_ctl &) = default;
     constexpr _move_asgn_ctl &operator=(const _move_asgn_ctl &) = default;
     constexpr _move_asgn_ctl &operator=(_move_asgn_ctl &&other) noexcept(
-        noexcept(Base::_asgn(static_cast<Base &&>(other)))) {
+        noexcept(declval<Base>()._asgn(static_cast<Base &&>(other)))) {
         Base::_asgn(static_cast<Base &&>(other));
         return *this;
     }

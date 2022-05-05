@@ -711,8 +711,8 @@ struct _invoke_result_sfinae {};
 
 template<typename Fn, typename... Args>
 struct _invoke_result_sfinae<
-    void_t<decltype(ala::_invoke(declval<Fn>(), declval<Args>()...))>, Fn, Args...> {
-    using type = decltype(ala::_invoke(declval<Fn>(), declval<Args>()...));
+    void_t<decltype(ala::invoke(declval<Fn>(), declval<Args>()...))>, Fn, Args...> {
+    using type = decltype(ala::invoke(declval<Fn>(), declval<Args>()...));
 };
 
 template<typename Fn, typename... Args>
@@ -738,7 +738,7 @@ template<typename Ret, typename Fn, typename... Args>
 struct is_invocable_r: _is_invocable_r_impl<invoke_result<Fn, Args...>, Ret> {};
 
 template<typename Fn, typename... Args>
-struct _is_nt_invocable: bool_constant<noexcept(ala::_invoke(declval<Fn>(), declval<Args>()...))> {};
+struct _is_nt_invocable: bool_constant<noexcept(ala::invoke(declval<Fn>(), declval<Args>()...))> {};
 
 template<typename Result, typename Ret, typename = void>
 struct _is_nt_invocable_r_impl: false_type {};
