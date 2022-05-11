@@ -34,9 +34,11 @@ struct _any_handle {
     }
 #endif
 
+    static constexpr bool _is_local = sizeof(T) <= 2 * sizeof(size_t) &&
+                                      is_nothrow_move_constructible<T>::value;
+
     static bool local() {
-        return sizeof(T) <= 2 * sizeof(size_t) &&
-               is_nothrow_move_constructible<T>::value;
+        return _is_local;
     }
 
     static void *operate(AnyOP op) {
@@ -172,7 +174,7 @@ protected:
     }
 
     template<class T, class... Args>
-    void _emplace(Args &&... args) {
+    void _emplace(Args &&...args) {
         using value_t = T;
         using handle_t = _any_handle<value_t>;
         reset();
@@ -212,7 +214,7 @@ public:
     template<class T, class... Args,
              class = enable_if_t<is_copy_constructible<decay_t<T>>::value &&
                                  is_constructible<decay_t<T>, Args...>::value>>
-    explicit any(in_place_type_t<T>, Args &&... args) {
+    explicit any(in_place_type_t<T>, Args &&...args) {
         this->_emplace<decay_t<T>>(ala::forward<Args>(args)...);
     }
 
@@ -220,7 +222,7 @@ public:
              class = enable_if_t<
                  is_copy_constructible<decay_t<T>>::value &&
                  is_constructible<decay_t<T>, initializer_list<U> &, Args...>::value>>
-    explicit any(in_place_type_t<T> tag, initializer_list<U> il, Args &&... args) {
+    explicit any(in_place_type_t<T> tag, initializer_list<U> il, Args &&...args) {
         this->_emplace<decay_t<T>>(il, ala::forward<Args>(args)...);
     }
 
@@ -263,7 +265,7 @@ public:
     enable_if_t<is_copy_constructible<decay_t<T>>::value &&
                     is_constructible<decay_t<T>, Args...>::value,
                 decay_t<T> &>
-    emplace(Args &&... args) {
+    emplace(Args &&...args) {
         this->_emplace<decay_t<T>>(ala::forward<Args>(args)...);
         return *reinterpret_cast<T *>(_address());
     }
@@ -272,7 +274,7 @@ public:
     enable_if_t<is_copy_constructible<decay_t<T>>::value &&
                     is_constructible<decay_t<T>, initializer_list<U> &, Args...>::value,
                 decay_t<T> &>
-    emplace(initializer_list<U> il, Args &&... args) {
+    emplace(initializer_list<U> il, Args &&...args) {
         this->_emplace<decay_t<T>>(il, ala::forward<Args>(args)...);
         return *reinterpret_cast<T *>(_address());
     }
@@ -315,12 +317,12 @@ inline void swap(any &lhs, any &rhs) noexcept(noexcept(lhs.swap(rhs))) {
 }
 
 template<class T, class... Args>
-any make_any(Args &&... args) {
+any make_any(Args &&...args) {
     return any(in_place_type_t<T>{}, ala::forward<Args>(args)...);
 }
 
 template<class T, class U, class... Args>
-any make_any(initializer_list<U> il, Args &&... args) {
+any make_any(initializer_list<U> il, Args &&...args) {
     return any(in_place_type_t<T>{}, il, ala::forward<Args>(args)...);
 }
 

@@ -134,7 +134,7 @@ class StdTuplePrinter(object):
 
         def __init__(self, val):
             self.val = val
-            self.child_iter = iter(self.val["__base_"].type.fields())
+            self.child_iter = iter(self.val["_impl"].type.fields())
             self.count = 0
 
         def __iter__(self):
@@ -143,7 +143,11 @@ class StdTuplePrinter(object):
         def __next__(self):
             # child_iter raises StopIteration when appropriate.
             field_name = next(self.child_iter)
-            child = self.val["__base_"][field_name]["__value_"]
+            tuple_base = self.val["_impl"][field_name]
+            try:
+                child = tuple_base["value"]
+            except:
+                child = tuple_base[tuple_base.type.fields()[0]]
             self.count += 1
             return ("[%d]" % self.count, child)
 
@@ -164,6 +168,118 @@ class StdTuplePrinter(object):
         if not self.val.type.fields():
             return iter(())
         return self._Children(self.val)
+
+
+class StdVariantPrinter(object):
+    """Print a std::variant."""
+
+    def __init__(self, val):
+        self.val = val
+        self.index = self.val["_index"]
+        self.union = self.val["_union"]
+        try:
+            self.holdtype = self.val.type.template_argument(self.index)
+        except:
+            self.holdtype = None
+        self.addr = self.union.address.cast(self.holdtype.pointer())
+
+    def to_string(self):
+        typename = _remove_generics(_prettify_typename(self.val.type))
+        if self.holdtype is None:
+            return "valueless %s" % typename
+        return "%s containing" % typename
+
+    def __iter__(self):
+        if self.holdtype:
+            yield "[%s]" % _prettify_typename(self.holdtype), self.addr.dereference()
+
+    def children(self):
+        return self
+
+
+class StdOptionalPrinter(object):
+    """Print a std::optional."""
+
+    def __init__(self, val):
+        self.val = val
+        self.has = self.val["_valid"]
+        self.value = self.val["_value"]
+        self.holdtype = self.val.type.template_argument(0)
+
+    def to_string(self):
+        typename = _remove_generics(_prettify_typename(self.val.type))
+        if not self.has:
+            return "empty %s" % typename
+        return "%s containing" % typename
+
+    def __iter__(self):
+        if self.has:
+            yield "[%s]" % _prettify_typename(self.holdtype), self.value
+
+    def children(self):
+        return self
+
+
+class StdAnyPrinter(object):
+    """Print a std::any."""
+
+    def __init__(self, val):
+        self.val = val
+        self.handle = self.val["_op_handle"]
+        if self.handle == 0:
+            return
+        try:
+            self.hname = gdb.block_for_pc(int(self.handle.cast(gdb.lookup_type('intptr_t')))).function.name
+            regex = r"""^ala::_any_handle<(.*)>::operate\(ala::AnyOP\)"""
+            m = re.match(regex, self.hname)
+            self.holdname = m.group(1)
+            localsym = gdb.lookup_symbol(self.hname.replace("operate\(ala::AnyOP\)", "_is_local"))[0]
+            self.local = localsym.value()
+            self.holdtype = gdb.lookup_type(self.holdname)
+            if self.local:
+                self.addr = self.val["_placehold"].address.cast(self.holdtype.pointer())
+            else:
+                self.addr = self.val["_placehold"][0].cast(self.holdtype.pointer())
+        except:
+            self.handle = 0
+
+    def to_string(self):
+        typename = _remove_generics(_prettify_typename(self.val.type))
+        if self.handle == 0:
+            return "empty %s" % typename
+        return "%s containing" % typename
+
+    def __iter__(self):
+        if self.handle != 0:
+            yield "[%s]" % _prettify_typename(self.holdtype), self.addr.dereference()
+
+    def children(self):
+        return self
+
+
+class StdArrayPrinter(object):
+    """Print a std::array."""
+
+    def __init__(self, val):
+        self.val = val
+        self.size = self.val.type.template_argument(1)
+        self.data = self.val["_data"]
+
+    def to_string(self):
+        typename = _remove_generics(_prettify_typename(self.val.type))
+        if self.size:
+            return "%s with %d elements" % (typename, self.size)
+        return "%s is empty" % typename
+
+    def __iter__(self):
+        for i in range(0, self.size):
+            yield "%d" % i, self.data[i]
+
+    def children(self):
+        return self if self.size > 0 else iter(())
+
+    def display_hint(self):
+        return "array"
 
 
 def _get_base_subobject(child_class_value, index=0):
@@ -277,7 +393,7 @@ class StdUniquePtrPrinter(object):
 
     def __init__(self, val):
         self.val = val
-        self.addr = _value_of_pair_first(self.val["__ptr_"])
+        self.addr = self.val["_ptr"]
         self.pointee_type = self.val.type.template_argument(0)
 
     def to_string(self):
@@ -289,8 +405,7 @@ class StdUniquePtrPrinter(object):
                  _remove_generics(_prettify_typename(self.pointee_type))))
 
     def __iter__(self):
-        if self.addr:
-            yield "__ptr_", self.addr.cast(self.pointee_type.pointer())
+        yield "[pointer]", self.addr.cast(self.pointee_type.pointer())
 
     def children(self):
         return self
@@ -301,7 +416,7 @@ class StdSharedPointerPrinter(object):
 
     def __init__(self, val):
         self.val = val
-        self.addr = self.val["__ptr_"]
+        self.addr = self.val["_ptr"]
 
     def to_string(self):
         """Returns self as a string."""
@@ -310,28 +425,16 @@ class StdSharedPointerPrinter(object):
             _prettify_typename(self.val.type.template_argument(0)))
         if not self.addr:
             return "%s is nullptr" % typename
-        refcount = self.val["__cntrl_"]
-        if refcount != 0:
-            try:
-                usecount = refcount["__shared_owners_"] + 1
-                weakcount = refcount["__shared_weak_owners_"]
-                if usecount == 0:
-                    state = "expired, weak %d" % weakcount
-                else:
-                    state = "count %d, weak %d" % (usecount, weakcount)
-            except:
-                # Debug info for a class with virtual functions is emitted
-                # in the same place as its key function. That means that
-                # for std::shared_ptr, __shared_owners_ is emitted into
-                # into libcxx.[so|a] itself, rather than into the shared_ptr
-                # instantiation point. So if libcxx.so was built without
-                # debug info, these fields will be missing.
-                state = "count ?, weak ? (libc++ missing debug info)"
-        return "%s<%s> %s containing" % (typename, pointee_type, state)
+        return "%s<%s> containing" % (typename, pointee_type)
 
     def __iter__(self):
-        if self.addr:
-            yield "__ptr_", self.addr
+        yield "[pointer]", self.addr
+        refcount = self.val["_cb"]
+        if refcount != 0:
+            usecount = refcount["_shared"]
+            weakcount = refcount["_weak"]
+            yield "[shared]", usecount
+            yield "[weak]", weakcount
 
     def children(self):
         return self
@@ -401,8 +504,9 @@ class StdVectorPrinter(object):
         """Set val, length, capacity, and iterator for bool and normal vectors."""
         self.val = val
         self.typename = _remove_generics(_prettify_typename(val.type))
-        begin = self.val["__begin_"]
-        if self.val.type.template_argument(0).code == gdb.TYPE_CODE_BOOL:
+        begin = self.val["_data"]
+        if False:
+        # if self.val.type.template_argument(0).code == gdb.TYPE_CODE_BOOL:
             self.typename += "<bool>"
             self.length = self.val["__size_"]
             bits_per_word = self.val["__bits_per_word"]
@@ -411,10 +515,9 @@ class StdVectorPrinter(object):
             self.iterator = self._VectorBoolIterator(
                 begin, self.length, bits_per_word)
         else:
-            end = self.val["__end_"]
-            self.length = end - begin
-            self.capacity = _get_base_subobject(
-                self.val["__end_cap_"])["__value_"] - begin
+            self.length = self.val["_size"]
+            end = begin + self.length
+            self.capacity = self.val["_capacity"]
             self.iterator = self._VectorIterator(begin, end)
 
     def to_string(self):
@@ -518,13 +621,10 @@ class StdListPrinter(object):
 
     def __init__(self, val):
         self.val = val
-        size_alloc_field = self.val["__size_alloc_"]
-        self.size = int(_value_of_pair_first(size_alloc_field))
-        dummy_node = self.val["__end_"]
-        self.nodetype = gdb.lookup_type(
-            re.sub("__list_node_base", "__list_node",
-                   str(dummy_node.type.strip_typedefs()))).pointer()
-        self.first_node = dummy_node["__next_"]
+        self.size = self.val["_size"]
+        dummy_node = self.val["_guard"][0]
+        self.nodetype = dummy_node.type.strip_typedefs().template_argument(0).pointer()
+        self.first_node = dummy_node["_suc"]
 
     def to_string(self):
         typename = _remove_generics(_prettify_typename(self.val.type))
@@ -534,15 +634,15 @@ class StdListPrinter(object):
 
     def _list_iter(self):
         current_node = self.first_node
-        for _ in range(self.size):
-            yield "", current_node.cast(self.nodetype).dereference()["__value_"]
-            current_node = current_node.dereference()["__next_"]
+        for i in range(self.size):
+            yield "%d" % i, current_node.cast(self.nodetype).dereference()["_data"]
+            current_node = current_node.dereference()["_suc"]
 
     def __iter__(self):
         return self._list_iter()
 
     def children(self):
-        return self if self.nodetype else iter(())
+        return self if self.nodetype and self.size > 0 else iter(())
 
     def display_hint(self):
         return "array"
@@ -588,105 +688,38 @@ class StdPriorityQueuePrinter(object):
         return "array"
 
 
-class RBTreeUtils(object):
-    """Utility class for std::(multi)map, and std::(multi)set and iterators."""
-
-    def __init__(self, cast_type, root):
-        self.cast_type = cast_type
-        self.root = root
-
-    def left_child(self, node):
-        result = node.cast(self.cast_type).dereference()["__left_"]
-        return result
-
-    def right_child(self, node):
-        result = node.cast(self.cast_type).dereference()["__right_"]
-        return result
-
-    def parent(self, node):
-        """Return the parent of node, if it exists."""
-        # If this is the root, then from the algorithm's point of view, it has no
-        # parent.
-        if node == self.root:
-            return None
-
-        # We don't have enough information to tell if this is the end_node (which
-        # doesn't have a __parent_ field), or the root (which doesn't have a parent
-        # from the algorithm's point of view), so cast_type may not be correct for
-        # this particular node. Use heuristics.
-
-        # The end_node's left child is the root. Note that when printing interators
-        # in isolation, the root is unknown.
-        if self.left_child(node) == self.root:
-            return None
-
-        parent = node.cast(self.cast_type).dereference()["__parent_"]
-        # If the value at the offset of __parent_ doesn't look like a valid pointer,
-        # then assume that node is the end_node (and therefore has no parent).
-        # End_node type has a pointer embedded, so should have pointer alignment.
-        if addr_as_long(parent) % _void_pointer_type.alignof:
-            return None
-        # This is ugly, but the only other option is to dereference an invalid
-        # pointer.  0x8000 is fairly arbitrary, but has had good results in
-        # practice.  If there was a way to tell if a pointer is invalid without
-        # actually dereferencing it and spewing error messages, that would be ideal.
-        if parent < 0x8000:
-            return None
-        return parent
-
-    def is_left_child(self, node):
-        parent = self.parent(node)
-        return parent is not None and self.left_child(parent) == node
-
-    def is_right_child(self, node):
-        parent = self.parent(node)
-        return parent is not None and self.right_child(parent) == node
-
-
 class AbstractRBTreePrinter(object):
     """Abstract super class for std::(multi)map, and std::(multi)set."""
 
     def __init__(self, val):
-        self.val = val
-        tree = self.val["__tree_"]
-        self.size = int(_value_of_pair_first(tree["__pair3_"]))
-        dummy_root = tree["__pair1_"]
-        root = _value_of_pair_first(dummy_root)["__left_"]
-        cast_type = self._init_cast_type(val.type)
-        self.util = RBTreeUtils(cast_type, root)
+        self.val = val["tree"]
+        self.size = int(self.val["_size"])
+        self.root = self.val["_root"]
+        self.cast_type = self.root.dereference().type.strip_typedefs().pointer()
 
     def _get_key_value(self, node):
         """Subclasses should override to return a list of values to yield."""
         raise NotImplementedError
 
-    def _traverse(self):
+    def is_nil(self, node):
+        return node == 0 or node.dereference()["_is_nil"]
+
+    def _traverse(self, node):
         """Traverses the binary search tree in order."""
-        current = self.util.root
-        skip_left_child = False
-        while True:
-            if not skip_left_child and self.util.left_child(current):
-                current = self.util.left_child(current)
-                continue
-            skip_left_child = False
-            for key_value in self._get_key_value(current):
-                yield "", key_value
-            right_child = self.util.right_child(current)
-            if right_child:
-                current = right_child
-                continue
-            while self.util.is_right_child(current):
-                current = self.util.parent(current)
-            if self.util.is_left_child(current):
-                current = self.util.parent(current)
-                skip_left_child = True
-                continue
-            break
+        if not self.is_nil(node["_left"]):
+            for i in self._traverse(node["_left"]):
+                yield i
+        for kv in self._get_key_value(node):
+            yield "", kv
+        if not self.is_nil(node["_left"]):
+            for i in self._traverse(node["_rght"]):
+                yield i
 
     def __iter__(self):
-        return self._traverse()
+        return self._traverse(self.root)
 
     def children(self):
-        return self if self.util.cast_type and self.size > 0 else iter(())
+        return self if self.cast_type and self.size > 0 else iter(())
 
     def to_string(self):
         typename = _remove_generics(_prettify_typename(self.val.type))
@@ -694,99 +727,70 @@ class AbstractRBTreePrinter(object):
             return "%s with %d elements" % (typename, self.size)
         return "%s is empty" % typename
 
+    def _get_key_value(self, node):
+        if self._is_map():
+            return [node.dereference()["_data"]["first"], node.dereference()["_data"]["second"]]
+        return [node.dereference()["_data"]];
 
-class StdMapPrinter(AbstractRBTreePrinter):
-    """Print a std::map or std::multimap."""
-
-    def _init_cast_type(self, val_type):
-        map_it_type = gdb.lookup_type(
-            str(val_type.strip_typedefs()) + "::iterator").strip_typedefs()
-        tree_it_type = map_it_type.template_argument(0)
-        node_ptr_type = tree_it_type.template_argument(1)
-        return node_ptr_type
+    def _is_map(self):
+        return self.val.type.template_argument(3) == True
 
     def display_hint(self):
-        return "map"
-
-    def _get_key_value(self, node):
-        key_value = node.cast(self.util.cast_type).dereference()[
-            "__value_"]["__cc"]
-        return [key_value["first"], key_value["second"]]
-
-
-class StdSetPrinter(AbstractRBTreePrinter):
-    """Print a std::set."""
-
-    def _init_cast_type(self, val_type):
-        set_it_type = gdb.lookup_type(
-            str(val_type.strip_typedefs()) + "::iterator").strip_typedefs()
-        node_ptr_type = set_it_type.template_argument(1)
-        return node_ptr_type
-
-    def display_hint(self):
-        return "array"
-
-    def _get_key_value(self, node):
-        key_value = node.cast(self.util.cast_type).dereference()["__value_"]
-        return [key_value]
+        return "map" if self._is_map() else "array" 
 
 
 class AbstractRBTreeIteratorPrinter(object):
     """Abstract super class for std::(multi)map, and std::(multi)set iterator."""
 
-    def _initialize(self, val, typename):
-        self.typename = typename
+    def __init__(self, val):
         self.val = val
-        self.addr = self.val["__ptr_"]
-        cast_type = self.val.type.template_argument(1)
-        self.util = RBTreeUtils(cast_type, None)
+        self.addr = val["_ptr"]
+        cast_type = self.addr.dereference().type.strip_typedefs().pointer()
         if self.addr:
             self.node = self.addr.cast(cast_type).dereference()
 
-    def _is_valid_node(self):
-        if not self.util.parent(self.addr):
-            return False
-        return self.util.is_left_child(self.addr) or \
-            self.util.is_right_child(self.addr)
-
     def to_string(self):
+        typename = _remove_generics(_prettify_typename(self.val.type))
         if not self.addr:
-            return "%s is nullptr" % self.typename
-        return "%s " % self.typename
-
-    def _get_node_value(self, node):
-        raise NotImplementedError
+            return "%s is nullptr" % typename
+        return "%s " % typename
 
     def __iter__(self):
         addr_str = "[%s]" % str(self.addr)
-        if not self._is_valid_node():
-            yield addr_str, " end()"
+        if self.node["_is_nil"]:
+            yield addr_str, "end()"
         else:
-            yield addr_str, self._get_node_value(self.node)
+            yield addr_str, self.node["_data"]
 
     def children(self):
         return self if self.addr else iter(())
 
 
-class MapIteratorPrinter(AbstractRBTreeIteratorPrinter):
-    """Print a std::(multi)map iterator."""
+class ListIteratorPrinter(object):
+    """Abstract super class for std::list iterator."""
 
     def __init__(self, val):
-        self._initialize(val["__i_"],
-                         _remove_generics(_prettify_typename(val.type)))
+        self.val = val
+        self.addr = val["_ptr"]
+        cast_type = self.addr.dereference().type.strip_typedefs().pointer()
+        if self.addr:
+            self.node = self.addr.cast(cast_type).dereference()
 
-    def _get_node_value(self, node):
-        return node["__value_"]["__cc"]
+    def to_string(self):
+        typename = _remove_generics(_prettify_typename(self.val.type))
+        if not self.addr:
+            return "%s is nullptr" % typename
+        return "%s " % typename
 
+    def __iter__(self):
+        addr_str = "[%s]" % str(self.addr)
+        if not self.node["_suc"]:
+            yield addr_str, "end()"
+        else:
+            yield addr_str, self.node["_data"]
 
-class SetIteratorPrinter(AbstractRBTreeIteratorPrinter):
-    """Print a std::(multi)set iterator."""
-
-    def __init__(self, val):
-        self._initialize(val, _remove_generics(_prettify_typename(val.type)))
-
-    def _get_node_value(self, node):
-        return node["__value_"]
+    def children(self):
+        return self if self.addr else iter(())
 
 
 class StdFposPrinter(object):
@@ -919,7 +923,7 @@ class StdUnorderedMapIteratorPrinter(AbstractHashMapIteratorPrinter):
 
 
 def _remove_std_prefix(typename):
-    match = re.match("^std::(.+)", typename)
+    match = re.match("^ala::(.+)", typename)
     return match.group(1) if match is not None else ""
 
 
@@ -936,6 +940,10 @@ class LibcxxPrettyPrinter(object):
             "string": StdStringPrinter,
             "string_view": StdStringViewPrinter,
             "tuple": StdTuplePrinter,
+            "variant": StdVariantPrinter,
+            "optional": StdOptionalPrinter,
+            "any": StdAnyPrinter,
+            "array": StdArrayPrinter,
             "unique_ptr": StdUniquePtrPrinter,
             "shared_ptr": StdSharedPointerPrinter,
             "weak_ptr": StdSharedPointerPrinter,
@@ -945,15 +953,13 @@ class LibcxxPrettyPrinter(object):
             "queue": StdQueueOrStackPrinter,
             "stack": StdQueueOrStackPrinter,
             "priority_queue": StdPriorityQueuePrinter,
-            "map": StdMapPrinter,
-            "multimap": StdMapPrinter,
-            "set": StdSetPrinter,
-            "multiset": StdSetPrinter,
+            "map": AbstractRBTreePrinter,
+            "multimap": AbstractRBTreePrinter,
+            "set": AbstractRBTreePrinter,
+            "multiset": AbstractRBTreePrinter,
             "vector": StdVectorPrinter,
-            "__map_iterator": MapIteratorPrinter,
-            "__map_const_iterator": MapIteratorPrinter,
-            "__tree_iterator": SetIteratorPrinter,
-            "__tree_const_iterator": SetIteratorPrinter,
+            "rb_iterator": AbstractRBTreeIteratorPrinter,
+            "l_iterator": ListIteratorPrinter,
             "fpos": StdFposPrinter,
             "unordered_set": StdUnorderedSetPrinter,
             "unordered_multiset": StdUnorderedSetPrinter,
@@ -983,7 +989,7 @@ class LibcxxPrettyPrinter(object):
 
         # Don't attempt types known to be inside libstdcxx.
         typename = val.type.name or val.type.tag or str(val.type)
-        match = re.match("^std::(__.*?)::", typename)
+        match = re.match("^ala::(__.*?)::", typename)
         if match is not None and match.group(1) in ["__cxx1998",
                                                     "__debug",
                                                     "__7",

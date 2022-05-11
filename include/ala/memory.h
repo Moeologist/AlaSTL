@@ -700,7 +700,8 @@ struct _ctblk_base {
 #endif
 };
 
-template<class Pointer, class Deleter, class Alloc, size_t AllocOnce = 0>
+// gdb be confused with find (size_t)AllocOnce RTTI symbol
+template<class Pointer, class Deleter, class Alloc, int AllocOnce = 0>
 struct _ctblk: _ctblk_base {
     // TODO atomic, thread safety
     Pointer _ptr;

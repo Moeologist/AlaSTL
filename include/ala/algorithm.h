@@ -336,7 +336,6 @@ constexpr ForwardIter unique(ForwardIter first, ForwardIter last) {
     return ala::unique(first, last, equal_to<>());
 }
 
-// TODO: make this work with input iterator
 template<class InputIter, class ForwardIter, class BinPred>
 constexpr ForwardIter _unique_copy_dispatch(InputIter first, InputIter last,
                                             ForwardIter out, BinPred pred,
