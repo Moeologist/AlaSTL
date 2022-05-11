@@ -639,7 +639,7 @@
     </Expand>
   </Type>
 
-  <Type Name="aarray&lt;*,*&gt;">
+  <!-- <Type Name="aarray&lt;*,*&gt;">
     <Expand>
       <ArrayItems Condition="_m != 0">
         <Direction>Forward</Direction>
@@ -648,7 +648,7 @@
         <ValuePointer>($T1*) _m</ValuePointer>
       </ArrayItems>
     </Expand>
-  </Type>
+  </Type> -->
 
   <Type Name="ala::monostate">
     <DisplayString>monostate</DisplayString>
