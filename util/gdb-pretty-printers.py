@@ -950,6 +950,7 @@ class LibcxxPrettyPrinter(object):
             "bitset": StdBitsetPrinter,
             "deque": StdDequePrinter,
             "list": StdListPrinter,
+            "forward_list": StdListPrinter,
             "queue": StdQueueOrStackPrinter,
             "stack": StdQueueOrStackPrinter,
             "priority_queue": StdPriorityQueuePrinter,

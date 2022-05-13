@@ -256,7 +256,7 @@ constexpr void fill(ForwardIter first, ForwardIter last, const T &value) {
 
 template<class Iter1, class Iter2>
 constexpr void iter_swap(Iter1 a, Iter2 b) {
-    using std::swap;
+    using ala::swap;
     swap(*a, *b);
 }
 

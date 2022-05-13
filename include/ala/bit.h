@@ -16,12 +16,12 @@ bit_cast(const From &x) noexcept {
 #if _ALA_ENABLE_BUILTIN_BIT_CAST
     return __builtin_bit_cast(To, x);
 #else
-    static_assert(std::is_trivially_constructible_v<To>,
+    static_assert(is_trivially_constructible_v<To>,
                   "This implementation additionally requires destination type "
                   "to be trivially constructible");
-    To dst;
-    std::memcpy(&dst, &src, sizeof(To));
-    return dst;
+    To t;
+    ala::memcpy(&t, &x, sizeof(To));
+    return t;
 #endif
 }
 

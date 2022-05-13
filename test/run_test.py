@@ -57,26 +57,28 @@ else:
 
 lflags = []
 srcs = [
-    'std/algorithms',
-    'std/containers/container.node',
-    'std/containers/containers.general',
-    'std/containers/container.requirements',
-    'std/containers/associative/map',
-    'std/containers/associative/multimap',
-    'std/containers/associative/set',
-    'std/containers/associative/multiset',
-    'std/containers/sequences/array',
-    'std/containers/sequences/vector',
-    'std/containers/sequences/list',
-    'std/utilities/meta',
-    'std/utilities/function.objects',
-    'std/utilities/utility',
-    'std/utilities/tuple',
-    'std/utilities/any',
-    'std/utilities/variant',
-    'std/utilities/optional',
-    'std/utilities/smartptr',
-    'std/utilities/memory/util.smartptr',
+    # 'std/algorithms',
+    # 'std/containers/container.node',
+    # 'std/containers/containers.general',
+    # 'std/containers/container.requirements',
+    # 'std/containers/associative/map',
+    # 'std/containers/associative/multimap',
+    # 'std/containers/associative/set',
+    # 'std/containers/associative/multiset',
+    # 'std/containers/sequences/array',
+    # 'std/containers/sequences/vector',
+    # 'std/containers/sequences/list',
+    'std/containers/sequences/forwardlist',
+    'std/containers/views',
+    # 'std/utilities/meta',
+    # 'std/utilities/function.objects',
+    # 'std/utilities/utility',
+    # 'std/utilities/tuple',
+    # 'std/utilities/any',
+    # 'std/utilities/variant',
+    # 'std/utilities/optional',
+    # 'std/utilities/smartptr',
+    # 'std/utilities/memory/util.smartptr',
 ]
 
 
@@ -236,6 +238,7 @@ def patch(str):
         '#include <tuple>', '#include <ala/tuple.h>').replace(
         '#include <type_traits>', '#include <ala/type_traits.h>').replace(
         '#include <memory>', '#include <memory>\n#include <ala/memory.h>').replace(
+        '#include <forward_list>', '#include <ala/forward_list.h>').replace(
         'std::string', 'ALASTD::string').replace(
         'std::printf', 'ALASTD::printf').replace(
         'std::pow', 'ALASTD::pow').replace(
