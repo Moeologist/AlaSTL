@@ -3,134 +3,9 @@
 
 #include <ala/detail/algorithm_base.h>
 #include <ala/detail/allocator.h>
+#include <ala/detail/ptr_iterator.h>
 
 namespace ala {
-
-template<class Value, class Ptr>
-struct v_iterator {
-    typedef random_access_iterator_tag iterator_category;
-    typedef Value value_type;
-    typedef typename pointer_traits<Ptr>::difference_type difference_type;
-    typedef Ptr pointer;
-    typedef value_type &reference;
-
-    constexpr v_iterator() {}
-    constexpr v_iterator(const v_iterator &other): _ptr(other._ptr) {}
-    constexpr v_iterator(const Ptr &ptr): _ptr(ptr) {}
-
-    template<class Value1, class Ptr1>
-    constexpr v_iterator(const v_iterator<Value1, Ptr1> &other)
-        : _ptr(other._ptr) {}
-
-    constexpr reference operator*() const {
-        return *_ptr;
-    }
-
-    constexpr pointer operator->() const {
-        return _ptr;
-    }
-
-    template<class Value1, class Ptr1>
-    constexpr bool operator==(const v_iterator<Value1, Ptr1> &rhs) const {
-        return (_ptr == rhs._ptr);
-    }
-
-    template<class Value1, class Ptr1>
-    constexpr bool operator!=(const v_iterator<Value1, Ptr1> &rhs) const {
-        return !(_ptr == rhs._ptr);
-    }
-
-    template<class Value1, class Ptr1>
-    constexpr bool operator<(const v_iterator<Value1, Ptr1> &rhs) const {
-        return _ptr < rhs._ptr;
-    }
-
-    template<class Value1, class Ptr1>
-    constexpr bool operator>(const v_iterator<Value1, Ptr1> &rhs) const {
-        return rhs._ptr < _ptr;
-    }
-
-    template<class Value1, class Ptr1>
-    constexpr bool operator<=(const v_iterator<Value1, Ptr1> &rhs) const {
-        return !(rhs._ptr < _ptr);
-    }
-
-    template<class Value1, class Ptr1>
-    constexpr bool operator>=(const v_iterator<Value1, Ptr1> &rhs) const {
-        return !(_ptr < rhs._ptr);
-    }
-
-    constexpr v_iterator &operator++() {
-        ++_ptr;
-        return *this;
-    }
-
-    constexpr v_iterator operator++(int) {
-        v_iterator tmp(*this);
-        ++*this;
-        return tmp;
-    }
-
-    constexpr v_iterator &operator--() {
-        --_ptr;
-        return *this;
-    }
-
-    constexpr v_iterator operator--(int) {
-        v_iterator tmp(*this);
-        --*this;
-        return tmp;
-    }
-
-    constexpr v_iterator &operator+=(difference_type n) {
-        _ptr += n;
-        return *this;
-    }
-
-    constexpr v_iterator &operator-=(difference_type n) {
-        _ptr -= n;
-        return *this;
-    }
-
-    constexpr v_iterator operator+(difference_type n) const {
-        v_iterator tmp(*this);
-        tmp += n;
-        return tmp;
-    }
-
-    constexpr v_iterator operator-(difference_type n) const {
-        v_iterator tmp(*this);
-        tmp -= n;
-        return tmp;
-    }
-
-    template<class Value1, class Ptr1>
-    constexpr difference_type operator-(const v_iterator<Value1, Ptr1> &rhs) const {
-        return _ptr - rhs._ptr;
-    }
-
-    constexpr reference operator[](difference_type n) const {
-        return *(*this + n);
-    }
-
-protected:
-    using _invc_t =
-        conditional_t<is_const<value_type>::value, remove_const_t<value_type>,
-                      add_const_t<value_type>>;
-
-    template<class, class>
-    friend class v_iterator;
-    // friend class v_iterator<_invc_t, Ptr>;
-
-    template<class, class>
-    friend class vector;
-
-    constexpr operator Ptr() {
-        return _ptr;
-    }
-
-    Ptr _ptr = nullptr;
-};
 
 template<class T, class Alloc = allocator<T>>
 class vector {
@@ -145,8 +20,8 @@ public:
     typedef typename _alloc_traits::difference_type difference_type;
     typedef typename _alloc_traits::pointer pointer;
     typedef typename _alloc_traits::const_pointer const_pointer;
-    typedef v_iterator<value_type, pointer> iterator;
-    typedef v_iterator<const value_type, const_pointer> const_iterator;
+    typedef ptr_iterator<value_type, pointer> iterator;
+    typedef ptr_iterator<const value_type, const_pointer> const_iterator;
     typedef ala::reverse_iterator<iterator> reverse_iterator;
     typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
     static_assert(is_same<value_type, typename _alloc_traits::value_type>::value,

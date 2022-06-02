@@ -24,7 +24,7 @@ include_paths = [
 if False:
     compiler = 'clang-cl'
     cflags = [
-        '/DTEST_STD_VER=17',
+        '/DTEST_STD_VER=20',
         '/DALA_USE_ALLOC_REBIND=1',
         '/Od',
         '/Z7',
@@ -39,12 +39,12 @@ if False:
 else:
     compiler = 'clang++'
     cflags = [
-        '-DTEST_STD_VER=17',
+        '-DTEST_STD_VER=20',
         '-DALA_USE_ALLOC_REBIND=1',
         '-D_ALA_VERSION=0',
         '-O0',
         '-g',
-        '-std=c++17',
+        '-std=c++20',
         '-fexceptions',
         '-stdlib=libc++',
         '-fuse-ld=lld',
@@ -239,6 +239,7 @@ def patch(str):
         '#include <type_traits>', '#include <ala/type_traits.h>').replace(
         '#include <memory>', '#include <memory>\n#include <ala/memory.h>').replace(
         '#include <forward_list>', '#include <ala/forward_list.h>').replace(
+        '#include <span>', '#include <ala/span.h>').replace(
         'std::string', 'ALASTD::string').replace(
         'std::printf', 'ALASTD::printf').replace(
         'std::pow', 'ALASTD::pow').replace(
@@ -257,7 +258,7 @@ def patch(str):
 
 def preprocess_file(fname):
     output = output_src(fname)
-    with open(fname, mode='r') as R:
+    with open(fname, mode='r', encoding='utf-8') as R:
         with open(output, mode='w') as W:
             fstr = R.read()
             fstr = patch(fstr)
