@@ -10,23 +10,23 @@
 #endif
 
 #ifdef ALA_API_VER
-#if ALA_API_VER != 17 && ALA_API_VER !=20
-#error ala only support c++17 stdlib version
-#endif
+    #if ALA_API_VER != 17 && ALA_API_VER != 20
+        #error ala only support c++17 stdlib version
+    #endif
 #else
-#if ALA_LANG > 201703L
-    #define ALA_API_VER 20
-#else
-    #define ALA_API_VER 17
-#endif
+    #if ALA_LANG > 201703L
+        #define ALA_API_VER 20
+    #else
+        #define ALA_API_VER 17
+    #endif
 #endif
 
 #if ALA_API_VER > 17
-#define ALA_ENABLE_CXX20(...) x
-#define ALA_RETURN_CXX20(...) return __VA_ARGS__
+    #define ALA_ENABLE_CXX20(...) x
+    #define ALA_RETURN_CXX20(...) return __VA_ARGS__
 #else
-#define ALA_ENABLE_CXX20(...) void
-#define ALA_RETURN_CXX20(...) return (void)__VA_ARGS__
+    #define ALA_ENABLE_CXX20(...) void
+    #define ALA_RETURN_CXX20(...) return (void)__VA_ARGS__
 #endif
 
 #if defined(__is_identifier)
@@ -86,7 +86,7 @@
 #endif
 
 #if ALA_HAS_CPP_ATTRIBUTE(nodiscard) || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && ALA_LANG >= 201703L)
+    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && ALA_LANG >= 202002L)
     #define ALA_NODISCARD [[nodiscard]]
 #else
     #define ALA_NODISCARD
@@ -96,6 +96,14 @@
     #define _ALA_ENABLE_ALIGNED_NEW 1
 #else
     #define _ALA_ENABLE_ALIGNED_NEW 0
+#endif
+
+// funll support in _MSC_VER=1930
+#if __cpp_concepts >= 201907L || \
+    (defined(_ALA_MSVC) && _MSC_VER >= 1923 && ALA_LANG >= 201703L)
+    #define _ALA_ENABLE_CONCEPTS 1
+#else
+    #define _ALA_ENABLE_CONCEPTS 0
 #endif
 
 #if __cpp_deduction_guides >= 201606L || \

@@ -67,7 +67,7 @@ struct type_pack_index: _type_pack_index_helper<void, T, Ts...> {};
 
 #ifdef _ALA_ENABLE_INLINE_VAR
 template<typename T, typename... Ts>
-constexpr size_t type_pack_index_v = type_pack_index<T, Ts...>::value;
+inline constexpr size_t type_pack_index_v = type_pack_index<T, Ts...>::value;
 #endif
 
 } // namespace ala

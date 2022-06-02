@@ -771,26 +771,26 @@ void swap(CONTAINER<Key, Comp, Alloc> &lhs,
 #endif
 
 template<class InputIter>
-using iter_key_t =
+using _iter_key_t =
     remove_const_t<typename iterator_traits<InputIter>::value_type::first_type>;
 
 template<class InputIter>
-using iter_mapped_t = typename iterator_traits<InputIter>::value_type::second_type;
+using _iter_mapped_t = typename iterator_traits<InputIter>::value_type::second_type;
 
 template<class InputIter>
-using iter_value_t = typename iterator_traits<InputIter>::value_type;
+using _iter_value_t = typename iterator_traits<InputIter>::value_type;
 
 template<class InputIter>
 using iter_to_pair_t =
-    pair<add_const_t<iter_key_t<InputIter>>, iter_mapped_t<InputIter>>;
+    pair<add_const_t<_iter_key_t<InputIter>>, _iter_mapped_t<InputIter>>;
 
 #if _ALA_ENABLE_DEDUCTION_GUIDES
 
     #if _ALA_IS_MAP
-template<class InputIter, class Comp = less<iter_key_t<InputIter>>,
+template<class InputIter, class Comp = less<_iter_key_t<InputIter>>,
          class Alloc = allocator<iter_to_pair_t<InputIter>>>
 CONTAINER(InputIter, InputIter, Comp = Comp(), Alloc = Alloc())
-    -> CONTAINER<iter_key_t<InputIter>, iter_mapped_t<InputIter>,
+    -> CONTAINER<_iter_key_t<InputIter>, _iter_mapped_t<InputIter>,
                  enable_if_t<!_is_allocator<Comp>::value, Comp>,
                  enable_if_t<_is_allocator<Alloc>::value, Alloc>>;
 
@@ -802,8 +802,8 @@ CONTAINER(initializer_list<pair<Key, T>>, Comp = Comp(), Alloc = Alloc())
 
 template<class InputIter, class Alloc>
 CONTAINER(InputIter, InputIter, Alloc)
-    -> CONTAINER<iter_key_t<InputIter>, iter_mapped_t<InputIter>,
-                 less<iter_key_t<InputIter>>,
+    -> CONTAINER<_iter_key_t<InputIter>, _iter_mapped_t<InputIter>,
+                 less<_iter_key_t<InputIter>>,
                  enable_if_t<_is_allocator<Alloc>::value, Alloc>>;
 
 template<class Key, class T, class Alloc>
@@ -812,10 +812,10 @@ CONTAINER(initializer_list<pair<Key, T>>, Alloc)
                  enable_if_t<_is_allocator<Alloc>::value, Alloc>>;
 
     #else // _ALA_IS_MAP is 0
-template<class InputIter, class Comp = less<iter_value_t<InputIter>>,
-         class Alloc = allocator<iter_value_t<InputIter>>>
+template<class InputIter, class Comp = less<_iter_value_t<InputIter>>,
+         class Alloc = allocator<_iter_value_t<InputIter>>>
 CONTAINER(InputIter, InputIter, Comp = Comp(), Alloc = Alloc())
-    -> CONTAINER<iter_value_t<InputIter>,
+    -> CONTAINER<_iter_value_t<InputIter>,
                  enable_if_t<!_is_allocator<Comp>::value, Comp>,
                  enable_if_t<_is_allocator<Alloc>::value, Alloc>>;
 
@@ -826,7 +826,7 @@ CONTAINER(initializer_list<Key>, Comp = Comp(), Alloc = Alloc())
 
 template<class InputIter, class Alloc>
 CONTAINER(InputIter, InputIter, Alloc)
-    -> CONTAINER<iter_value_t<InputIter>, less<iter_value_t<InputIter>>,
+    -> CONTAINER<_iter_value_t<InputIter>, less<_iter_value_t<InputIter>>,
                  enable_if_t<_is_allocator<Alloc>::value, Alloc>>;
 
 template<class Key, class Alloc>

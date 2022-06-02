@@ -7,7 +7,7 @@ namespace ala {
 
 template<class Enum>
 constexpr underlying_type_t<Enum> to_underlying(Enum e) noexcept {
-    return static_cast<std::underlying_type_t<Enum>>(e);
+    return static_cast<underlying_type_t<Enum>>(e);
 }
 
 template<class T, class U = T>

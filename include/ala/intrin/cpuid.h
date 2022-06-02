@@ -111,9 +111,9 @@ struct CPUIDInfo {
     static char *GetManufacturerId() {
         static char mf_id[13] = {};
         CPUIDInfo info(0);
-        std::memcpy(mf_id + 0, &info.ebx, 4);
-        std::memcpy(mf_id + 4, &info.edx, 4);
-        std::memcpy(mf_id + 8, &info.ecx, 4);
+        ala::memcpy(mf_id + 0, &info.ebx, 4);
+        ala::memcpy(mf_id + 4, &info.edx, 4);
+        ala::memcpy(mf_id + 8, &info.ecx, 4);
         return mf_id;
     }
 
@@ -328,11 +328,11 @@ struct CPUIDInfo {
     static char *GetProcessorName() {
         static char pc_name[49] = {};
         CPUIDInfo info(0x80000002);
-        std::memcpy(pc_name, info.data, 16);
+        ala::memcpy(pc_name, info.data, 16);
         info(0x80000003);
-        std::memcpy(pc_name + 16, info.data, 16);
+        ala::memcpy(pc_name + 16, info.data, 16);
         info(0x80000004);
-        std::memcpy(pc_name + 32, info.data, 16);
+        ala::memcpy(pc_name + 32, info.data, 16);
         return pc_name;
     }
 };

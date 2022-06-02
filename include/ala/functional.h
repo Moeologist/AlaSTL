@@ -16,14 +16,6 @@ namespace ala {
 using ::std::type_info;
 #endif
 
-struct identity {
-    using is_transparent = int;
-    template<class T>
-    constexpr T &&operator()(T &&t) const noexcept {
-        return ala::forward<T>(t);
-    }
-};
-
 template<class Fn>
 struct _not_fn_t {
     typedef decay_t<Fn> _fn_t;

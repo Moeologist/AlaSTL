@@ -20,7 +20,7 @@ template<typename...>
 struct common_type;
 
 template<typename, typename, template<typename> class, template<typename> class>
-struct basic_common_reference {};
+struct basic_common_reference;
 
 #if defined(_LIBCPP_ABI_NAMESPACE)
 }
@@ -973,6 +973,12 @@ struct is_specification: false_type {};
 
 template<template<typename...> class Templt, typename... Args>
 struct is_specification<Templt<Args...>, Templt>: true_type {};
+
+// template<typename T, template<typename..., auto...> class>
+// struct is_specification_with_varg: false_type {};
+
+// template<template<typename..., auto...> class Templt, class... TArgs, auto... Args>
+// struct is_specification_with_varg<Templt<TArgs..., Args...>, Templt>: true_type {};
 
 } // namespace ala
 

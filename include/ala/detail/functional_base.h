@@ -69,6 +69,14 @@ ALA_MAKE_BASE_FUNCTION(bit_or, |, T)
 ALA_MAKE_BASE_FUNCTION(bit_xor, ^, T)
 ALA_MAKE_BASE_FUNCTION_UNARY(bit_not, ~, T)
 
+struct identity {
+    using is_transparent = int;
+    template<class T>
+    constexpr T &&operator()(T &&t) const noexcept {
+        return ala::forward<T>(t);
+    }
+};
+
 } // namespace ala
 
 #undef ALALA_MAKE_BASE_FUNCTION
