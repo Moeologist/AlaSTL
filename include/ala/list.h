@@ -7,13 +7,13 @@
 
 namespace ala {
 
-template<class Derived>
 struct l_node {
-    Derived *_pre = nullptr, *_suc = nullptr;
+    l_node *_pre = nullptr;
+    l_node *_suc = nullptr;
 };
 
 template<class T>
-struct l_vnode: l_node<l_vnode<T>> {
+struct l_vnode: l_node {
     T _data;
 };
 
@@ -34,11 +34,12 @@ struct l_iterator {
         : _ptr(other._ptr) {}
 
     constexpr reference operator*() const {
-        return _ptr->_data;
+        l_vnode<value_type> *vnode = static_cast<l_vnode<value_type> *>(_ptr);
+        return vnode->_data;
     }
 
     constexpr pointer operator->() const {
-        return ala::addressof(_ptr->_data);
+        return ala::addressof(this->operator*());
     }
 
     template<class Value1, class Ptr1>
@@ -90,8 +91,8 @@ public:
     typedef T value_type;
     typedef value_type &reference;
     typedef const value_type &const_reference;
-    typedef l_iterator<value_type, l_vnode<value_type> *> iterator;
-    typedef l_iterator<const value_type, l_vnode<value_type> *> const_iterator;
+    typedef l_iterator<value_type, l_node *> iterator;
+    typedef l_iterator<const value_type, l_node *> const_iterator;
     typedef Alloc allocator_type;
     typedef allocator_traits<Alloc> _alloc_traits;
     typedef typename _alloc_traits::size_type size_type;
@@ -104,19 +105,18 @@ public:
                   "allocator::value_type mismatch");
 
 protected:
-    typedef l_vnode<value_type> _node_t;
-    typedef _node_t *_hdle_t;
-    l_node<_node_t> _guard[2];
+    typedef l_node *_hdle_t;
+    l_node _guard[2];
     size_type _size = 0;
     allocator_type _alloc;
 
     _hdle_t head() {
-        l_node<_node_t> *p = _guard;
+        l_node *p = _guard;
         return static_cast<_hdle_t>(p);
     }
 
     _hdle_t tail() {
-        l_node<_node_t> *p = _guard;
+        l_node *p = _guard;
         return static_cast<_hdle_t>(p + 1);
     }
 
@@ -177,7 +177,7 @@ protected:
 
     template<class... Args>
     _hdle_t construct_node(Args &&...args) {
-        using holder_t = pointer_holder<_node_t *, Alloc>;
+        using holder_t = pointer_holder<l_vnode<value_type> *, Alloc>;
         holder_t holder(_alloc, 1);
         _alloc_traits::construct(_alloc, ala::addressof(holder.get()->_data),
                                  ala::forward<Args>(args)...);
@@ -185,9 +185,11 @@ protected:
     }
 
     _hdle_t destruct_node(_hdle_t node) {
-        _alloc_traits::destroy(_alloc, ala::addressof(node->_data));
-        _hdle_t result = node->_suc;
-        _alloc_traits::template deallocate_object<_node_t>(_alloc, node, 1);
+        assert(node != head() && node != tail());
+        l_vnode<value_type> *vnode = static_cast<l_vnode<value_type> *>(node);
+        _alloc_traits::destroy(_alloc, ala::addressof(vnode->_data));
+        _hdle_t result = vnode->_suc;
+        _alloc_traits::template deallocate_object<l_vnode<value_type>>(_alloc, vnode, 1);
         return result;
     }
 

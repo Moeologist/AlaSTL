@@ -13,35 +13,32 @@ namespace ala {
 enum class Color : bool { Black, Red };
 enum class Dir : bool { Left, Right };
 
-template<class Derived>
 struct rb_node {
-    Derived *_left = nullptr, *_rght = nullptr, *_parent = nullptr;
+    rb_node *_left = nullptr;
+    rb_node *_rght = nullptr;
+    rb_node *_parent = nullptr;
     Color _color = Color::Black;
     bool _is_nil = true;
 };
 
 template<class T>
-struct rb_vnode: rb_node<rb_vnode<T>> {
+struct rb_vnode: rb_node {
     T _data;
 };
 
-template<class T>
-constexpr bool is_black(rb_vnode<T> *node) {
+constexpr bool is_black(rb_node *node) {
     return node == nullptr || (node->_color == Color::Black);
 }
 
-template<class T>
-constexpr bool is_red(rb_vnode<T> *node) {
+constexpr bool is_red(rb_node *node) {
     return node != nullptr && (node->_color == Color::Red);
 }
 
-template<class T>
-constexpr bool is_nil(rb_vnode<T> *node) {
+constexpr bool is_nil(rb_node *node) {
     return node == nullptr || node->_is_nil;
 }
 
-template<class T>
-constexpr rb_vnode<T> *left_leaf(rb_vnode<T> *node) {
+constexpr rb_node *left_leaf(rb_node *node) {
     if (is_nil(node))
         return node;
     while (!is_nil(node->_left))
@@ -49,8 +46,7 @@ constexpr rb_vnode<T> *left_leaf(rb_vnode<T> *node) {
     return node;
 }
 
-template<class T>
-constexpr rb_vnode<T> *rght_leaf(rb_vnode<T> *node) {
+constexpr rb_node *rght_leaf(rb_node *node) {
     if (is_nil(node))
         return node;
     while (!is_nil(node->_rght))
@@ -58,8 +54,7 @@ constexpr rb_vnode<T> *rght_leaf(rb_vnode<T> *node) {
     return node;
 }
 
-template<class T>
-constexpr rb_vnode<T> *next_node(rb_vnode<T> *_ptr) {
+constexpr rb_node *next_node(rb_node *_ptr) {
     if (_ptr->_rght != nullptr)
         return left_leaf(_ptr->_rght);
     else {
@@ -74,8 +69,7 @@ constexpr rb_vnode<T> *next_node(rb_vnode<T> *_ptr) {
     }
 }
 
-template<class T>
-constexpr rb_vnode<T> *prev_node(rb_vnode<T> *_ptr) {
+constexpr rb_node *prev_node(rb_node *_ptr) {
     if (_ptr->_left != nullptr)
         return rght_leaf(_ptr->_left);
     else {
@@ -107,11 +101,12 @@ struct rb_iterator {
         : _ptr(other._ptr) {}
 
     constexpr reference operator*() const {
-        return _ptr->_data;
+        assert(!_ptr->_is_nil);
+        return static_cast<rb_vnode<value_type> *>(_ptr)->_data;
     }
 
     constexpr pointer operator->() const {
-        return ala::addressof(_ptr->_data);
+        return ala::addressof(this->operator*());
     }
 
     constexpr bool operator==(const rb_iterator &rhs) const {
@@ -182,7 +177,7 @@ public:
     typedef rb_vnode<value_type> _node_t;
     typedef allocator_traits<allocator_type> _alloc_traits;
     typedef typename _alloc_traits::size_type size_type;
-    typedef _node_t *_hdle_t;
+    typedef rb_node *_hdle_t;
     typedef rb_iterator<value_type, _hdle_t> iterator;
     typedef rb_iterator<const value_type, _hdle_t> const_iterator;
 
@@ -191,19 +186,19 @@ protected:
     friend class rb_tree;
 
     _hdle_t _root = nullptr;
-    rb_node<_node_t> _guard[2];
+    rb_node _guard[2];
 
     size_type _size = 0;
     allocator_type _alloc;
     value_compare _comp;
 
     _hdle_t left_nil() noexcept {
-        rb_node<_node_t> *p = _guard;
+        rb_node *p = _guard;
         return static_cast<_hdle_t>(p);
     }
 
     _hdle_t rght_nil() noexcept {
-        rb_node<_node_t> *p = _guard;
+        rb_node *p = _guard;
         return static_cast<_hdle_t>(p + 1);
     }
 
@@ -217,15 +212,20 @@ protected:
     };
 
     template<typename P, bool Dummy = IsMap, typename = enable_if_t<Dummy>>
-    const auto &_key(const P &v) const noexcept {
+    const auto &_key_get(const P &v) const noexcept {
         static_assert(_is_pair<P>::value == IsMap, "Internal error");
         return v.first;
     }
 
     template<typename P, bool Dummy = IsMap, typename = enable_if_t<!Dummy>>
-    const value_type &_key(const P &v) const noexcept {
+    const value_type &_key_get(const P &v) const noexcept {
         // static_assert(_is_pair<P>::value == IsMap, "Internal error");
         return v;
+    }
+
+    const auto &_key(rb_node *node) const noexcept {
+        assert(!node->_is_nil);
+        return this->_key_get(static_cast<rb_vnode<value_type> *>(node)->_data);
     }
 
     template<bool Dummy = IsMap, typename = enable_if_t<Dummy>>
@@ -402,12 +402,12 @@ public:
         destruct_node(detach(position));
     }
 
-    _hdle_t extract(_hdle_t position) noexcept {
+    rb_vnode<value_type> *extract(_hdle_t position) noexcept {
         if (is_nil(position))
             return nullptr;
         detach(position);
         position->_left = position->_rght = position->_parent = nullptr;
-        return position;
+        return static_cast<rb_vnode<value_type> *>(position);
     }
 
     allocator_type get_allocator() const noexcept {
@@ -455,7 +455,7 @@ public:
         auto next = src.begin();
         for (auto i = src.begin(); i != src.end(); i = next) {
             next = next_node(i);
-            locate_states ls = this->locate(nullptr, src._key(i->_data));
+            locate_states ls = this->locate(nullptr, src._key(i));
             if (!ls.found || !IsUniq)
                 this->attach(ls, src.detach(i));
         }
@@ -467,8 +467,7 @@ public:
         size_type n = 0;
         for (_hdle_t i = begin(); i != end(); i = next) {
             next = next_node(i);
-            if (!this->kcmp(k, this->_key(i->_data)) &&
-                !this->kcmp(this->_key(i->_data), k)) {
+            if (!this->kcmp(k, this->_key(i)) && !this->kcmp(this->_key(i), k)) {
                 this->remove(i);
                 ++n;
             }
@@ -479,7 +478,7 @@ public:
     template<class K, class F>
     auto traverse(const K &k, _hdle_t current, F f) const {
         while (!is_nil(current)) {
-            const auto &ck = this->_key(current->_data);
+            const auto &ck = this->_key(current);
             if (this->kcmp(k, ck))
                 current = current->_left;
             else if (this->kcmp(ck, k))
@@ -537,7 +536,7 @@ public:
     pair<_hdle_t, bool> insert(_hdle_t hint, _hdle_t p) {
         if (is_nil(p))
             return pair<_hdle_t, bool>(end(), false);
-        locate_states ls = locate(hint, this->_key(p->_data));
+        locate_states ls = locate(hint, this->_key(p));
         if (IsUniq && ls.found) {
             return pair<_hdle_t, bool>(ls.postion, false);
         } else {
@@ -573,7 +572,8 @@ public:
         static_assert(IsMap, "Internal error");
         locate_states ls = locate(hint, k);
         if (ls.found) {
-            ls.postion->_data.second = ala::move(m);
+            static_cast<rb_vnode<value_type> *>(ls.postion)->_data.second =
+                ala::move(m);
             return pair<_hdle_t, bool>(ls.postion, false);
         } else {
             _hdle_t node = construct_node(ala::forward<K>(k), ala::forward<M>(m));
@@ -585,9 +585,9 @@ public:
     template<class... Args>
     enable_if_t<!_is_v_emp<Args...>::value && !_is_km_emp<Args...>::value,
                 pair<_hdle_t, bool>>
-    emplace(_hdle_t hint, Args &&... args) {
+    emplace(_hdle_t hint, Args &&...args) {
         _hdle_t node = construct_node(ala::forward<Args>(args)...);
-        locate_states ls = locate(hint, this->_key(node->_data));
+        locate_states ls = locate(hint, this->_key(node));
         if (IsUniq && ls.found) {
             destruct_node(node);
             return pair<_hdle_t, bool>(ls.postion, false);
@@ -611,11 +611,11 @@ public:
 
     template<class V>
     pair<_hdle_t, bool> emplace_v(_hdle_t hint, V &&v) {
-        return this->emplace_k(this->_key(v), hint, ala::forward<V>(v));
+        return this->emplace_k(this->_key_get(v), hint, ala::forward<V>(v));
     }
 
     template<class K, class... Args>
-    pair<_hdle_t, bool> emplace_k(const K &k, _hdle_t hint, Args &&... args) {
+    pair<_hdle_t, bool> emplace_k(const K &k, _hdle_t hint, Args &&...args) {
         locate_states ls = locate(hint, k);
         if (IsUniq && ls.found) {
             return pair<_hdle_t, bool>(ls.postion, false);
@@ -634,14 +634,14 @@ public:
         bool p = !is_nil(prev), h = !is_nil(hint);
         bool kh = false, hk = false, kp = false, pk = false;
         if (h) {
-            kh = this->kcmp(k, this->_key(hint->_data));
-            hk = this->kcmp(this->_key(hint->_data), k);
+            kh = this->kcmp(k, this->_key(hint));
+            hk = this->kcmp(this->_key(hint), k);
             if (!kh && !hk)
                 return locate_states{hint, true, Dir::Left};
         }
         if (p) {
-            pk = this->kcmp(this->_key(prev->_data), k);
-            kp = this->kcmp(k, this->_key(prev->_data));
+            pk = this->kcmp(this->_key(prev), k);
+            kp = this->kcmp(k, this->_key(prev));
             if (h && pk && kh)
                 return locate_states{hint, false, Dir::Left};
             else if (!h && !pk && !kp)
@@ -663,7 +663,7 @@ public:
             return checked;
         while (!is_nil(guard)) {
             current = guard;
-            const auto &ck = this->_key(current->_data);
+            const auto &ck = this->_key(current);
             if (this->kcmp(k, ck)) {
                 guard = guard->_left;
                 lr = Dir::Left;
@@ -692,7 +692,7 @@ protected:
 
     template<class... Args>
     enable_if_t<sizeof...(Args) != 1 || !_use_pair_ref<Args...>::value, _hdle_t>
-    construct_node(Args &&... args) {
+    construct_node(Args &&...args) {
         using holder_t = pointer_holder<_node_t *, Alloc>;
         holder_t holder(_alloc, 1);
         _alloc_traits::construct(_alloc, ala::addressof(holder.get()->_data),
@@ -712,9 +712,11 @@ protected:
     }
 
     void destruct_node(_hdle_t node) {
-        if (!node->_is_nil)
-            _alloc_traits::destroy(_alloc, ala::addressof(node->_data));
-        _alloc_traits::template deallocate_object<_node_t>(_alloc, node, 1);
+        assert(!node->_is_nil);
+        rb_vnode<value_type> *vnode = static_cast<rb_vnode<value_type> *>(node);
+        _alloc_traits::destroy(_alloc, ala::addressof(vnode->_data));
+        _alloc_traits::template deallocate_object<rb_vnode<value_type>>(_alloc,
+                                                                        vnode, 1);
         node = nullptr;
     }
 
@@ -730,7 +732,8 @@ protected:
     _hdle_t copy_tree(_hdle_t other, _hdle_t parent = nullptr) {
         if (is_nil(other))
             return nullptr;
-        _hdle_t node = construct_node(other->_data);
+        _hdle_t node = construct_node(
+            static_cast<rb_vnode<value_type> *>(other)->_data);
         node->_color = other->_color;
         node->_parent = parent;
         node->_left = copy_tree(other->_left, node);
@@ -741,7 +744,8 @@ protected:
     _hdle_t copy_tree_mv(_hdle_t other, _hdle_t parent = nullptr) {
         if (is_nil(other))
             return nullptr;
-        _hdle_t node = construct_node(ala::move(other->_data));
+        _hdle_t node = construct_node(
+            ala::move(static_cast<rb_vnode<value_type> *>(other)->_data));
         node->_color = other->_color;
         node->_parent = parent;
         node->_left = copy_tree_mv(other->_left, node);

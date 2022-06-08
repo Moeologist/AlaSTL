@@ -121,9 +121,9 @@ public:
     typedef ala::reverse_iterator<iterator> reverse_iterator;
     typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
 #if _ALA_IS_MAP
-    typedef _map_node_adaptor<typename tree_type::_hdle_t, allocator_type> node_type;
+    typedef _map_node_adaptor<rb_vnode<value_type> *, allocator_type> node_type;
 #else
-    typedef _set_node_adaptor<typename tree_type::_hdle_t, allocator_type> node_type;
+    typedef _set_node_adaptor<rb_vnode<value_type> *, allocator_type> node_type;
 #endif
 
 #if _ALA_IS_UNIQ
