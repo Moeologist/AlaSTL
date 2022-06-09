@@ -5,6 +5,8 @@
 #include <ala/detail/memory_base.h>
 #include <ala/detail/controller.h>
 #include <ala/detail/monostate.h>
+#include <ala/detail/uninitialized_memory.h>
+#include <memory>
 
 namespace ala {
 
@@ -57,7 +59,7 @@ struct _optional_destroy<T, false> {
         T _value;
     };
     bool _valid = false;
-    ~_optional_destroy() {
+    constexpr ~_optional_destroy() {
         this->_reset();
     }
     constexpr void _reset() {
@@ -93,11 +95,8 @@ struct _optional_base: _optional_destroy<T> {
     template<class... Args>
     constexpr void _ctor_v(Args &&...args) {
         assert(!this->_has_value());
-        try {
-            ::new (this->_address()) T(ala::forward<Args>(args)...);
-        } catch (...) {
-            throw;
-        }
+        // ::new (this->_address()) T(ala::forward<Args>(args)...);
+        std::construct_at(&this->_value, ala::forward<Args>(args)...);
         this->_valid = true;
     }
 
@@ -111,11 +110,7 @@ struct _optional_base: _optional_destroy<T> {
     template<class Arg>
     constexpr void _asgn_v(Arg &&arg) {
         if (this->_has_value()) {
-            try {
-                this->_value = ala::forward<Arg>(arg);
-            } catch (...) {
-                throw;
-            }
+            this->_value = ala::forward<Arg>(arg);
         } else {
             this->_ctor_v(ala::forward<Arg>(arg));
         }
@@ -235,10 +230,11 @@ public:
     optional &operator=(optional &&) = default;
 
     template<class U = T>
-    constexpr enable_if_t<!is_same<optional, remove_cvref_t<U>>::value &&
-                    is_constructible<T, U>::value && is_assignable<T &, U>::value &&
-                    (!is_scalar<T>::value || !is_same<decay_t<U>, T>::value),
-                optional &>
+    constexpr enable_if_t<
+        !is_same<optional, remove_cvref_t<U>>::value &&
+            is_constructible<T, U>::value && is_assignable<T &, U>::value &&
+            (!is_scalar<T>::value || !is_same<decay_t<U>, T>::value),
+        optional &>
     operator=(U &&u) {
         this->_asgn_v(ala::forward<U>(u));
         return *this;
@@ -255,8 +251,8 @@ public:
 
     template<class U>
     constexpr enable_if_t<_check_asgn<U>::value && is_constructible_v<T, const U &> &&
-                    is_assignable_v<T &, const U &>,
-                optional> &
+                              is_assignable_v<T &, const U &>,
+                          optional> &
     operator=(const optional<U> &other) {
         if (other.has_value()) {
             this->_asgn_v(*other);
@@ -268,8 +264,8 @@ public:
 
     template<class U>
     constexpr enable_if_t<_check_asgn<U>::value && is_constructible_v<T, U> &&
-                    is_assignable_v<T &, U>,
-                optional> &
+                              is_assignable_v<T &, U>,
+                          optional> &
     operator=(optional<U> &&other) {
         if (other.has_value()) {
             this->_asgn_v(ala::move(*other));
@@ -280,7 +276,8 @@ public:
     }
 
     template<class... Args>
-    constexpr enable_if_t<is_constructible<T, Args...>::value, T &> emplace(Args &&...args) {
+    constexpr enable_if_t<is_constructible<T, Args...>::value, T &>
+    emplace(Args &&...args) {
         reset();
         this->_ctor_v(ala::forward<Args>(args)...);
         return **this;

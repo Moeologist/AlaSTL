@@ -942,13 +942,17 @@ constexpr bool _is_permutation_dispatch(ForwardIter1 first1, ForwardIter1 last1,
                                         ForwardIter2 first2, ForwardIter2 last2,
                                         BinPred pred, false_type) {
     using T = typename iterator_traits<ForwardIter1>::value_type;
+    auto p = ala::mismatch(first1, last1, first2, last2, pred);
+    first1 = p.first;
+    first2 = p.second;
     ForwardIter1 i = first1;
     ForwardIter2 j = first2;
     for (; i != last1 && j != last2; ++i, (void)++j) {
         auto unary = [&](const T &x) { return pred(x, *i); };
         if (i != ala::find_if(first1, i, unary))
             continue;
-        if (ala::count_if(i, last1, unary) != ala::count_if(first2, last2, unary))
+        auto c = ala::count_if(first2, last2, unary);
+        if (c == 0 || c != ala::count_if(first1, last1, unary))
             return false;
     }
     if (i == last1 && j == last2)
@@ -962,6 +966,38 @@ constexpr bool _is_permutation_dispatch(ForwardIter1 first1, ForwardIter1 last1,
                                         BinPred pred, true_type) {
     if (ala::distance(first1, last1) == ala::distance(first2, last2))
         return ala::_is_permutation_dispatch(first1, last1, first2, last2, pred,
+                                             false_type{});
+    return false;
+}
+
+template<class ForwardIter1, class ForwardIter2>
+constexpr bool _is_permutation_dispatch(ForwardIter1 first1, ForwardIter1 last1,
+                                        ForwardIter2 first2, ForwardIter2 last2,
+                                        false_type) {
+    using T = typename iterator_traits<ForwardIter1>::value_type;
+    auto p = ala::mismatch(first1, last1, first2, last2);
+    first1 = p.first;
+    first2 = p.second;
+    ForwardIter1 i = first1;
+    ForwardIter2 j = first2;
+    for (; i != last1 && j != last2; ++i, (void)++j) {
+        if (i != ala::find(first1, i, *i))
+            continue;
+        auto c = ala::count(first2, last2, *i);
+        if (c == 0 || c != ala::count(first1, last1, *i))
+            return false;
+    }
+    if (i == last1 && j == last2)
+        return true;
+    return false;
+}
+
+template<class ForwardIter1, class ForwardIter2>
+constexpr bool _is_permutation_dispatch(ForwardIter1 first1, ForwardIter1 last1,
+                                        ForwardIter2 first2, ForwardIter2 last2,
+                                        true_type) {
+    if (ala::distance(first1, last1) == ala::distance(first2, last2))
+        return ala::_is_permutation_dispatch(first1, last1, first2, last2,
                                              false_type{});
     return false;
 }
@@ -982,7 +1018,12 @@ constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
 template<class ForwardIter1, class ForwardIter2>
 constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
                               ForwardIter2 first2, ForwardIter2 last2) {
-    return ala::is_permutation(first1, last1, first2, last2, equal_to<>());
+    using tag_t =
+        _and_<is_base_of<random_access_iterator_tag,
+                         typename iterator_traits<ForwardIter1>::iterator_category>,
+              is_base_of<random_access_iterator_tag,
+                         typename iterator_traits<ForwardIter2>::iterator_category>>;
+    return ala::_is_permutation_dispatch(first1, last1, first2, last2, tag_t{});
 }
 
 template<class ForwardIter1, class ForwardIter2, class BinPred>
@@ -996,7 +1037,9 @@ constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
 template<class ForwardIter1, class ForwardIter2>
 constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
                               ForwardIter2 first2) {
-    return ala::is_permutation(first1, last1, first2, equal_to<>());
+    ForwardIter2 last2 = first2;
+    ala::advance(last2, ala::distance(first1, last1));
+    return ala::is_permutation(first1, last1, first2, last2);
 }
 
 template<class ForwardIter>

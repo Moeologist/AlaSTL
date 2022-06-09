@@ -95,7 +95,7 @@ ForwardIter uninitialized_fill_n(ForwardIter first, Size count, const T &x) {
 template<class T>
 constexpr enable_if_t<is_array<T>::value> destroy_at(T *p) {
     for (auto &elem : *p)
-        destroy_at(ala::addressof(elem));
+        ala::destroy_at(ala::addressof(elem));
 }
 
 template<class T>
@@ -103,10 +103,11 @@ constexpr enable_if_t<!is_array<T>::value> destroy_at(T *p) {
     p->~T();
 }
 
-template<class T, class... Args>
-constexpr T *construct_at(T *p, Args &&... args) {
-    return ::new (const_cast<void *>(static_cast<const volatile void *>(p)))
-        T(ala::forward<Args>(args)...);
+template<class T, class... Args,
+         class = decltype(::new (declval<void *>()) T(declval<Args>()...))>
+constexpr T *construct_at(T *p, Args &&...args) {
+    return ::new (const_cast<void *>(static_cast<const volatile void *>(
+        ala::addressof(*p)))) T(ala::forward<Args>(args)...);
 }
 
 template<class ForwardIter>
