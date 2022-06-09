@@ -13,8 +13,8 @@ concept derived_from = is_base_of_v<Base, Derived> &&
     is_convertible_v<const volatile Derived *, const volatile Base *>;
 
 template<class From, class To>
-concept convertible_to = is_convertible_v<From, To> && requires(From (&f)()) {
-    static_cast<To>(f());
+concept convertible_to = is_convertible_v<From, To> && requires {
+    static_cast<To>(declval<From>());
 };
 
 template<class T>
@@ -58,7 +58,8 @@ template<class T>
 concept __signed_integeral_arithmetic = signed_integral<T> && !same_as<T, bool>;
 
 template<class T>
-concept __unsigned_integeral_arithmetic = unsigned_integral<T> && !same_as<T, bool>;
+concept __unsigned_integeral_arithmetic = unsigned_integral<T> &&
+    !same_as<T, bool>;
 
 template<class T>
 concept floating_point = is_floating_point_v<T>;
@@ -102,8 +103,8 @@ template<class T>
 void swap(T &, T &) = delete;
 
 template<class T, class U>
-concept __enable_adl = (__class_or_enum<T> ||
-                       __class_or_enum<U>)&&requires(T &&t, U &&u) {
+concept __enable_adl = (__class_or_enum<remove_cvref_t<T>> ||
+                        __class_or_enum<remove_cvref_t<U>>)&&requires(T &&t, U &&u) {
     swap(static_cast<T &&>(t), static_cast<U &&>(u));
 };
 
@@ -142,16 +143,15 @@ struct _cpo_fn {
 inline namespace _cpos {
 inline constexpr _swap::_cpo_fn swap;
 }
-}
+} // namespace ranges
 
 template<class T>
 concept swappable = requires(T &a, T &b) {
-    ala::ranges::swap(a, b);
+    ranges::swap(a, b);
 };
 
 template<class T, class U>
-concept swappable_with = common_reference_with < const remove_reference_t<T>
-&, const remove_reference_t<U> & > &&requires(T &&t, U &&u) {
+concept swappable_with = common_reference_with<T, U> && requires(T &&t, U &&u) {
     ala::ranges::swap(ala::forward<T>(t), ala::forward<T>(t));
     ala::ranges::swap(ala::forward<U>(u), ala::forward<U>(u));
     ala::ranges::swap(ala::forward<T>(t), ala::forward<U>(u));
@@ -159,7 +159,7 @@ concept swappable_with = common_reference_with < const remove_reference_t<T>
 };
 
 template<class T, class U>
-concept __weakly_equality_comparable_with = // 仅为阐释
+concept __weakly_equality_comparable_with =
     requires(const remove_reference_t<T> &t, const remove_reference_t<U> &u) {
     { t == u } -> __boolean_testable;
     { t != u } -> __boolean_testable;
@@ -225,7 +225,6 @@ concept regular = semiregular<T> && equality_comparable<T>;
 template<class F, class... Args>
 concept invocable = requires(F &&f, Args &&...args) {
     ala::invoke(static_cast<F &&>(f), static_cast<Args &&>(args)...);
-    // 不要求保持相等性
 };
 
 template<class F, class... Args>

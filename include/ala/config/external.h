@@ -17,6 +17,8 @@ using ::std::exception;
 using ::std::length_error;
 using ::std::out_of_range;
 using ::std::logic_error;
+using ::std::runtime_error;
+using ::std::overflow_error;
 
 using ::std::initializer_list;
 

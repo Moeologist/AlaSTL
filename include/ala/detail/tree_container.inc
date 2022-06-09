@@ -681,7 +681,7 @@ template<class Key, class T, class Comp, class Alloc>
 bool operator==(const CONTAINER<Key, T, Comp, Alloc> &lhs,
                 const CONTAINER<Key, T, Comp, Alloc> &rhs) {
     if (lhs.size() == rhs.size())
-        return equal(lhs.begin(), lhs.end(), rhs.begin());
+        return ala::equal(lhs.begin(), lhs.end(), rhs.begin());
     return false;
 }
 
@@ -694,7 +694,7 @@ bool operator!=(const CONTAINER<Key, T, Comp, Alloc> &lhs,
 template<class Key, class T, class Comp, class Alloc>
 bool operator<(const CONTAINER<Key, T, Comp, Alloc> &lhs,
                const CONTAINER<Key, T, Comp, Alloc> &rhs) {
-    return lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
+    return ala::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
                                    rhs.end());
 }
 
@@ -728,7 +728,7 @@ template<class Key, class Comp, class Alloc>
 bool operator==(const CONTAINER<Key, Comp, Alloc> &lhs,
                 const CONTAINER<Key, Comp, Alloc> &rhs) {
     if (lhs.size() == rhs.size())
-        return equal(lhs.begin(), lhs.end(), rhs.begin());
+        return ala::equal(lhs.begin(), lhs.end(), rhs.begin());
     return false;
 }
 

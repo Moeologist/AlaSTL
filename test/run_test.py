@@ -61,15 +61,15 @@ srcs = [
     # 'std/containers/container.node',
     # 'std/containers/containers.general',
     # 'std/containers/container.requirements',
-    # 'std/containers/associative/map',
-    # 'std/containers/associative/multimap',
-    # 'std/containers/associative/set',
-    # 'std/containers/associative/multiset',
+    'std/containers/associative/map',
+    'std/containers/associative/multimap',
+    'std/containers/associative/set',
+    'std/containers/associative/multiset',
     # 'std/containers/sequences/array',
     # 'std/containers/sequences/vector',
-    # 'std/containers/sequences/list',
+    'std/containers/sequences/list',
     'std/containers/sequences/forwardlist',
-    'std/containers/views',
+    # 'std/containers/views',
     # 'std/utilities/meta',
     # 'std/utilities/function.objects',
     # 'std/utilities/utility',
@@ -79,6 +79,7 @@ srcs = [
     # 'std/utilities/optional',
     # 'std/utilities/smartptr',
     # 'std/utilities/memory/util.smartptr',
+    'std/concepts',
 ]
 
 
@@ -240,13 +241,31 @@ def patch(str):
         '#include <memory>', '#include <memory>\n#include <ala/memory.h>').replace(
         '#include <forward_list>', '#include <ala/forward_list.h>').replace(
         '#include <span>', '#include <ala/span.h>').replace(
+        '#include <concepts>', '#include <ala/concepts.h>').replace(
+        # '#include <ranges>', '#include <ala/ranges.h>').replace(
         'std::string', 'ALASTD::string').replace(
+        'std::wstring', 'ALASTD::wstring').replace(
+        'std::u8string', 'ALASTD::u8string').replace(
+        'std::u16string', 'ALASTD::u16string').replace(
+        'std::u32string', 'ALASTD::u32string').replace(
         'std::printf', 'ALASTD::printf').replace(
         'std::pow', 'ALASTD::pow').replace(
         'std::cout', 'ALASTD::cout').replace(
         'std::endl', 'ALASTD::endl').replace(
         'std::complex', 'ALASTD::complex').replace(
-        'std::mt19937 randomness', 'ala::xoshiro256ss randomness{12345}').replace(
+        'std::mt19937', 'ALASTD::mt19937').replace(
+        'std::mt19937_64', 'ALASTD::mt19937_64').replace(
+        'std::deque', 'ALASTD::deque').replace(
+        'std::unordered_map', 'ALASTD::unordered_map').replace(
+        'std::unordered_set', 'ALASTD::unordered_set').replace(
+        'std::unordered_multimap', 'ALASTD::unordered_multimap').replace(
+        'std::unordered_multiset', 'ALASTD::unordered_multiset').replace(
+        'std::lock_guard', 'ALASTD::lock_guard').replace(
+        'std::mutex', 'ALASTD::mutex').replace(
+        'std::basic_string', 'ALASTD::basic_string').replace(
+        'std::stack', 'ALASTD::stack').replace(
+        'std::queue', 'ALASTD::queue').replace(
+        'std::priority_queue', 'ALASTD::priority_queue').replace(
         'std::', 'ala::').replace(
         'assert(distance(', 'assert(ala::distance(').replace(
         'assert(*next(', 'assert(*ala::next(').replace(

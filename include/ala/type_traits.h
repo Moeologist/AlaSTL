@@ -2,13 +2,18 @@
 #ifndef _ALA_TYPE_TRAITS_H
 #define _ALA_TYPE_TRAITS_H
 
+#include <ala/detail/traits_declare.h>
+
 #ifdef _ALA_MSVC
     #pragma warning(push)
     #pragma warning(disable : 4180)
     #pragma warning(disable : 4197)
 #endif
 
-#include <ala/detail/traits_declare.h>
+#ifdef _ALA_CLANG
+    #pragma clang diagnostic push
+    #pragma clang diagnostic ignored "-Wdeprecated-volatile"
+#endif
 
 namespace std {
 
@@ -877,7 +882,7 @@ struct _sc_reference<T1, T2, true>
               _sc_ref_mix<T1, T2>>> {};
 
 template<typename T1, typename T2, typename = void>
-struct _common_reference_2_helper: common_type_t<T1, T2> {};
+struct _common_reference_2_helper: common_type<T1, T2> {};
 
 template<typename T1, typename T2>
 struct _common_reference_2_helper<T1, T2, void_t<_cond_ref_t<T1, T2>>>
@@ -986,6 +991,10 @@ struct is_specification<Templt<Args...>, Templt>: true_type {};
 
 #ifdef _ALA_MSVC
     #pragma warning(pop)
+#endif
+
+#ifdef _ALA_CLANG
+    #pragma clang diagnostic pop
 #endif
 
 #endif // HEAD

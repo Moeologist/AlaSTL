@@ -41,7 +41,7 @@ struct _optional_destroy {
         return _valid;
     }
     template<class... Args>
-    constexpr _optional_destroy(in_place_t, Args &&... args)
+    constexpr _optional_destroy(in_place_t, Args &&...args)
         : _value(ala::forward<Args>(args)...), _valid{true} {}
     constexpr _optional_destroy(): _placehold{} {}
     constexpr _optional_destroy(_optional_destroy &&) = default;
@@ -70,7 +70,7 @@ struct _optional_destroy<T, false> {
         return _valid;
     }
     template<class... Args>
-    constexpr _optional_destroy(in_place_t, Args &&... args)
+    constexpr _optional_destroy(in_place_t, Args &&...args)
         : _value(ala::forward<Args>(args)...), _valid{true} {}
     constexpr _optional_destroy(): _placehold{} {}
     constexpr _optional_destroy(_optional_destroy &&) = default;
@@ -91,11 +91,13 @@ struct _optional_base: _optional_destroy<T> {
     }
 
     template<class... Args>
-    void _ctor_v(Args &&... args) {
+    void _ctor_v(Args &&...args) {
         assert(!this->_has_value());
         try {
             ::new (this->_address()) T(ala::forward<Args>(args)...);
-        } catch (...) { throw; }
+        } catch (...) {
+            throw;
+        }
         this->_valid = true;
     }
 
@@ -111,7 +113,9 @@ struct _optional_base: _optional_destroy<T> {
         if (this->_has_value()) {
             try {
                 this->_value = ala::forward<Arg>(arg);
-            } catch (...) { throw; }
+            } catch (...) {
+                throw;
+            }
         } else {
             this->_ctor_v(ala::forward<Arg>(arg));
         }
@@ -155,7 +159,7 @@ public:
 
     // enable_if_t make Clang's is_constructible failed
     template<class... Args /*, class = enable_if_t<is_constructible<T, Args...>::value>*/>
-    constexpr explicit optional(in_place_t, Args &&... args)
+    constexpr explicit optional(in_place_t, Args &&...args)
         : _base_t(in_place_t(), ala::forward<Args>(args)...) {}
 
     template<class U, class... Args/*,
@@ -276,7 +280,7 @@ public:
     }
 
     template<class... Args>
-    enable_if_t<is_constructible<T, Args...>::value, T &> emplace(Args &&... args) {
+    enable_if_t<is_constructible<T, Args...>::value, T &> emplace(Args &&...args) {
         reset();
         this->_ctor_v(ala::forward<Args>(args)...);
         return **this;
@@ -284,7 +288,7 @@ public:
 
     template<class U, class... Args>
     enable_if_t<is_constructible<T, initializer_list<U> &, Args...>::value, T &>
-    emplace(initializer_list<U> il, Args &&... args) {
+    emplace(initializer_list<U> il, Args &&...args) {
         reset();
         this->_ctor_v(il, ala::forward<Args>(args)...);
         return **this;
@@ -450,7 +454,8 @@ public:
         return _optional_or_else_impl(*this, f);
     }
 
-    template<class Opt, class F, class Ret = invoke_result_t<F, typename Opt::value_type>,
+    template<class Opt, class F,
+             class Ret = invoke_result_t<F, typename Opt::value_type>,
              class = enable_if_t<!is_void<Ret>::value>>
     constexpr auto _optional_fmap_impl(Opt &&opt, F &&f) -> optional<Ret> {
         return opt.has_value() ?
@@ -458,10 +463,10 @@ public:
                    nullopt;
     }
 
-    template<class Opt, class F, class Ret = invoke_result_t<F, typename Opt::value_type>,
+    template<class Opt, class F,
+             class Ret = invoke_result_t<F, typename Opt::value_type>,
              class = enable_if_t<is_void<Ret>::value>, class = void>
-    constexpr auto _optional_fmap_impl(Opt &&opt, F &&f)
-        -> optional<monostate> {
+    constexpr auto _optional_fmap_impl(Opt &&opt, F &&f) -> optional<monostate> {
         if (opt.has_value()) {
             ala::invoke(ala::forward<F>(f), *ala::forward<Opt>(opt));
             return optional<monostate>(monostate{});
@@ -496,34 +501,46 @@ optional(T) -> optional<T>;
 #endif
 
 template<class T, class U>
-constexpr bool operator==(const optional<T> &lhs, const optional<U> &rhs) {
+constexpr enable_if_t<
+    is_convertible<decltype(declval<const T &>() == declval<const U &>()), bool>::value, bool>
+operator==(const optional<T> &lhs, const optional<U> &rhs) {
     return lhs.has_value() == rhs.has_value() &&
            (!rhs.has_value() || *lhs == *rhs);
 }
 
 template<class T, class U>
-constexpr bool operator!=(const optional<T> &lhs, const optional<U> &rhs) {
+constexpr enable_if_t<
+    is_convertible<decltype(declval<const T &>() != declval<const U &>()), bool>::value, bool>
+operator!=(const optional<T> &lhs, const optional<U> &rhs) {
     return lhs.has_value() != rhs.has_value() ||
            (lhs.has_value() && *lhs != *rhs);
 }
 
 template<class T, class U>
-constexpr bool operator<(const optional<T> &lhs, const optional<U> &rhs) {
+constexpr enable_if_t<
+    is_convertible<decltype(declval<const T &>() < declval<const U &>()), bool>::value, bool>
+operator<(const optional<T> &lhs, const optional<U> &rhs) {
     return rhs.has_value() && (!lhs.has_value() || *lhs < *rhs);
 }
 
 template<class T, class U>
-constexpr bool operator<=(const optional<T> &lhs, const optional<U> &rhs) {
+constexpr enable_if_t<
+    is_convertible<decltype(declval<const T &>() <= declval<const U &>()), bool>::value, bool>
+operator<=(const optional<T> &lhs, const optional<U> &rhs) {
     return !lhs.has_value() || (rhs.has_value() && *lhs <= *rhs);
 }
 
 template<class T, class U>
-constexpr bool operator>(const optional<T> &lhs, const optional<U> &rhs) {
+constexpr enable_if_t<
+    is_convertible<decltype(declval<const T &>() > declval<const U &>()), bool>::value, bool>
+operator>(const optional<T> &lhs, const optional<U> &rhs) {
     return lhs.has_value() && (!rhs.has_value() || *lhs > *rhs);
 }
 
 template<class T, class U>
-constexpr bool operator>=(const optional<T> &lhs, const optional<U> &rhs) {
+constexpr enable_if_t<
+    is_convertible<decltype(declval<const T &>() >= declval<const U &>()), bool>::value, bool>
+operator>=(const optional<T> &lhs, const optional<U> &rhs) {
     return !rhs.has_value() || (lhs.has_value() && *lhs >= *rhs);
 }
 // comparison with nullopt
@@ -673,12 +690,12 @@ constexpr optional<decay_t<T>> make_optional(T &&value) {
 }
 
 template<class T, class... Args>
-constexpr optional<T> make_optional(Args &&... args) {
+constexpr optional<T> make_optional(Args &&...args) {
     return ala::optional<T>(in_place_t(), ala::forward<Args>(args)...);
 }
 
 template<class T, class U, class... Args>
-constexpr optional<T> make_optional(initializer_list<U> il, Args &&... args) {
+constexpr optional<T> make_optional(initializer_list<U> il, Args &&...args) {
     return ala::optional<T>(in_place_t(), il, ala::forward<Args>(args)...);
 }
 
