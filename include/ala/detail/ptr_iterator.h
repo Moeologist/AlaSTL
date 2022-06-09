@@ -8,13 +8,13 @@ namespace ala {
 template<class Value, class Ptr>
 struct ptr_iterator {
 #if ALA_API_VER >= 20
-    typedef contiguous_iterator_tag iterator_concept;
+    using iterator_concept = contiguous_iterator_tag;
 #endif
-    typedef random_access_iterator_tag iterator_category;
-    typedef Value value_type;
-    typedef typename pointer_traits<Ptr>::difference_type difference_type;
-    typedef Ptr pointer;
-    typedef value_type &reference;
+    using iterator_category = random_access_iterator_tag;
+    using value_type = Value;
+    using difference_type = typename pointer_traits<Ptr>::difference_type;
+    using pointer = Ptr;
+    using reference = value_type &;
 
     constexpr ptr_iterator() {}
     constexpr ptr_iterator(const ptr_iterator &other): _ptr(other._ptr) {}
@@ -107,11 +107,13 @@ struct ptr_iterator {
     }
 
     template<class Value1, class Ptr1>
-    constexpr difference_type operator-(const ptr_iterator<Value1, Ptr1> &rhs) const {
+    constexpr difference_type
+    operator-(const ptr_iterator<Value1, Ptr1> &rhs) const {
         return _ptr - rhs._ptr;
     }
 
-    friend constexpr ptr_iterator operator+(difference_type lhs, ptr_iterator rhs) {
+    friend constexpr ptr_iterator operator+(difference_type lhs,
+                                            ptr_iterator rhs) {
         return rhs + lhs;
     }
 
@@ -140,6 +142,6 @@ protected:
 
     Ptr _ptr = nullptr;
 };
-}
+} // namespace ala
 
 #endif

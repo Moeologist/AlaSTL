@@ -86,12 +86,12 @@ struct _optional_base: _optional_destroy<T> {
     using _base_t::_has_value;
     using _base_t::_reset;
 
-    void *_address() {
+    constexpr void *_address() {
         return &this->_placehold;
     }
 
     template<class... Args>
-    void _ctor_v(Args &&...args) {
+    constexpr void _ctor_v(Args &&...args) {
         assert(!this->_has_value());
         try {
             ::new (this->_address()) T(ala::forward<Args>(args)...);
@@ -102,14 +102,14 @@ struct _optional_base: _optional_destroy<T> {
     }
 
     template<class OptBase>
-    void _ctor(OptBase &&other) noexcept(
+    constexpr void _ctor(OptBase &&other) noexcept(
         is_nothrow_constructible<T, decltype((declval<OptBase>()._value))>::value) {
         if (other._has_value())
             this->_ctor_v(ala::forward<OptBase>(other)._value);
     }
 
     template<class Arg>
-    void _asgn_v(Arg &&arg) {
+    constexpr void _asgn_v(Arg &&arg) {
         if (this->_has_value()) {
             try {
                 this->_value = ala::forward<Arg>(arg);
@@ -122,7 +122,7 @@ struct _optional_base: _optional_destroy<T> {
     }
 
     template<class OptBase>
-    void _asgn(OptBase &&other) noexcept(
+    constexpr void _asgn(OptBase &&other) noexcept(
         is_nothrow_constructible<T, decltype((declval<OptBase>()._value))>::value &&
             is_nothrow_assignable<T &, decltype((declval<OptBase>()._value))>::value) {
         if (other._has_value()) {
@@ -194,7 +194,7 @@ public:
     template<class U, class = enable_if_t<is_constructible<T, const U &>::value &&
                                           _check<U>::value &&
                                           is_convertible<const U &, T>::value>>
-    optional(const optional<U> &other) {
+    constexpr optional(const optional<U> &other) {
         if (other)
             this->_ctor_v(*other);
     }
@@ -202,7 +202,7 @@ public:
     template<class U, class = void,
              class = enable_if_t<is_constructible<T, const U &>::value && _check<U>::value &&
                                  !is_convertible<const U &, T>::value>>
-    explicit optional(const optional<U> &other) {
+    explicit constexpr optional(const optional<U> &other) {
         if (other)
             this->_ctor_v(*other);
     }
@@ -210,7 +210,7 @@ public:
     template<class U,
              class = enable_if_t<is_constructible<T, U &&>::value &&
                                  _check<U>::value && is_convertible<U &&, T>::value>>
-    optional(optional<U> &&other) {
+    constexpr optional(optional<U> &&other) {
         if (other)
             this->_ctor_v(ala::move(*other));
     }
@@ -218,7 +218,7 @@ public:
     template<class U, class = void,
              class = enable_if_t<is_constructible<T, U &&>::value && _check<U>::value &&
                                  !is_convertible<U &&, T>::value>>
-    explicit optional(optional<U> &&other) {
+    explicit constexpr optional(optional<U> &&other) {
         if (other)
             this->_ctor_v(ala::move(*other));
     }
@@ -226,7 +226,7 @@ public:
     // destructor
     ~optional() = default;
     // assignment
-    optional &operator=(nullopt_t) noexcept {
+    constexpr optional &operator=(nullopt_t) noexcept {
         reset();
         return *this;
     }
@@ -235,7 +235,7 @@ public:
     optional &operator=(optional &&) = default;
 
     template<class U = T>
-    enable_if_t<!is_same<optional, remove_cvref_t<U>>::value &&
+    constexpr enable_if_t<!is_same<optional, remove_cvref_t<U>>::value &&
                     is_constructible<T, U>::value && is_assignable<T &, U>::value &&
                     (!is_scalar<T>::value || !is_same<decay_t<U>, T>::value),
                 optional &>
@@ -254,7 +254,7 @@ public:
         is_assignable<T &, optional<U> &&>, is_assignable<T &, const optional<U> &&>>>;
 
     template<class U>
-    enable_if_t<_check_asgn<U>::value && is_constructible_v<T, const U &> &&
+    constexpr enable_if_t<_check_asgn<U>::value && is_constructible_v<T, const U &> &&
                     is_assignable_v<T &, const U &>,
                 optional> &
     operator=(const optional<U> &other) {
@@ -267,7 +267,7 @@ public:
     }
 
     template<class U>
-    enable_if_t<_check_asgn<U>::value && is_constructible_v<T, U> &&
+    constexpr enable_if_t<_check_asgn<U>::value && is_constructible_v<T, U> &&
                     is_assignable_v<T &, U>,
                 optional> &
     operator=(optional<U> &&other) {
@@ -280,21 +280,21 @@ public:
     }
 
     template<class... Args>
-    enable_if_t<is_constructible<T, Args...>::value, T &> emplace(Args &&...args) {
+    constexpr enable_if_t<is_constructible<T, Args...>::value, T &> emplace(Args &&...args) {
         reset();
         this->_ctor_v(ala::forward<Args>(args)...);
         return **this;
     }
 
     template<class U, class... Args>
-    enable_if_t<is_constructible<T, initializer_list<U> &, Args...>::value, T &>
+    constexpr enable_if_t<is_constructible<T, initializer_list<U> &, Args...>::value, T &>
     emplace(initializer_list<U> il, Args &&...args) {
         reset();
         this->_ctor_v(il, ala::forward<Args>(args)...);
         return **this;
     }
     // swap
-    void swap(optional &other) noexcept(
+    constexpr void swap(optional &other) noexcept(
         is_nothrow_move_constructible<T>::value &&is_nothrow_swappable<T>::value) {
         static_assert(is_move_constructible<T>::value && is_swappable<T>::value,
                       "optional<T>::swap requires T to be move_constructible "
@@ -382,7 +382,7 @@ public:
             return static_cast<T>(ala::forward<U>(def_value));
     }
     // modifiers
-    void reset() noexcept {
+    constexpr void reset() noexcept {
         this->_reset();
     }
 
@@ -702,8 +702,8 @@ constexpr optional<T> make_optional(initializer_list<U> il, Args &&...args) {
 template<class T>
 struct hash<_sfinae_checker<optional<T>,
                             enable_if_t<_is_hashable<remove_const_t<T>>::value>>> {
-    typedef optional<T> argument_type;
-    typedef size_t result_type;
+    using argument_type = optional<T>;
+    using result_type = size_t;
 
     result_type operator()(const argument_type &opt) const {
         return !!opt ? hash<remove_const_t<T>>()(*opt) : 0;

@@ -11,19 +11,19 @@ template<class T, class Alloc = allocator<T>>
 class vector {
 public:
     // types:
-    typedef T value_type;
-    typedef Alloc allocator_type;
-    typedef value_type &reference;
-    typedef const value_type &const_reference;
-    typedef allocator_traits<allocator_type> _alloc_traits;
-    typedef typename _alloc_traits::size_type size_type;
-    typedef typename _alloc_traits::difference_type difference_type;
-    typedef typename _alloc_traits::pointer pointer;
-    typedef typename _alloc_traits::const_pointer const_pointer;
-    typedef ptr_iterator<value_type, pointer> iterator;
-    typedef ptr_iterator<const value_type, const_pointer> const_iterator;
-    typedef ala::reverse_iterator<iterator> reverse_iterator;
-    typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
+    using value_type = T;
+    using allocator_type = Alloc;
+    using reference = value_type &;
+    using const_reference = const value_type &;
+    using _alloc_traits = allocator_traits<allocator_type>;
+    using size_type = typename _alloc_traits::size_type;
+    using difference_type = typename _alloc_traits::difference_type;
+    using pointer = typename _alloc_traits::pointer;
+    using const_pointer = typename _alloc_traits::const_pointer;
+    using iterator = ptr_iterator<value_type, pointer>;
+    using const_iterator = ptr_iterator<const value_type, const_pointer>;
+    using reverse_iterator = ala::reverse_iterator<iterator>;
+    using const_reverse_iterator = ala::reverse_iterator<const_iterator>;
     static_assert(is_same<value_type, typename _alloc_traits::value_type>::value,
                   "allocator::value_type mismatch");
 
@@ -680,7 +680,7 @@ public:
                        typename iterator_traits<InputIter>::iterator_category>::value,
         iterator>
     insert(const_iterator position, InputIter first, InputIter last) {
-        typedef typename iterator_traits<InputIter>::difference_type diff_t;
+        using diff_t = typename iterator_traits<InputIter>::difference_type;
         diff_t n = ala::distance(first, last);
         difference_type offset = position - cbegin();
         pointer pos = begin() + offset;

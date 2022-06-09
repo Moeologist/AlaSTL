@@ -19,30 +19,33 @@ struct _tuple_size_sfinae<Tuple, void_t<decltype(tuple_size<Tuple>::value)>>
     : integral_constant<size_t, tuple_size<Tuple>::value> {};
 
 template<typename T>
-struct tuple_size<_sfinae_checker<const T, decltype(sizeof(tuple_size<T>))>>: _tuple_size_sfinae<T> {};
+struct tuple_size<_sfinae_checker<const T, decltype(sizeof(tuple_size<T>))>>
+    : _tuple_size_sfinae<T> {};
 
 template<typename T>
-struct tuple_size<_sfinae_checker<volatile T, decltype(sizeof(tuple_size<T>))>>: _tuple_size_sfinae<T> {};
+struct tuple_size<_sfinae_checker<volatile T, decltype(sizeof(tuple_size<T>))>>
+    : _tuple_size_sfinae<T> {};
 
 template<typename T>
-struct tuple_size<_sfinae_checker<const volatile T, decltype(sizeof(tuple_size<T>))>>: _tuple_size_sfinae<T> {};
+struct tuple_size<_sfinae_checker<const volatile T, decltype(sizeof(tuple_size<T>))>>
+    : _tuple_size_sfinae<T> {};
 
 template<size_t I, typename T>
 struct tuple_element;
 
 template<size_t I, typename T>
 struct tuple_element<I, const T> {
-    typedef add_const_t<typename tuple_element<I, T>::type> type;
+    using type = add_const_t<typename tuple_element<I, T>::type>;
 };
 
 template<size_t I, typename T>
 struct tuple_element<I, volatile T> {
-    typedef add_volatile_t<typename tuple_element<I, T>::type> type;
+    using type = add_volatile_t<typename tuple_element<I, T>::type>;
 };
 
 template<size_t I, typename T>
 struct tuple_element<I, const volatile T> {
-    typedef add_cv_t<typename tuple_element<I, T>::type> type;
+    using type = add_cv_t<typename tuple_element<I, T>::type>;
 };
 
 #if _ALA_ENABLE_INLINE_VAR
@@ -68,7 +71,7 @@ struct tuple_size<array<T, N>>: integral_constant<size_t, N> {};
 template<size_t I, class T, size_t N>
 struct tuple_element<I, array<T, N>> {
     static_assert(I < N, "ala::array index out of range");
-    typedef T type;
+    using type = T;
 };
 
 template<class T1, class T2>

@@ -86,11 +86,11 @@ constexpr rb_node *prev_node(rb_node *_ptr) {
 
 template<class Value, class Ptr>
 struct rb_iterator {
-    typedef bidirectional_iterator_tag iterator_category;
-    typedef Value value_type;
-    typedef typename pointer_traits<Ptr>::difference_type difference_type;
-    typedef value_type *pointer;
-    typedef value_type &reference;
+    using iterator_category = bidirectional_iterator_tag;
+    using value_type = Value;
+    using difference_type = typename pointer_traits<Ptr>::difference_type;
+    using pointer = value_type *;
+    using reference = value_type &;
 
     constexpr rb_iterator() {}
     constexpr rb_iterator(const rb_iterator &other): _ptr(other._ptr) {}
@@ -171,15 +171,15 @@ protected:
 template<class Value, class Comp, class Alloc, bool IsMap, bool IsUniq>
 class rb_tree {
 public:
-    typedef Value value_type;
-    typedef Comp value_compare;
-    typedef Alloc allocator_type;
-    typedef rb_vnode<value_type> _node_t;
-    typedef allocator_traits<allocator_type> _alloc_traits;
-    typedef typename _alloc_traits::size_type size_type;
-    typedef rb_node *_hdle_t;
-    typedef rb_iterator<value_type, _hdle_t> iterator;
-    typedef rb_iterator<const value_type, _hdle_t> const_iterator;
+    using value_type = Value;
+    using value_compare = Comp;
+    using allocator_type = Alloc;
+    using _node_t = rb_vnode<value_type>;
+    using _alloc_traits = allocator_traits<allocator_type>;
+    using size_type = typename _alloc_traits::size_type;
+    using _hdle_t = rb_node *;
+    using iterator = rb_iterator<value_type, _hdle_t>;
+    using const_iterator = rb_iterator<const value_type, _hdle_t>;
 
 protected:
     template<class, class, class, bool, bool>
@@ -219,7 +219,6 @@ protected:
 
     template<typename P, bool Dummy = IsMap, typename = enable_if_t<!Dummy>>
     const value_type &_key_get(const P &v) const noexcept {
-        // static_assert(_is_pair<P>::value == IsMap, "Internal error");
         return v;
     }
 

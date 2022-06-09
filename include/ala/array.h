@@ -9,17 +9,17 @@ namespace ala {
 template<class T, size_t N>
 struct array {
     // types:
-    typedef T &reference;
-    typedef const T &const_reference;
-    typedef T *iterator;
-    typedef const T *const_iterator;
-    typedef size_t size_type;
-    typedef ptrdiff_t difference_type;
-    typedef T value_type;
-    typedef T *pointer;
-    typedef const T *const_pointer;
-    typedef ala::reverse_iterator<iterator> reverse_iterator;
-    typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
+    using reference = T &;
+    using const_reference = const T &;
+    using iterator = T *;
+    using const_iterator = const T *;
+    using size_type = size_t;
+    using difference_type = ptrdiff_t;
+    using value_type = T;
+    using pointer = T *;
+    using const_pointer = const T *;
+    using reverse_iterator = ala::reverse_iterator<iterator>;
+    using const_reverse_iterator = ala::reverse_iterator<const_iterator>;
 
     T _data[N];
 
@@ -143,17 +143,17 @@ struct array {
 template<class T>
 struct array<T, 0> {
     // types:
-    typedef T &reference;
-    typedef const T &const_reference;
-    typedef T *iterator;
-    typedef const T *const_iterator;
-    typedef size_t size_type;
-    typedef ptrdiff_t difference_type;
-    typedef T value_type;
-    typedef T *pointer;
-    typedef const T *const_pointer;
-    typedef ala::reverse_iterator<iterator> reverse_iterator;
-    typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
+    using reference = T &;
+    using const_reference = const T &;
+    using iterator = T *;
+    using const_iterator = const T *;
+    using size_type = size_t;
+    using difference_type = ptrdiff_t;
+    using value_type = T;
+    using pointer = T *;
+    using const_pointer = const T *;
+    using reverse_iterator = ala::reverse_iterator<iterator>;
+    using const_reverse_iterator = ala::reverse_iterator<const_iterator>;
 
     struct _array_struct {
         T _m[1];

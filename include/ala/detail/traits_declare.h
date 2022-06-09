@@ -166,7 +166,7 @@ template<typename F, typename... Args>                       using invoke_result
 template<typename...> using void_t = void;
 #else
 // http://open-std.org/JTC1/SC22/WG21/docs/cwg_defects.html#1558
-template<typename... Ts> struct _void_t_impl { typedef void type; };
+template<typename... Ts> struct _void_t_impl { using type = void ; };
 template<typename... Ts> using void_t = typename _void_t_impl<Ts...>::type;
 #endif
 

@@ -8,7 +8,9 @@ namespace ala {
 template<typename... T>
 struct tuple;
 
-struct piecewise_construct_t { explicit piecewise_construct_t() = default; };
+struct piecewise_construct_t {
+    explicit piecewise_construct_t() = default;
+};
 
 #if _ALA_ENABLE_INLINE_VAR
 inline constexpr piecewise_construct_t piecewise_construct{};
@@ -18,8 +20,8 @@ constexpr piecewise_construct_t piecewise_construct{};
 
 template<typename T1, typename T2>
 struct pair {
-    typedef T1 first_type;
-    typedef T2 second_type;
+    using first_type = T1;
+    using second_type = T2;
 
     first_type first;
     second_type second;
@@ -225,8 +227,8 @@ constexpr Return _pair_get_helper(Pair &pr,
 template<size_t I, class T1, class T2>
 constexpr tuple_element_t<I, pair<T1, T2>> &get(pair<T1, T2> &pr) noexcept {
     static_assert(I == 0 || I == 1, "ala::pair index out of range");
-    typedef tuple_element_t<I, pair<T1, T2>> &type;
-    typedef integral_constant<size_t, I> idx;
+    using type = tuple_element_t<I, pair<T1, T2>> &;
+    using idx = integral_constant<size_t, I>;
     return _pair_get_helper<type>(pr, idx());
 }
 
@@ -234,16 +236,16 @@ template<size_t I, class T1, class T2>
 constexpr const tuple_element_t<I, pair<T1, T2>> &
 get(const pair<T1, T2> &pr) noexcept {
     static_assert(I == 0 || I == 1, "ala::pair index out of range");
-    typedef const tuple_element_t<I, pair<T1, T2>> &type;
-    typedef integral_constant<size_t, I> idx;
+    using type = const tuple_element_t<I, pair<T1, T2>> &;
+    using idx = integral_constant<size_t, I>;
     return _pair_get_helper<type>(pr, idx());
 }
 
 template<size_t I, class T1, class T2>
 constexpr tuple_element_t<I, pair<T1, T2>> &&get(pair<T1, T2> &&pr) noexcept {
     static_assert(I == 0 || I == 1, "ala::pair index out of range");
-    typedef tuple_element_t<I, pair<T1, T2>> &&type;
-    typedef integral_constant<size_t, I> idx;
+    using type = tuple_element_t<I, pair<T1, T2>> &&;
+    using idx = integral_constant<size_t, I>;
     return ala::forward<type>(ala::get<I>(pr));
 }
 
@@ -251,8 +253,8 @@ template<size_t I, class T1, class T2>
 constexpr const tuple_element_t<I, pair<T1, T2>> &&
 get(const pair<T1, T2> &&pr) noexcept {
     static_assert(I == 0 || I == 1, "ala::pair index out of range");
-    typedef const tuple_element_t<I, pair<T1, T2>> &&type;
-    typedef integral_constant<size_t, I> idx;
+    using type = const tuple_element_t<I, pair<T1, T2>> &&;
+    using idx = integral_constant<size_t, I>;
     return ala::forward<type>(ala::get<I>(pr));
 }
 

@@ -57,28 +57,28 @@ else:
 
 lflags = []
 srcs = [
-    # 'std/algorithms',
-    # 'std/containers/container.node',
-    # 'std/containers/containers.general',
-    # 'std/containers/container.requirements',
+    'std/algorithms',
+    'std/containers/container.node',
+    'std/containers/containers.general',
+    'std/containers/container.requirements',
     'std/containers/associative/map',
     'std/containers/associative/multimap',
     'std/containers/associative/set',
     'std/containers/associative/multiset',
-    # 'std/containers/sequences/array',
-    # 'std/containers/sequences/vector',
+    'std/containers/sequences/array',
+    'std/containers/sequences/vector',
     'std/containers/sequences/list',
     'std/containers/sequences/forwardlist',
-    # 'std/containers/views',
-    # 'std/utilities/meta',
-    # 'std/utilities/function.objects',
-    # 'std/utilities/utility',
-    # 'std/utilities/tuple',
-    # 'std/utilities/any',
-    # 'std/utilities/variant',
-    # 'std/utilities/optional',
-    # 'std/utilities/smartptr',
-    # 'std/utilities/memory/util.smartptr',
+    'std/containers/views',
+    'std/utilities/meta',
+    'std/utilities/function.objects',
+    'std/utilities/utility',
+    'std/utilities/tuple',
+    'std/utilities/any',
+    'std/utilities/variant',
+    'std/utilities/optional',
+    'std/utilities/smartptr',
+    'std/utilities/memory/util.smartptr',
     'std/concepts',
 ]
 
@@ -224,11 +224,11 @@ def preprocess_cmd(fname, output=None):
 def patch(str):
     return str.replace(
         '#include <any>', '#include <ala/any.h>').replace(
-        '#include <algorithm>', '#include <ala/algorithm.h>\n#include <ala/vector.h>').replace(
+        '#include <algorithm>', '#include <ala/algorithm.h>\n#include <ala/vector.h>\n#include <random>').replace(
         '#include <array>', '#include <ala/array.h>').replace(
         '#include <functional>', '#include <ala/functional.h>').replace(
         '#include <iterator>', '#include <ala/iterator.h>').replace(
-        '#include <random>', '#include <ala/random.h>').replace(
+        '#include <random>', '#include <random>\n#include <ala/random.h>').replace(
         '#include <vector>', '#include <ala/vector.h>\n#include <ala/functional.h>').replace(
         '#include <optional>', '#include <ala/optional.h>').replace(
         '#include <variant>', '#include <ala/variant.h>\n#include <ala/tuple.h>').replace(
@@ -255,6 +255,7 @@ def patch(str):
         'std::complex', 'ALASTD::complex').replace(
         'std::mt19937', 'ALASTD::mt19937').replace(
         'std::mt19937_64', 'ALASTD::mt19937_64').replace(
+        'std::uniform_int_distribution', 'ALASTD::uniform_int_distribution').replace(
         'std::deque', 'ALASTD::deque').replace(
         'std::unordered_map', 'ALASTD::unordered_map').replace(
         'std::unordered_set', 'ALASTD::unordered_set').replace(

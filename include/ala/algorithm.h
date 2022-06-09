@@ -140,7 +140,7 @@ constexpr ForwardIter adjacent_find(ForwardIter first, ForwardIter last) {
 template<class InputIter, class T>
 constexpr typename iterator_traits<InputIter>::difference_type
 count(InputIter first, InputIter last, const T &value) {
-    typedef typename iterator_traits<InputIter>::difference_type diff_t;
+    using diff_t = typename iterator_traits<InputIter>::difference_type;
     diff_t n = 0;
     for (; first != last; ++first)
         if (*first == value)
@@ -151,7 +151,7 @@ count(InputIter first, InputIter last, const T &value) {
 template<class InputIter, class UnaryPred>
 constexpr typename iterator_traits<InputIter>::difference_type
 count_if(InputIter first, InputIter last, UnaryPred pred) {
-    typedef typename iterator_traits<InputIter>::difference_type diff_t;
+    using diff_t = typename iterator_traits<InputIter>::difference_type;
     diff_t n = 0;
     for (; first != last; ++first)
         if (pred(*first))
@@ -404,7 +404,7 @@ constexpr OutputIter unique_copy(ForwardIter first, ForwardIter last,
 }
 
 template<class BidirIter>
-void reverse(BidirIter first, BidirIter last) {
+constexpr void reverse(BidirIter first, BidirIter last) {
     while ((first != last) && (first != --last))
         ala::iter_swap(first++, last);
 }
@@ -449,9 +449,9 @@ constexpr OutputIter rotate_copy(ForwardIter first, ForwardIter middle,
 
 template<class RandomIter, class URBG>
 constexpr void shuffle(RandomIter first, RandomIter last, URBG &&g) {
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
-    typedef uniform_int_distribution<diff_t> ud_t;
-    typedef typename ud_t::param_type param_t;
+    using diff_t = typename iterator_traits<RandomIter>::difference_type;
+    using ud_t = uniform_int_distribution<diff_t>;
+    using param_t = typename ud_t::param_type;
     diff_t len = last - first;
     if (len < 2)
         return;
@@ -537,7 +537,7 @@ constexpr ForwardIter partition(ForwardIter first, ForwardIter last,
 template<class BidirIter, class UnaryPred>
 constexpr BidirIter stable_partition(BidirIter first, BidirIter last,
                                      UnaryPred pred) {
-    typedef typename iterator_traits<BidirIter>::value_type T;
+    using T = typename iterator_traits<BidirIter>::value_type;
     auto len = ala::distance(first, last);
     allocator<T> alloc;
     pointer_holder<T *, allocator<T>> ph(alloc, len);
@@ -576,7 +576,7 @@ partition_copy(InputIter first, InputIter last, OutputIter1 out_true,
 template<class ForwardIter, class UnaryPred>
 constexpr ForwardIter partition_point(ForwardIter first, ForwardIter last,
                                       UnaryPred pred) {
-    typedef typename iterator_traits<ForwardIter>::difference_type diff_t;
+    using diff_t = typename iterator_traits<ForwardIter>::difference_type;
     diff_t len = ala::distance(first, last);
 
     while (len > 0) {
@@ -941,7 +941,7 @@ template<class ForwardIter1, class ForwardIter2, class BinPred>
 constexpr bool _is_permutation_dispatch(ForwardIter1 first1, ForwardIter1 last1,
                                         ForwardIter2 first2, ForwardIter2 last2,
                                         BinPred pred, false_type) {
-    typedef typename iterator_traits<ForwardIter1>::value_type T;
+    using T = typename iterator_traits<ForwardIter1>::value_type;
     ForwardIter1 i = first1;
     ForwardIter2 j = first2;
     for (; i != last1 && j != last2; ++i, (void)++j) {
@@ -1003,7 +1003,7 @@ template<class ForwardIter>
 constexpr ForwardIter
 shift_left(ForwardIter first, ForwardIter last,
            typename iterator_traits<ForwardIter>::difference_type n) {
-    typedef typename iterator_traits<ForwardIter>::difference_type diff_t;
+    using diff_t = typename iterator_traits<ForwardIter>::difference_type;
     diff_t len = ala::distance(first, last);
     if (!(0 < n))
         return last;
@@ -1018,7 +1018,7 @@ template<class BidirIter>
 constexpr BidirIter
 _shift_right_dispatch(true_type, BidirIter first, BidirIter last,
                       typename iterator_traits<BidirIter>::difference_type n) {
-    typedef typename iterator_traits<BidirIter>::difference_type diff_t;
+    using diff_t = typename iterator_traits<BidirIter>::difference_type;
     diff_t len = ala::distance(first, last);
     if (!(0 < n))
         return first;
@@ -1033,7 +1033,7 @@ template<class ForwardIter>
 constexpr ForwardIter
 _shift_right_dispatch(false_type, ForwardIter first, ForwardIter last,
                       typename iterator_traits<ForwardIter>::difference_type n) {
-    typedef typename iterator_traits<ForwardIter>::difference_type diff_t;
+    using diff_t = typename iterator_traits<ForwardIter>::difference_type;
     diff_t len = ala::distance(first, last);
     if (!(0 < n))
         return first;

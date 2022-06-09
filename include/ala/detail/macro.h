@@ -11,13 +11,13 @@
 #define ALA_HAS_MEM_TYPEDEF(cls, mem, def) \
     template<typename _type_, typename = void> \
     struct _get_##mem { \
-        typedef def type; \
+        using type = def; \
     }; \
     template<typename _type_> \
     struct _get_##mem<_type_, ala::void_t<typename _type_::mem>> { \
-        typedef typename _type_::mem type; \
+        using type = typename _type_::mem; \
     }; \
-    typedef typename _get_##mem<cls>::type mem;
+    using mem = typename _get_##mem<cls>::type;
 
 namespace ala {
 

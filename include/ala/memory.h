@@ -1500,8 +1500,8 @@ template<class T, class D>
 struct hash<_sfinae_checker<
     unique_ptr<T, D>,
     enable_if_t<_is_hashable<typename unique_ptr<T, D>::pointer>::value>>> {
-    typedef unique_ptr<T, D> argument_type;
-    typedef size_t result_type;
+    using argument_type = unique_ptr<T, D>;
+    using result_type = size_t;
 
     result_type operator()(const argument_type &p) const {
         return hash<typename unique_ptr<T, D>::pointer>()(p.get());
@@ -1512,8 +1512,8 @@ template<class T>
 struct hash<_sfinae_checker<
     shared_ptr<T>,
     enable_if_t<_is_hashable<typename shared_ptr<T>::element_type *>::value>>> {
-    typedef shared_ptr<T> argument_type;
-    typedef size_t result_type;
+    using argument_type = shared_ptr<T>;
+    using result_type = size_t;
 
     result_type operator()(const argument_type &p) const {
         return hash<typename shared_ptr<T>::element_type *>()(p.get());

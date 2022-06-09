@@ -10,7 +10,7 @@
 namespace ala {
 
 template<class ForwardIter, class Comp>
-void select_sort(ForwardIter first, ForwardIter last, Comp comp) {
+constexpr void select_sort(ForwardIter first, ForwardIter last, Comp comp) {
     if (first == last)
         return;
     ForwardIter i = first, next = first;
@@ -24,28 +24,35 @@ void select_sort(ForwardIter first, ForwardIter last, Comp comp) {
 }
 
 template<class ForwardIter>
-void select_sort(ForwardIter first, ForwardIter last) {
+constexpr void select_sort(ForwardIter first, ForwardIter last) {
     return ala::select_sort(first, last, less<>());
 }
 
 template<class BidirIter, class Comp>
-void insertion_sort(BidirIter first, BidirIter last, Comp comp) {
-    typedef typename iterator_traits<BidirIter>::value_type T;
+constexpr void insertion_sort(BidirIter first, BidirIter last, Comp comp) {
+    using T = typename iterator_traits<BidirIter>::value_type;
     if (first == last)
         return;
     BidirIter sorted = first;
     BidirIter cur, next;
     for (++sorted; sorted != last; ++sorted) {
         cur = next = sorted;
+        if (next == first)
+            break;
         T tmp(ala::move(*sorted));
-        for (--cur; next != first && comp(tmp, *cur); --cur, (void)--next)
+        for (--cur; comp(tmp, *cur);) {
             *next = ala::move(*cur);
+            --next;
+            if (next == first)
+                break;
+            --cur;
+        }
         *next = ala::move(tmp);
     }
 }
 
 template<class BidirIter>
-void insertion_sort(BidirIter first, BidirIter last) {
+constexpr void insertion_sort(BidirIter first, BidirIter last) {
     return ala::insertion_sort(first, last, less<>());
 }
 
@@ -61,8 +68,8 @@ void insertion_sort(BidirIter first, BidirIter last) {
 // }
 
 template<class RandomIter, class Comp>
-void shell_sort(RandomIter first, RandomIter last, Comp comp) {
-    typedef typename iterator_traits<RandomIter>::value_type T;
+constexpr void shell_sort(RandomIter first, RandomIter last, Comp comp) {
+    using T = typename iterator_traits<RandomIter>::value_type;
     constexpr uint_fast64_t seq[] = {0x1ull,
                                      0x5ull,
                                      0x13ull,
@@ -141,14 +148,14 @@ void shell_sort(RandomIter first, RandomIter last, Comp comp) {
 }
 
 template<class RandomIter>
-void shell_sort(RandomIter first, RandomIter last) {
+constexpr void shell_sort(RandomIter first, RandomIter last) {
     return ala::shell_sort(first, last, less<>());
 }
 
 namespace detail {
 
 template<class T, class Comp>
-void set_median(T &a, T &b, T &c, Comp comp) {
+constexpr void set_median(T &a, T &b, T &c, Comp comp) {
     if (comp(a, b)) {
         if (comp(b, c))
             ala::_swap_adl(a, b);
@@ -161,8 +168,8 @@ void set_median(T &a, T &b, T &c, Comp comp) {
 }
 
 template<class RandomIter, class Comp>
-RandomIter partition_c(RandomIter first, RandomIter last, Comp comp) {
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+constexpr RandomIter partition_c(RandomIter first, RandomIter last, Comp comp) {
+    using diff_t = typename iterator_traits<RandomIter>::difference_type;
     diff_t len = last - first;
     assert(!(len < 3));
     ala::detail::set_median(*first, *(first + len / 2), *(last - 1), comp);
@@ -180,8 +187,8 @@ RandomIter partition_c(RandomIter first, RandomIter last, Comp comp) {
 }
 
 template<class RandomIter, class Comp>
-void quick_sort_impl(RandomIter first, RandomIter last, Comp comp) {
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+constexpr void quick_sort_impl(RandomIter first, RandomIter last, Comp comp) {
+    using diff_t = typename iterator_traits<RandomIter>::difference_type;
     diff_t len = last - first;
     if (len <= ALA_INSERTION_THRESHOLD)
         return;
@@ -192,8 +199,9 @@ void quick_sort_impl(RandomIter first, RandomIter last, Comp comp) {
 
 // quick-sort with three-way partion
 template<class RandomIter, class Comp>
-void quick_sort_three_way_impl(RandomIter first, RandomIter last, Comp comp) {
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+constexpr void quick_sort_three_way_impl(RandomIter first, RandomIter last,
+                                         Comp comp) {
+    using diff_t = typename iterator_traits<RandomIter>::difference_type;
     diff_t len = last - first;
     if (len <= ALA_INSERTION_THRESHOLD)
         return;
@@ -215,7 +223,7 @@ void quick_sort_three_way_impl(RandomIter first, RandomIter last, Comp comp) {
 template<class RandomIter, class Comp>
 constexpr void sort_impl(RandomIter first, RandomIter last, unsigned depth,
                          Comp comp) {
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+    using diff_t = typename iterator_traits<RandomIter>::difference_type;
     diff_t len = last - first;
     while ((len = last - first) > ALA_INSERTION_THRESHOLD) {
         RandomIter left = ala::detail::partition_c(first, last, comp);
@@ -229,7 +237,7 @@ constexpr void sort_impl(RandomIter first, RandomIter last, unsigned depth,
 } // namespace detail
 
 template<class RandomIter, class Comp>
-void quick_sort(RandomIter first, RandomIter last, Comp comp) {
+constexpr void quick_sort(RandomIter first, RandomIter last, Comp comp) {
     if (first < last) {
 #if ALA_ENABLE_THREE_WAY_QUICK_SORT
         detail::quick_sort_three_way_impl(first, last, comp);
@@ -241,14 +249,14 @@ void quick_sort(RandomIter first, RandomIter last, Comp comp) {
 }
 
 template<class RandomIter>
-void quick_sort(RandomIter first, RandomIter last) {
+constexpr void quick_sort(RandomIter first, RandomIter last) {
     return ala::quick_sort(first, last, less<>());
 }
 
 // a quick-sort variety form eastl
 template<class RandomIter, class Comp>
 constexpr void sort(RandomIter first, RandomIter last, Comp comp) {
-    typedef typename iterator_traits<RandomIter>::value_type T;
+    using T = typename iterator_traits<RandomIter>::value_type;
     if (first < last) {
         unsigned i = 0;
         for (ptrdiff_t s = last - first; s > 0; ++i)
@@ -316,7 +324,8 @@ constexpr OutputIter merge_umv(InputIter1 first1, InputIter1 last1,
 }
 
 template<class RandomIter1, class RandomIter2, class Size, class Comp>
-bool merge_sort_impl(RandomIter1 first, RandomIter2 tmp, Size len, Comp comp) {
+constexpr bool merge_sort_impl(RandomIter1 first, RandomIter2 tmp, Size len,
+                               Comp comp) {
     if (len <= ALA_INSERTION_THRESHOLD) {
         ala::insertion_sort(first, first + len);
         return false;
@@ -345,9 +354,10 @@ bool merge_sort_impl(RandomIter1 first, RandomIter2 tmp, Size len, Comp comp) {
 } // namespace detail
 
 template<class BidirIter, class Comp>
-void inplace_merge(BidirIter first, BidirIter middle, BidirIter last, Comp comp) {
-    typedef typename iterator_traits<BidirIter>::difference_type diff_t;
-    typedef typename iterator_traits<BidirIter>::value_type T;
+constexpr void inplace_merge(BidirIter first, BidirIter middle, BidirIter last,
+                             Comp comp) {
+    using diff_t = typename iterator_traits<BidirIter>::difference_type;
+    using T = typename iterator_traits<BidirIter>::value_type;
     diff_t len = ala::distance(first, last);
     allocator<T> alloc;
     pointer_holder<T *, allocator<T>> ph(alloc, len);
@@ -358,15 +368,15 @@ void inplace_merge(BidirIter first, BidirIter middle, BidirIter last, Comp comp)
 }
 
 template<class BidirIter>
-void inplace_merge(BidirIter first, BidirIter middle, BidirIter last) {
+constexpr void inplace_merge(BidirIter first, BidirIter middle, BidirIter last) {
     return ala::inplace_merge(first, middle, last, less<>());
 }
 
 // top-down merge-sort, no-copyback
 template<class RandomIter, class Comp>
-void merge_sort(RandomIter first, RandomIter last, Comp comp) {
-    typedef typename iterator_traits<RandomIter>::value_type T;
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+constexpr void merge_sort(RandomIter first, RandomIter last, Comp comp) {
+    using T = typename iterator_traits<RandomIter>::value_type;
+    using diff_t = typename iterator_traits<RandomIter>::difference_type;
     diff_t len = last - first;
     allocator<T> alloc;
     pointer_holder<T *, allocator<T>> ph(alloc, len);
@@ -378,7 +388,7 @@ void merge_sort(RandomIter first, RandomIter last, Comp comp) {
 }
 
 template<class RandomIter>
-void merge_sort(RandomIter first, RandomIter last) {
+constexpr void merge_sort(RandomIter first, RandomIter last) {
     ala::merge_sort(first, last, less<>());
 }
 
@@ -386,8 +396,8 @@ void merge_sort(RandomIter first, RandomIter last) {
 template<class RandomIter, class Comp>
 constexpr void stable_sort(RandomIter first, RandomIter last, Comp comp) {
     return merge_sort(first, last, comp);
-    // typedef typename iterator_traits<RandomIter>::value_type T;
-    // typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+    // using T = typename iterator_traits<RandomIter>::value_type ;
+    // using diff_t = typename iterator_traits<RandomIter>::difference_type ;
     // diff_t len = last - first;
     // allocator<T> alloc;
     // pointer_holder<T *, allocator<T>> ph(alloc, len);
@@ -431,7 +441,8 @@ constexpr void stable_sort(RandomIter first, RandomIter last) {
 namespace detail {
 
 template<class RandomIter, class Distance, class Comp>
-void heap_sink(RandomIter first, Distance begin, Distance end, Comp comp) {
+constexpr void heap_sink(RandomIter first, Distance begin, Distance end,
+                         Comp comp) {
     Distance parent = begin, child = (parent << 1) + 1;
     while (child < end) {
         if (child + 1 < end && comp(first[child], first[child + 1]))
@@ -449,7 +460,7 @@ void heap_sink(RandomIter first, Distance begin, Distance end, Comp comp) {
 // Heap operations
 template<class RandomIter, class Comp>
 constexpr void push_heap(RandomIter first, RandomIter last, Comp comp) {
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+    using diff_t = typename iterator_traits<RandomIter>::difference_type;
     if (first == last)
         return;
     diff_t child = last - 1 - first;
@@ -468,7 +479,7 @@ constexpr void push_heap(RandomIter first, RandomIter last) {
 
 template<class RandomIter, class Comp>
 constexpr void pop_heap(RandomIter first, RandomIter last, Comp comp) {
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+    using diff_t = typename iterator_traits<RandomIter>::difference_type;
     if (first == last)
         return;
     ala::iter_swap(first, last - 1);
@@ -482,7 +493,7 @@ constexpr void pop_heap(RandomIter first, RandomIter last) {
 
 template<class RandomIter, class Comp>
 constexpr void make_heap(RandomIter first, RandomIter last, Comp comp) {
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+    using diff_t = typename iterator_traits<RandomIter>::difference_type;
     if (first == last)
         return;
     diff_t len = last - first;
@@ -497,7 +508,7 @@ constexpr void make_heap(RandomIter first, RandomIter last) {
 
 template<class RandomIter, class Comp>
 constexpr void sort_heap(RandomIter first, RandomIter last, Comp comp) {
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+    using diff_t = typename iterator_traits<RandomIter>::difference_type;
     if (first == last)
         return;
     diff_t len = last - first;
@@ -514,7 +525,7 @@ constexpr void sort_heap(RandomIter first, RandomIter last) {
 
 template<class RandomIter, class Comp>
 constexpr bool is_heap(RandomIter first, RandomIter last, Comp comp) {
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+    using diff_t = typename iterator_traits<RandomIter>::difference_type;
     if (first == last)
         return true;
     diff_t len = last - first;
@@ -535,7 +546,7 @@ constexpr bool is_heap(RandomIter first, RandomIter last) {
 
 template<class RandomIter, class Comp>
 constexpr RandomIter is_heap_until(RandomIter first, RandomIter last, Comp comp) {
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+    using diff_t = typename iterator_traits<RandomIter>::difference_type;
     if (first == last)
         return last;
     diff_t len = last - first;
@@ -560,20 +571,20 @@ constexpr RandomIter is_heap_until(RandomIter first, RandomIter last) {
 }
 
 template<class RandomIter, class Comp>
-void heap_sort(RandomIter first, RandomIter last, Comp comp) {
+constexpr void heap_sort(RandomIter first, RandomIter last, Comp comp) {
     ala::make_heap(first, last, comp);
     ala::sort_heap(first, last, comp);
 }
 
 template<class RandomIter>
-void heap_sort(RandomIter first, RandomIter last) {
+constexpr void heap_sort(RandomIter first, RandomIter last) {
     ala::heap_sort(first, last, less<>());
 }
 
 template<class RandomIter, class Comp>
 constexpr void partial_sort(RandomIter first, RandomIter middle,
                             RandomIter last, Comp comp) {
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+    using diff_t = typename iterator_traits<RandomIter>::difference_type;
     diff_t len = last - first;
     if (middle - first < 1 || len < 2)
         return;
@@ -602,7 +613,7 @@ constexpr void partial_sort(RandomIter first, RandomIter middle, RandomIter last
 template<class RandomIter, class Comp>
 constexpr void nth_element(RandomIter first, RandomIter nth, RandomIter last,
                            Comp comp) {
-    typedef typename iterator_traits<RandomIter>::value_type T;
+    using T = typename iterator_traits<RandomIter>::value_type;
     auto len = last - first;
     while ((len = last - first) > 1) {
         if (len < 3) {
@@ -629,7 +640,7 @@ constexpr void nth_element(RandomIter first, RandomIter nth, RandomIter last) {
 template<class Iter, class RandomIter, class Comp>
 constexpr RandomIter partial_sort_copy(Iter first1, Iter last1, RandomIter first2,
                                        RandomIter last2, Comp comp) {
-    typedef typename iterator_traits<RandomIter>::difference_type diff_t;
+    using diff_t = typename iterator_traits<RandomIter>::difference_type;
     diff_t n = 0;
     for (; first1 != last1 && n < last2 - first2; ++first1, (void)++n)
         first2[n] = *first1;

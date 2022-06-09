@@ -62,13 +62,13 @@ class any {
 protected:
     static_assert(sizeof(void *) == sizeof(size_t), "Unsupported platform");
 
-    typedef void (*op_copy_t)(void *, const void *);
-    typedef void (*op_move_t)(void *, void *);
-    typedef void (*op_destroy_t)(void *);
+    using op_copy_t = void (*)(void *, const void *);
+    using op_move_t = void (*)(void *, void *);
+    using op_destroy_t = void (*)(void *);
 #if ALA_USE_RTTI
-    typedef const type_info &(*op_typeinfo_t)();
+    using op_typeinfo_t = const type_info &(*)();
 #endif
-    typedef bool (*op_local_t)();
+    using op_local_t = bool (*)();
 
     void *(*_op_handle)(AnyOP) = nullptr;
     size_t _placehold[2] = {};

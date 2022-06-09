@@ -15,12 +15,12 @@ struct pointer_traits {
 
     template<typename T>
     struct _get_element_type<T, true> {
-        typedef typename T::element_type type;
+        using type = typename T::element_type;
     };
 
     template<template<typename, typename...> class Templt, typename T, typename... Args>
     struct _get_element_type<Templt<T, Args...>, false> {
-        typedef T type;
+        using type = T;
     };
 
     template<typename T, typename U, typename = void>
@@ -35,17 +35,17 @@ struct pointer_traits {
 
     template<typename T, typename U>
     struct _get_rebind<T, U, true> {
-        typedef typename T::template rebind<U> type;
+        using type = typename T::template rebind<U>;
     };
 
     template<template<typename, typename...> class Templt, typename U,
              typename T, typename... Args>
     struct _get_rebind<Templt<T, Args...>, U, false> {
-        typedef Templt<U, Args...> type;
+        using type = Templt<U, Args...>;
     };
 
-    typedef Ptr pointer;
-    typedef typename _get_element_type<pointer>::type element_type;
+    using pointer = Ptr;
+    using element_type = typename _get_element_type<pointer>::type;
     ALA_HAS_MEM_TYPEDEF(pointer, difference_type, ptrdiff_t)
 
     template<typename U>
@@ -61,9 +61,9 @@ struct pointer_traits {
 
 template<typename T>
 struct pointer_traits<T *> {
-    typedef T *pointer;
-    typedef T element_type;
-    typedef ptrdiff_t difference_type;
+    using pointer = T *;
+    using element_type = T;
+    using difference_type = ptrdiff_t;
 
     template<typename U>
     using rebind = U *;

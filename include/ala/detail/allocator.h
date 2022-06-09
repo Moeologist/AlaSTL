@@ -19,18 +19,18 @@ using ::std::bad_alloc;
 
 template<class T>
 struct allocator {
-    typedef T value_type;
-    typedef T *pointer;
-    typedef const T *const_pointer;
-    typedef add_lvalue_reference_t<T> reference;
-    typedef add_lvalue_reference_t<add_const_t<T>> const_reference;
-    typedef size_t size_type;
-    typedef ptrdiff_t difference_type;
-    typedef true_type propagate_on_container_move_assignment;
-    typedef true_type is_always_equal;
+    using value_type = T;
+    using pointer = T *;
+    using const_pointer = const T *;
+    using reference = add_lvalue_reference_t<T>;
+    using const_reference = add_lvalue_reference_t<add_const_t<T>>;
+    using size_type = size_t;
+    using difference_type = ptrdiff_t;
+    using propagate_on_container_move_assignment = true_type;
+    using is_always_equal = true_type;
     template<class U>
     struct rebind {
-        typedef allocator<U> other;
+        using other = allocator<U>;
     };
 
     constexpr allocator() noexcept {};
@@ -57,7 +57,7 @@ struct allocator {
     }
 
     template<class U, class... Args>
-    void construct(U *p, Args &&... args) {
+    void construct(U *p, Args &&...args) {
         ::new ((void *)p) U(ala::forward<Args>(args)...);
     }
 
@@ -113,8 +113,8 @@ bool operator!=(const allocator<T> &, const allocator<U> &) noexcept {
 
 template<class Alloc>
 struct allocator_traits {
-    typedef Alloc allocator_type;
-    typedef typename allocator_type::value_type value_type;
+    using allocator_type = Alloc;
+    using value_type = typename allocator_type::value_type;
     // clang-format off
     ALA_HAS_MEM_TYPEDEF(allocator_type, pointer,            value_type*)
     ALA_HAS_MEM_TYPEDEF(allocator_type, const_pointer,      typename pointer_traits<pointer>::template rebind<const value_type>)
@@ -140,13 +140,13 @@ struct allocator_traits {
 
     template<typename T, typename U>
     struct _get_rebind<T, U, true> {
-        typedef typename T::template rebind<U>::other type;
+        using type = typename T::template rebind<U>::other;
     };
 
     template<template<typename, typename...> class Templt, typename U,
              typename T, typename... Args>
     struct _get_rebind<Templt<T, Args...>, U, false> {
-        typedef Templt<U, Args...> type;
+        using type = Templt<U, Args...>;
     };
 
     template<typename T>
@@ -192,7 +192,7 @@ struct allocator_traits {
 
     template<typename Pointer, typename... Args>
     static enable_if_t<_has_construct<void, allocator_type &, Pointer, Args...>::value>
-    construct(allocator_type &a, Pointer p, Args &&... args) {
+    construct(allocator_type &a, Pointer p, Args &&...args) {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
         // static_assert(is_same<T, value_type>::value,
         //               "Can not process incompatible type");
@@ -201,7 +201,7 @@ struct allocator_traits {
 
     template<typename Pointer, typename... Args>
     static enable_if_t<!_has_construct<void, allocator_type &, Pointer, Args...>::value>
-    construct(allocator_type &a, Pointer p, Args &&... args) {
+    construct(allocator_type &a, Pointer p, Args &&...args) {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
         // static_assert(is_same<T, value_type>::value,
         //               "Can not process incompatible type");
@@ -338,7 +338,7 @@ struct allocator_traits {
     template<typename U, typename Pointer, typename... Args>
     static enable_if_t<
         _has_construct_obj<void, U, allocator_type &, Pointer, Args...>::value>
-    construct_object(allocator_type &a, Pointer p, Args &&... args) {
+    construct_object(allocator_type &a, Pointer p, Args &&...args) {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
         static_assert(is_same<T, remove_cv_t<U>>::value,
                       "Can not process incompatible type");
@@ -348,7 +348,7 @@ struct allocator_traits {
     template<typename U, typename Pointer, typename... Args>
     static enable_if_t<
         !_has_construct_obj<void, U, allocator_type &, Pointer, Args...>::value>
-    construct_object(allocator_type &a, Pointer p, Args &&... args) {
+    construct_object(allocator_type &a, Pointer p, Args &&...args) {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
         static_assert(is_same<T, remove_cv_t<U>>::value,
                       "Can not process incompatible type");

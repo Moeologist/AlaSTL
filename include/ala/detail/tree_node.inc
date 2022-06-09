@@ -19,14 +19,14 @@ namespace ala {
 template<class NodePtr, class Alloc>
 struct NODE {
 #if _ALA_IS_MAP
-    typedef remove_const_t<decltype(declval<NodePtr>()->_data.first)> key_type;
-    typedef decltype(declval<NodePtr>()->_data.second) mapped_type;
+    using key_type = remove_const_t<decltype(declval<NodePtr>()->_data.first)>;
+    using mapped_type = decltype(declval<NodePtr>()->_data.second);
 #else
-    typedef decltype(declval<NodePtr>()->_data) value_type;
+    using value_type = decltype(declval<NodePtr>()->_data);
 #endif
-    typedef Alloc allocator_type;
-    typedef typename pointer_traits<NodePtr>::element_type _ele_type;
-    typedef allocator_traits<allocator_type> _alloc_traits;
+    using allocator_type = Alloc;
+    using _ele_type = typename pointer_traits<NodePtr>::element_type;
+    using _alloc_traits = allocator_traits<allocator_type>;
 
 protected:
     void possess(NODE &&other) noexcept {
@@ -128,7 +128,7 @@ protected:
     template<class, class, class>
     friend class multiset;
 #endif
-    typedef NodePtr node_pointer;
+    using node_pointer = NodePtr;
     node_pointer _ptr = nullptr;
     union {
         allocator_type _a;
@@ -144,7 +144,7 @@ protected:
     }
 
     template<class... Args>
-    void alloc_ctor(Args &&... args) {
+    void alloc_ctor(Args &&...args) {
         ::new (ala::addressof(_a)) allocator_type(ala::forward<Args>(args)...);
     }
 

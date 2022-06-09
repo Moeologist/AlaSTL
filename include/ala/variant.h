@@ -966,7 +966,7 @@ constexpr auto visit_r(Visitor &&vis, Variants &&...vars)
 template<class R, class Visitor, class... Variants>
 constexpr auto visit(Visitor &&vis, Variants &&...vars)
     -> enable_if_t<_can_visit<Variants...>::value, R> {
-    return visit_r<R>(ala::forward<Visitor>(vis),
+    return ala::visit_r<R>(ala::forward<Visitor>(vis),
                       ala::forward<Variants>(vars)...);
 }
 
@@ -1063,8 +1063,8 @@ swap(variant<Ts...> &lhs, variant<Ts...> &rhs) noexcept(noexcept(lhs.swap(rhs)))
 template<class... Ts>
 struct hash<_sfinae_checker<
     variant<Ts...>, enable_if_t<_and_<_is_hashable<remove_const_t<Ts>>...>::value>>> {
-    typedef variant<Ts...> argument_type;
-    typedef size_t result_type;
+    using argument_type = variant<Ts...>;
+    using result_type = size_t;
 
     result_type operator()(const argument_type &var) const {
         using _union_op_t = typename _variant_base<Ts...>::_union_op_t;

@@ -54,22 +54,22 @@ template<class Key, class Comp = less<Key>, class Alloc = allocator<Key>>
 #endif
 class CONTAINER {
 public:
-    typedef Key key_type;
+    using key_type = Key;
 #if _ALA_IS_MAP
-    typedef T mapped_type;
-    typedef pair<const Key, T> value_type;
+    using mapped_type = T;
+    using value_type = pair<const Key, T>;
 #else
-    typedef Key value_type;
+    using value_type = Key;
 #endif
-    typedef type_identity_t<Comp> key_compare;
-    typedef type_identity_t<Alloc> allocator_type;
-    typedef value_type &reference;
-    typedef const value_type &const_reference;
-    typedef allocator_traits<allocator_type> _alloc_traits;
-    typedef typename _alloc_traits::size_type size_type;
-    typedef typename _alloc_traits::difference_type difference_type;
-    typedef typename _alloc_traits::pointer pointer;
-    typedef typename _alloc_traits::const_pointer const_pointer;
+    using key_compare = type_identity_t<Comp>;
+    using allocator_type = type_identity_t<Alloc>;
+    using reference = value_type &;
+    using const_reference = const value_type &;
+    using _alloc_traits = allocator_traits<allocator_type>;
+    using size_type = typename _alloc_traits::size_type;
+    using difference_type = typename _alloc_traits::difference_type;
+    using pointer = typename _alloc_traits::pointer;
+    using const_pointer = typename _alloc_traits::const_pointer;
     static_assert(is_same<value_type, typename _alloc_traits::value_type>::value,
                   "allocator::value_type mismatch");
 #if _ALA_IS_MAP
@@ -86,12 +86,11 @@ public:
         value_compare(key_compare c): comp(c) {}
     };
 #else
-    typedef key_compare value_compare;
+    using value_compare = key_compare;
 #endif
 protected:
-    typedef rb_tree<value_type, value_compare, allocator_type,
-                    (bool)_ALA_IS_MAP, (bool)_ALA_IS_UNIQ>
-        tree_type;
+    using tree_type = rb_tree<value_type, value_compare, allocator_type,
+                              (bool)_ALA_IS_MAP, (bool)_ALA_IS_UNIQ>;
     tree_type tree;
 
 #if _ALA_IS_MAP
@@ -116,18 +115,18 @@ protected:
 #endif
 
 public:
-    typedef typename tree_type::iterator iterator;
-    typedef typename tree_type::const_iterator const_iterator;
-    typedef ala::reverse_iterator<iterator> reverse_iterator;
-    typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
+    using iterator = typename tree_type::iterator;
+    using const_iterator = typename tree_type::const_iterator;
+    using reverse_iterator = ala::reverse_iterator<iterator>;
+    using const_reverse_iterator = ala::reverse_iterator<const_iterator>;
 #if _ALA_IS_MAP
-    typedef _map_node_adaptor<rb_vnode<value_type> *, allocator_type> node_type;
+    using node_type = _map_node_adaptor<rb_vnode<value_type> *, allocator_type>;
 #else
-    typedef _set_node_adaptor<rb_vnode<value_type> *, allocator_type> node_type;
+    using node_type = _set_node_adaptor<rb_vnode<value_type> *, allocator_type>;
 #endif
 
 #if _ALA_IS_UNIQ
-    typedef _insert_return_adaptor<iterator, node_type> insert_return_type;
+    using insert_return_type = _insert_return_adaptor<iterator, node_type>;
 #endif
 
     // construct/copy/destroy:
@@ -284,17 +283,17 @@ public:
     // modifiers:
     template<class... Args>
 #if _ALA_IS_UNIQ
-    pair<iterator, bool> emplace(Args &&... args) {
+    pair<iterator, bool> emplace(Args &&...args) {
         return tree.emplace(nullptr, ala::forward<Args>(args)...);
     }
 #else
-    iterator emplace(Args &&... args) {
+    iterator emplace(Args &&...args) {
         return tree.emplace(nullptr, ala::forward<Args>(args)...).first;
     }
 #endif
 
     template<class... Args>
-    iterator emplace_hint(const_iterator position, Args &&... args) {
+    iterator emplace_hint(const_iterator position, Args &&...args) {
         return tree.emplace(position._ptr, ala::forward<Args>(args)...).first;
     }
 
@@ -475,21 +474,21 @@ public:
 
 #if _ALA_IS_MAP && _ALA_IS_UNIQ
     template<class... Args>
-    pair<iterator, bool> try_emplace(const key_type &k, Args &&... args) {
+    pair<iterator, bool> try_emplace(const key_type &k, Args &&...args) {
         return tree.emplace_k(k, nullptr, ala::piecewise_construct,
                               ala::forward_as_tuple(k),
                               ala::forward_as_tuple(ala::forward<Args>(args)...));
     }
 
     template<class... Args>
-    pair<iterator, bool> try_emplace(key_type &&k, Args &&... args) {
+    pair<iterator, bool> try_emplace(key_type &&k, Args &&...args) {
         return tree.emplace_k(k, nullptr, ala::piecewise_construct,
                               ala::forward_as_tuple(ala::move(k)),
                               ala::forward_as_tuple(ala::forward<Args>(args)...));
     }
 
     template<class... Args>
-    iterator try_emplace(const_iterator hint, const key_type &k, Args &&... args) {
+    iterator try_emplace(const_iterator hint, const key_type &k, Args &&...args) {
         return tree
             .emplace_k(k, hint._ptr, ala::piecewise_construct,
                        ala::forward_as_tuple(k),
@@ -498,7 +497,7 @@ public:
     }
 
     template<class... Args>
-    iterator try_emplace(const_iterator hint, key_type &&k, Args &&... args) {
+    iterator try_emplace(const_iterator hint, key_type &&k, Args &&...args) {
         return tree
             .emplace_k(k, hint._ptr, ala::piecewise_construct,
                        ala::forward_as_tuple(ala::move(k)),
@@ -695,7 +694,7 @@ template<class Key, class T, class Comp, class Alloc>
 bool operator<(const CONTAINER<Key, T, Comp, Alloc> &lhs,
                const CONTAINER<Key, T, Comp, Alloc> &rhs) {
     return ala::lexicographical_compare(lhs.begin(), lhs.end(), rhs.begin(),
-                                   rhs.end());
+                                        rhs.end());
 }
 
 template<class Key, class T, class Comp, class Alloc>

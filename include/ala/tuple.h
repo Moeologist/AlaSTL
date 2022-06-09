@@ -20,7 +20,7 @@ struct _tuple_base<I, T, false> {
         : value(ala::forward<U>(u)) {}
 
     template<typename U>
-    _tuple_base &operator=(U &&u) noexcept(is_nothrow_assignable<T &, U>::value) {
+    constexpr _tuple_base &operator=(U &&u) noexcept(is_nothrow_assignable<T &, U>::value) {
         value = ala::forward<U>(u);
         return *this;
     }
@@ -31,7 +31,7 @@ struct _tuple_base<I, T, false> {
         return value;
     }
 
-    void swap(_tuple_base &tb) noexcept(is_nothrow_swappable<_tuple_base>::value) {
+    constexpr void swap(_tuple_base &tb) noexcept(is_nothrow_swappable<_tuple_base>::value) {
         ala::_swap_adl(value, tb.value);
     }
 };
@@ -46,7 +46,7 @@ struct _tuple_base<I, T, true>: private T {
         : T(ala::forward<U>(u)) {}
 
     template<typename U>
-    _tuple_base &operator=(U &&u) noexcept(is_nothrow_assignable<T &, U>::value) {
+    constexpr _tuple_base &operator=(U &&u) noexcept(is_nothrow_assignable<T &, U>::value) {
         T::operator=(ala::forward<U>(u));
         return *this;
     }
@@ -57,28 +57,28 @@ struct _tuple_base<I, T, true>: private T {
         return static_cast<const T &>(*this);
     }
 
-    void swap(_tuple_base &tb) noexcept(is_nothrow_swappable<_tuple_base>::value) {
+    constexpr void swap(_tuple_base &tb) noexcept(is_nothrow_swappable<_tuple_base>::value) {
         ala::_swap_adl(get(), tb.get());
     }
 };
 
 template<size_t I, typename... Ts>
 constexpr tuple_element_t<I, tuple<Ts...>> &get(tuple<Ts...> &tp) noexcept {
-    typedef tuple_element_t<I, tuple<Ts...>> type;
+    using type = tuple_element_t<I, tuple<Ts...>>;
     return const_cast<type &>(static_cast<_tuple_base<I, type> &>(tp._impl).get());
 }
 
 template<size_t I, typename... Ts>
 constexpr const tuple_element_t<I, tuple<Ts...>> &
 get(const tuple<Ts...> &tp) noexcept {
-    typedef tuple_element_t<I, tuple<Ts...>> type;
+    using type = tuple_element_t<I, tuple<Ts...>>;
     return const_cast<const type &>(
         static_cast<const _tuple_base<I, type> &>(tp._impl).get());
 }
 
 template<size_t I, typename... Ts>
 constexpr tuple_element_t<I, tuple<Ts...>> &&get(tuple<Ts...> &&tp) noexcept {
-    typedef tuple_element_t<I, tuple<Ts...>> type;
+    using type = tuple_element_t<I, tuple<Ts...>>;
     return const_cast<type &&>(
         static_cast<_tuple_base<I, type> &&>(tp._impl).get());
 }
@@ -86,7 +86,7 @@ constexpr tuple_element_t<I, tuple<Ts...>> &&get(tuple<Ts...> &&tp) noexcept {
 template<size_t I, typename... Ts>
 constexpr const tuple_element_t<I, tuple<Ts...>> &&
 get(const tuple<Ts...> &&tp) noexcept {
-    typedef tuple_element_t<I, tuple<Ts...>> type;
+    using type = tuple_element_t<I, tuple<Ts...>>;
     return const_cast<const type &&>(
         static_cast<const _tuple_base<I, type> &&>(tp._impl).get());
 }
@@ -102,7 +102,7 @@ struct tuple;
 template<size_t... Ids, typename... Ts>
 struct _tuple_impl<index_sequence<Ids...>, Ts...>: _tuple_base<Ids, Ts>... {
     template<typename... Us>
-    explicit constexpr _tuple_impl(true_type, Us &&... us) noexcept(
+    explicit constexpr _tuple_impl(true_type, Us &&...us) noexcept(
         _and_<is_nothrow_constructible<Ts, Us>...>::value)
         : _tuple_base<Ids, Ts>(ala::forward<Us>(us))... {}
 
@@ -137,7 +137,7 @@ struct _tuple_impl<index_sequence<Ids...>, Ts...>: _tuple_base<Ids, Ts>... {
 template<typename... Ts>
 struct tuple {
 private:
-    typedef _tuple_impl<index_sequence_for<Ts...>, Ts...> impl_type;
+    using impl_type = _tuple_impl<index_sequence_for<Ts...>, Ts...>;
     impl_type _impl;
     template<size_t Id, typename... Us>
     friend constexpr typename tuple_element<Id, tuple<Us...>>::type &
@@ -181,7 +181,7 @@ public:
              typename = enable_if_t<_and_<Dummy, bool_constant<sizeof...(Ts) >= 1>,
                                           _and_<is_copy_constructible<Ts>...>,
                                           _and_<is_convertible<const Ts &, Ts>...>>::value>>
-    constexpr tuple(const Ts &... ts) noexcept(
+    constexpr tuple(const Ts &...ts) noexcept(
         _and_<is_nothrow_copy_constructible<Ts>...>::value)
         : _impl(true_type{}, ts...) {}
 
@@ -190,7 +190,7 @@ public:
                  _and_<Dummy, bool_constant<sizeof...(Ts) >= 1>,
                        _and_<is_copy_constructible<Ts>...>,
                        _not_<_and_<is_convertible<const Ts &, Ts>...>>>::value>>
-    explicit constexpr tuple(const Ts &... ts) noexcept(
+    explicit constexpr tuple(const Ts &...ts) noexcept(
         _and_<is_nothrow_copy_constructible<Ts>...>::value)
         : _impl(true_type{}, ts...) {}
 
@@ -201,7 +201,7 @@ public:
                                    _not_<_is_copy_move_ctor<tuple, Us...>>,
                                    _and_<is_constructible<Ts, Us>...>,
                                    _and_<is_convertible<Us, Ts>...>>::value>>
-    constexpr tuple(Us &&... us) noexcept(
+    constexpr tuple(Us &&...us) noexcept(
         is_nothrow_constructible<impl_type, Us...>::value)
         : _impl(true_type{}, ala::forward<Us>(us)...) {}
 
@@ -212,7 +212,7 @@ public:
                                    _not_<_is_copy_move_ctor<tuple, Us...>>,
                                    _and_<is_constructible<Ts, Us>...>,
                                    _not_<_and_<is_convertible<Us, Ts>...>>>::value>>
-    explicit constexpr tuple(Us &&... us) noexcept(
+    explicit constexpr tuple(Us &&...us) noexcept(
         is_nothrow_constructible<impl_type, Us...>::value)
         : _impl(true_type{}, ala::forward<Us>(us)...) {}
 
@@ -501,12 +501,12 @@ constexpr bool operator>=(const tuple<Ts...> &lhs, const tuple<Us...> &rhs) {
 }
 
 template<typename... Ts>
-constexpr tuple<unwrap_ref_decay_t<Ts>...> make_tuple(Ts &&... args) {
+constexpr tuple<unwrap_ref_decay_t<Ts>...> make_tuple(Ts &&...args) {
     return tuple<unwrap_ref_decay_t<Ts>...>(ala::forward<Ts>(args)...);
 }
 
 template<typename... Ts>
-constexpr tuple<Ts &&...> forward_as_tuple(Ts &&... args) noexcept {
+constexpr tuple<Ts &&...> forward_as_tuple(Ts &&...args) noexcept {
     return tuple<Ts &&...>(ala::forward<Ts>(args)...);
 }
 
@@ -545,12 +545,12 @@ struct _tuple_cat_type;
 
 template<typename... Ts, typename... T1Ts, typename... Tuples>
 struct _tuple_cat_type<tuple<Ts...>, tuple<T1Ts...>, Tuples...> {
-    typedef typename _tuple_cat_type<tuple<Ts..., T1Ts...>, Tuples...>::type type;
+    using type = typename _tuple_cat_type<tuple<Ts..., T1Ts...>, Tuples...>::type;
 };
 
 template<typename... Ts>
 struct _tuple_cat_type<tuple<Ts...>> {
-    typedef tuple<Ts...> type;
+    using type = tuple<Ts...>;
 };
 
 template<typename... Tuples>
@@ -564,21 +564,20 @@ template<size_t... Is, typename Ret>
 struct _tuple_cat_impl<index_sequence<Is...>, Ret> {
     template<size_t Idx, typename Tuple1, typename... Tuples>
     static constexpr decltype(auto) _deep_get(true_type, Tuple1 &&t1,
-                                              Tuples &&... ts) {
+                                              Tuples &&...ts) {
         return ala::get<Idx>(ala::forward<Tuple1>(t1));
     }
 
     template<size_t Idx, typename Tuple1, typename... Tuples>
     static constexpr decltype(auto) _deep_get(false_type, Tuple1 &&t1,
-                                              Tuples &&... ts) {
+                                              Tuples &&...ts) {
         using T1 = remove_reference_t<Tuple1>;
         return _tuple_cat_impl::_deep_get_helper<Idx - tuple_size<T1>::value>(
             ala::forward<Tuples>(ts)...);
     }
 
     template<size_t Idx, typename Tuple1, typename... Tuples>
-    static constexpr decltype(auto) _deep_get_helper(Tuple1 &&t1,
-                                                     Tuples &&... ts) {
+    static constexpr decltype(auto) _deep_get_helper(Tuple1 &&t1, Tuples &&...ts) {
         using T1 = remove_reference_t<Tuple1>;
         return _tuple_cat_impl::_deep_get<Idx>(
             bool_constant<(Idx < tuple_size<T1>::value)>{},
@@ -586,7 +585,7 @@ struct _tuple_cat_impl<index_sequence<Is...>, Ret> {
     }
 
     template<typename... Tuples>
-    static constexpr Ret _cat(Tuples &&... ts) {
+    static constexpr Ret _cat(Tuples &&...ts) {
         return Ret(_tuple_cat_impl::_deep_get_helper<Is>(
             ala::forward<Tuples>(ts)...)...);
     }
@@ -603,7 +602,7 @@ struct _sum_<I, Is...>
     : integral_constant<size_t, I::value + _sum_<Is...>::value> {};
 
 template<typename... Tuples>
-constexpr _tuple_cat_t<Tuples...> tuple_cat(Tuples &&... ts) {
+constexpr _tuple_cat_t<Tuples...> tuple_cat(Tuples &&...ts) {
     using Size = _sum_<tuple_size<remove_reference_t<Tuples>>...>;
     using Idx = make_index_sequence<Size::value>;
     using Ret = _tuple_cat_t<remove_cvref_t<Tuples>...>;
@@ -616,7 +615,7 @@ constexpr tuple<> tuple_cat() {
 }
 
 template<typename... Args>
-constexpr tuple<Args &...> tie(Args &... args) noexcept {
+constexpr tuple<Args &...> tie(Args &...args) noexcept {
     return tuple<Args &...>(args...);
 }
 
@@ -664,16 +663,15 @@ struct _type_pick_impl;
 template<template<typename> class Templt, size_t Cur, typename T1,
          typename... Ts, size_t... SIs>
 struct _type_pick_impl<Templt, Cur, index_sequence<SIs...>, T1, Ts...> {
-    typedef conditional_t<
+    using type = conditional_t<
         Templt<T1>::value,
         typename _type_pick_impl<Templt, Cur + 1, index_sequence<SIs..., Cur>, Ts...>::type,
-        typename _type_pick_impl<Templt, Cur + 1, index_sequence<SIs...>, Ts...>::type>
-        type;
+        typename _type_pick_impl<Templt, Cur + 1, index_sequence<SIs...>, Ts...>::type>;
 };
 
 template<template<typename> class Templt, size_t Cur, size_t... SIs>
 struct _type_pick_impl<Templt, Cur, index_sequence<SIs...>> {
-    typedef index_sequence<SIs...> type;
+    using type = index_sequence<SIs...>;
 };
 
 template<template<typename> class Templt, typename... Ts>

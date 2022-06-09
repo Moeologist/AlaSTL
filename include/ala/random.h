@@ -23,7 +23,7 @@ struct random_device_adaptor {
         sizeof(UInt) == 2 || sizeof(UInt) == 4 || sizeof(UInt) == 8,
         "random_device_adaptor only support 16bit|32bit|64bit integral");
 
-    typedef UInt result_type;
+    using result_type = UInt;
     result_type s;
 
     random_device_adaptor() {}
@@ -76,7 +76,7 @@ struct xoshiro {
                   "xoshiro only support unsigned integral");
     static_assert(sizeof(UInt) == 4 || sizeof(UInt) == 8,
                   "xoshiro only support 32bit|64bit integral");
-    typedef UInt result_type;
+    using result_type = UInt;
     result_type s[4];
     static constexpr UInt A = sizeof(UInt) == 8 ? 17 : 9;
     static constexpr UInt B = sizeof(UInt) == 8 ? 45 : 11;
@@ -202,7 +202,7 @@ struct xoshiro {
 
 template<typename UInt, UInt A, UInt B, UInt C>
 struct xorshift {
-    typedef UInt result_type;
+    using result_type = UInt;
     result_type s;
 
     constexpr void next() {
@@ -223,7 +223,7 @@ struct xorshift {
 
 template<typename UInt, UInt A, UInt C, UInt M>
 struct linear_congruential_engine {
-    typedef UInt result_type;
+    using result_type = UInt;
     result_type s;
 
     constexpr void next() {
@@ -281,7 +281,7 @@ struct uniform_int_distribution {
         result_type _a;
         result_type _b;
 
-        typedef uniform_int_distribution distribution_type;
+        using distribution_type = uniform_int_distribution;
 
         explicit param_type(result_type a = 0,
                             result_type b = numeric_limits<result_type>::max())

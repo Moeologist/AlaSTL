@@ -19,11 +19,11 @@ struct l_vnode: l_node {
 
 template<class Value, class Ptr>
 struct l_iterator {
-    typedef bidirectional_iterator_tag iterator_category;
-    typedef Value value_type;
-    typedef typename pointer_traits<Ptr>::difference_type difference_type;
-    typedef value_type *pointer;
-    typedef value_type &reference;
+    using iterator_category = bidirectional_iterator_tag;
+    using value_type = Value;
+    using difference_type = typename pointer_traits<Ptr>::difference_type;
+    using pointer = value_type *;
+    using reference = value_type &;
 
     constexpr l_iterator() {}
     constexpr l_iterator(const l_iterator &other): _ptr(other._ptr) {}
@@ -88,24 +88,24 @@ template<class T, class Alloc = allocator<T>>
 class list {
 public:
     // types:
-    typedef T value_type;
-    typedef value_type &reference;
-    typedef const value_type &const_reference;
-    typedef l_iterator<value_type, l_node *> iterator;
-    typedef l_iterator<const value_type, l_node *> const_iterator;
-    typedef Alloc allocator_type;
-    typedef allocator_traits<Alloc> _alloc_traits;
-    typedef typename _alloc_traits::size_type size_type;
-    typedef typename _alloc_traits::difference_type difference_type;
-    typedef typename _alloc_traits::pointer pointer;
-    typedef typename _alloc_traits::const_pointer const_pointer;
-    typedef ala::reverse_iterator<iterator> reverse_iterator;
-    typedef ala::reverse_iterator<const_iterator> const_reverse_iterator;
+    using value_type = T;
+    using reference = value_type &;
+    using const_reference = const value_type &;
+    using iterator = l_iterator<value_type, l_node *>;
+    using const_iterator = l_iterator<const value_type, l_node *>;
+    using allocator_type = Alloc;
+    using _alloc_traits = allocator_traits<Alloc>;
+    using size_type = typename _alloc_traits::size_type;
+    using difference_type = typename _alloc_traits::difference_type;
+    using pointer = typename _alloc_traits::pointer;
+    using const_pointer = typename _alloc_traits::const_pointer;
+    using reverse_iterator = ala::reverse_iterator<iterator>;
+    using const_reverse_iterator = ala::reverse_iterator<const_iterator>;
     static_assert(is_same<value_type, typename _alloc_traits::value_type>::value,
                   "allocator::value_type mismatch");
 
 protected:
-    typedef l_node *_hdle_t;
+    using _hdle_t = l_node *;
     l_node _guard[2];
     size_type _size = 0;
     allocator_type _alloc;

@@ -7,7 +7,7 @@ namespace ala {
 
 template<typename Int, Int... Is>
 struct integer_sequence {
-    typedef Int value_type;
+    using value_type = Int;
     static constexpr size_t size() noexcept {
         return sizeof...(Is);
     }

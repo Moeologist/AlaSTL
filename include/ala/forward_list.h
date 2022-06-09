@@ -18,11 +18,11 @@ struct fl_vnode: fl_node {
 
 template<class Value, class Ptr>
 struct fl_iterator {
-    typedef forward_iterator_tag iterator_category;
-    typedef Value value_type;
-    typedef typename pointer_traits<Ptr>::difference_type difference_type;
-    typedef value_type *pointer;
-    typedef value_type &reference;
+    using iterator_category = forward_iterator_tag;
+    using value_type = Value;
+    using difference_type = typename pointer_traits<Ptr>::difference_type;
+    using pointer = value_type *;
+    using reference = value_type &;
 
     constexpr fl_iterator() {}
     constexpr fl_iterator(const fl_iterator &other): _ptr(other._ptr) {}
@@ -76,22 +76,22 @@ template<class T, class Alloc = allocator<T>>
 class forward_list {
 public:
     // types:
-    typedef T value_type;
-    typedef value_type &reference;
-    typedef const value_type &const_reference;
-    typedef fl_iterator<value_type, fl_node *> iterator;
-    typedef fl_iterator<const value_type, fl_node *> const_iterator;
-    typedef Alloc allocator_type;
-    typedef allocator_traits<Alloc> _alloc_traits;
-    typedef typename _alloc_traits::size_type size_type;
-    typedef typename _alloc_traits::difference_type difference_type;
-    typedef typename _alloc_traits::pointer pointer;
-    typedef typename _alloc_traits::const_pointer const_pointer;
+    using value_type = T;
+    using reference = value_type &;
+    using const_reference = const value_type &;
+    using iterator = fl_iterator<value_type, fl_node *>;
+    using const_iterator = fl_iterator<const value_type, fl_node *>;
+    using allocator_type = Alloc;
+    using _alloc_traits = allocator_traits<Alloc>;
+    using size_type = typename _alloc_traits::size_type;
+    using difference_type = typename _alloc_traits::difference_type;
+    using pointer = typename _alloc_traits::pointer;
+    using const_pointer = typename _alloc_traits::const_pointer;
     static_assert(is_same<value_type, typename _alloc_traits::value_type>::value,
                   "allocator::value_type mismatch");
 
 protected:
-    typedef fl_node *_hdle_t;
+    using _hdle_t = fl_node *;
     fl_node _guard[2];
     size_type _size = 0;
     allocator_type _alloc;

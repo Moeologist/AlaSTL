@@ -178,12 +178,12 @@ reference_wrapper(T &) -> reference_wrapper<T>;
 #endif
 
 template<class T>
-reference_wrapper<T> ref(T &t) noexcept {
+constexpr reference_wrapper<T> ref(T &t) noexcept {
     return reference_wrapper<T>(t);
 }
-auto a = (unsigned)(-1);
+
 template<class T>
-reference_wrapper<T> ref(reference_wrapper<T> t) noexcept {
+constexpr reference_wrapper<T> ref(reference_wrapper<T> t) noexcept {
     return ala::ref(t.get());
 }
 
@@ -191,12 +191,12 @@ template<class T>
 void ref(const T &&) = delete;
 
 template<class T>
-reference_wrapper<const T> cref(const T &t) noexcept {
+constexpr reference_wrapper<const T> cref(const T &t) noexcept {
     return reference_wrapper<const T>(t);
 }
 
 template<class T>
-reference_wrapper<const T> cref(reference_wrapper<T> t) noexcept {
+constexpr reference_wrapper<const T> cref(reference_wrapper<T> t) noexcept {
     return ala::cref(t.get());
 }
 

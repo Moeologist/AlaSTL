@@ -94,12 +94,12 @@ struct iterator_traits<const T *> {
 
 template<class Iter>
 struct reverse_iterator {
-    typedef typename iterator_traits<Iter>::iterator_category iterator_category;
-    typedef typename iterator_traits<Iter>::value_type value_type;
-    typedef typename iterator_traits<Iter>::difference_type difference_type;
-    typedef typename iterator_traits<Iter>::pointer pointer;
-    typedef typename iterator_traits<Iter>::reference reference;
-    typedef Iter iterator_type;
+    using iterator_category = typename iterator_traits<Iter>::iterator_category;
+    using value_type = typename iterator_traits<Iter>::value_type;
+    using difference_type = typename iterator_traits<Iter>::difference_type;
+    using pointer = typename iterator_traits<Iter>::pointer;
+    using reference = typename iterator_traits<Iter>::reference;
+    using iterator_type = Iter;
     static_assert(is_base_of<bidirectional_iterator_tag, iterator_category>::value,
                   "iterator can not reverse");
 
@@ -544,7 +544,7 @@ constexpr auto operator-(const move_iterator<Iter1> &lhs,
 }
 
 template<class Iter>
-move_iterator<Iter> make_move_iterator(Iter i) {
+constexpr move_iterator<Iter> make_move_iterator(Iter i) {
     return ala::move_iterator<Iter>(ala::move(i));
 }
 
