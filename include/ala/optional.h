@@ -6,7 +6,6 @@
 #include <ala/detail/controller.h>
 #include <ala/detail/monostate.h>
 #include <ala/detail/uninitialized_memory.h>
-#include <memory>
 
 namespace ala {
 
@@ -88,15 +87,11 @@ struct _optional_base: _optional_destroy<T> {
     using _base_t::_has_value;
     using _base_t::_reset;
 
-    constexpr void *_address() {
-        return &this->_placehold;
-    }
-
     template<class... Args>
     constexpr void _ctor_v(Args &&...args) {
         assert(!this->_has_value());
         // ::new (this->_address()) T(ala::forward<Args>(args)...);
-        std::construct_at(&this->_value, ala::forward<Args>(args)...);
+        ala::construct_at(&this->_value, ala::forward<Args>(args)...);
         this->_valid = true;
     }
 

@@ -124,7 +124,6 @@ protected:
         return i;
     }
 
-    // insert before pos
     void attach_after(_hdle_t bpos, _hdle_t node) {
         assert(bpos != tail());
         link(node, bpos->_suc);
