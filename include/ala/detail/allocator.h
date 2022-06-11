@@ -58,12 +58,12 @@ struct allocator {
 
     template<class U, class... Args>
     void construct(U *p, Args &&...args) {
-        ::new ((void *)p) U(ala::forward<Args>(args)...);
+        ala::construct_at<U>(p, ala::forward<Args>(args)...);
     }
 
     template<class U>
     void destroy(U *p) {
-        p->~U();
+        ala::destroy_at<U>(p);
     }
 
     size_type max_size() const noexcept {
@@ -205,8 +205,7 @@ struct allocator_traits {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
         // static_assert(is_same<T, value_type>::value,
         //               "Can not process incompatible type");
-        void *raw = static_cast<void *>(ala::to_address(p));
-        ::new (raw) T(ala::forward<Args>(args)...);
+        ala::construct_at<T>(ala::to_address(p), ala::forward<Args>(args)...);
     }
 
     template<typename Pointer>
@@ -224,7 +223,7 @@ struct allocator_traits {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
         // static_assert(is_same<T, value_type>::value,
         //               "Can not process incompatible type");
-        (*p).~T();
+        ala::destroy_at<T>(ala::to_address(p));
     }
 
     template<typename Void, typename A, typename U>
@@ -352,9 +351,7 @@ struct allocator_traits {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
         static_assert(is_same<T, remove_cv_t<U>>::value,
                       "Can not process incompatible type");
-        void *raw = const_cast<void *>(
-            static_cast<const volatile void *>(ala::to_address(p)));
-        ::new (raw) U(ala::forward<Args>(args)...);
+        ala::construct_at<U>(ala::to_address(p), ala::forward<Args>(args)...);
     }
 
     template<typename U, typename Pointer>
@@ -372,7 +369,7 @@ struct allocator_traits {
         using T = remove_cv_t<typename pointer_traits<Pointer>::element_type>;
         static_assert(is_same<T, remove_cv_t<U>>::value,
                       "Can not process incompatible type");
-        (*p).~U();
+        ala::destroy_at<T>(ala::to_address(p));
     }
 
     template<typename Void, typename A>
@@ -429,6 +426,12 @@ struct pointer_holder {
     Pointer get() {
         return _ptr;
     }
+    void reset(Pointer p = nullptr) noexcept {
+        Pointer tmp = _ptr;
+        _ptr = p;
+        if (tmp)
+            _alloc.deallocate(tmp, _size);
+    }
 };
 
 template<class T, class Alloc>
@@ -454,6 +457,12 @@ struct pointer_holder<T *, Alloc> {
     }
     Pointer get() {
         return _ptr;
+    }
+    void reset(Pointer p = nullptr) noexcept {
+        Pointer tmp = _ptr;
+        _ptr = p;
+        if (tmp)
+            _alloc_traits::template deallocate_object<T>(_alloc, tmp, _size);
     }
 };
 

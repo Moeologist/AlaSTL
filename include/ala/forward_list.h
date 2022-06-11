@@ -422,12 +422,12 @@ public:
 
 protected:
     template<class... V>
-    void nv_resize(size_type sz, V &&...v) {
+    void v_resize(size_type n, V &&...v) {
         static_assert(sizeof...(V) == 0 || sizeof...(V) == 1, "Internal error");
-        if (size() > sz) {
-            this->cut_after(this->locate_before(sz));
+        if (size() > n) {
+            this->cut_after(this->locate_before(n));
         } else {
-            size_t n = sz - size();
+            size_t n = n - size();
             if (n == 0)
                 return;
             _hdle_t head = nullptr, prev = nullptr;
@@ -456,12 +456,12 @@ protected:
     }
 
 public:
-    void resize(size_type sz) {
-        nv_resize(sz);
+    void resize(size_type n) {
+        v_resize(n);
     }
 
-    void resize(size_type sz, const value_type &v) {
-        nv_resize(sz, v);
+    void resize(size_type n, const value_type &v) {
+        v_resize(n, v);
     }
 
     ALA_NODISCARD bool empty() const noexcept {

@@ -58,7 +58,7 @@ struct _optional_destroy<T, false> {
         T _value;
     };
     bool _valid = false;
-    constexpr ~_optional_destroy() {
+    ALA_CONSTEXPR20 ~_optional_destroy() {
         this->_reset();
     }
     constexpr void _reset() {

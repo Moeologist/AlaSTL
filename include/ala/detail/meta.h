@@ -219,6 +219,12 @@ struct _sum_: _meta_reduce<_add_, Ts...> {};
 template<class... Ts>
 struct _prod_: _meta_reduce<_mul_, Ts...> {};
 
+template<size_t N>
+struct _log2_: integral_constant<size_t, _log2_<(N >> 1)>::value + 1> {};
+
+template<>
+struct _log2_<1>: integral_constant<size_t, 0> {};
+
 template<class T, class...>
 using _sfinae_checker = T;
 

@@ -6,18 +6,6 @@
 #include <ala/detail/memory_base.h>
 #include <ala/iterator.h>
 
-namespace std {
-namespace ala {
-
-template<class T, class... Args>
-constexpr T *construct_at(T *p, Args &&...args) {
-    return ::new (const_cast<void *>(static_cast<const volatile void *>(
-        ::ala::addressof(*p)))) T(::ala::forward<Args>(args)...);
-}
-
-}
-}
-
 namespace ala {
 
 template<class ForwardIter>
@@ -102,25 +90,6 @@ ForwardIter uninitialized_fill_n(ForwardIter first, Size count, const T &x) {
     for (; n > 0; ++first, (void)--n)
         ::new (static_cast<void *>(ala::addressof(*first))) T(x);
     return first;
-}
-
-template<class T>
-constexpr enable_if_t<is_array<T>::value> destroy_at(T *p) {
-    for (auto &elem : *p)
-        ala::destroy_at(ala::addressof(elem));
-}
-
-template<class T>
-constexpr enable_if_t<!is_array<T>::value> destroy_at(T *p) {
-    p->~T();
-}
-
-template<class T, class... Args>
-constexpr T *construct_at(T *p, Args &&...args) {
-    // std namespace make constexpr new happy
-    return ::std::ala::construct_at(p, ala::forward<Args>(args)...);
-    // return ::new (const_cast<void *>(static_cast<const volatile void *>(
-    //     ::ala::addressof(*p)))) T(::ala::forward<Args>(args)...);
 }
 
 template<class ForwardIter>

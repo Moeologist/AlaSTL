@@ -21,12 +21,10 @@
     #endif
 #endif
 
-#if ALA_API_VER > 17
-    #define ALA_ENABLE_CXX20(...) x
-    #define ALA_RETURN_CXX20(...) return __VA_ARGS__
+#if ALA_LANG > 201703L
+    #define ALA_CONSTEXPR20 constexpr
 #else
-    #define ALA_ENABLE_CXX20(...) void
-    #define ALA_RETURN_CXX20(...) return (void)__VA_ARGS__
+    #define ALA_CONSTEXPR20
 #endif
 
 #if defined(__is_identifier)

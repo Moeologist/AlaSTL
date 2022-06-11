@@ -59,7 +59,7 @@ constexpr void insertion_sort(BidirIter first, BidirIter last) {
 template<class RandomIter, class Comp>
 constexpr void shell_sort(RandomIter first, RandomIter last, Comp comp) {
     using T = typename iterator_traits<RandomIter>::value_type;
-    uint_fast64_t seq[64];
+    uint_fast64_t seq[64] = {};
     for (int i = 0; i < 32; ++i) {
         seq[i * 2] = 9 * pow(4, i) - 9 * pow(2, i) + 1;
         seq[i * 2 + 1] = pow(2, i + 2) * (pow(2, i + 2) - 3) + 1;

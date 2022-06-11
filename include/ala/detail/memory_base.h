@@ -5,6 +5,16 @@
 #include <ala/type_traits.h>
 #include <ala/detail/macro.h>
 
+namespace std {
+
+template<class T, class... Args>
+constexpr T *_ala_construct_at(T *p, Args &&...args) {
+    return ::new (const_cast<void *>(static_cast<const volatile void *>(
+        ::ala::addressof(*p)))) T(::ala::forward<Args>(args)...);
+}
+
+}
+
 namespace ala {
 
 template<typename Ptr>
@@ -105,6 +115,25 @@ template<class T>
 constexpr T *to_address(T *p) noexcept {
     static_assert(!is_function<T>::value, "Ill-formed, T is a function type");
     return p;
+}
+
+template<class T>
+constexpr enable_if_t<is_array<T>::value> destroy_at(T *p) {
+    for (auto &elem : *p)
+        ala::destroy_at(ala::addressof(elem));
+}
+
+template<class T>
+constexpr enable_if_t<!is_array<T>::value> destroy_at(T *p) {
+    p->~T();
+}
+
+template<class T, class... Args>
+constexpr T *construct_at(T *p, Args &&...args) {
+    // std namespace make constexpr new happy
+    return ::std::_ala_construct_at(p, ala::forward<Args>(args)...);
+    // return ::new (const_cast<void *>(static_cast<const volatile void *>(
+    //     ::ala::addressof(*p)))) T(::ala::forward<Args>(args)...);
 }
 
 } // namespace ala
