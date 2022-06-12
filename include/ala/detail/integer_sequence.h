@@ -64,7 +64,7 @@ struct _make_int_seq<Int, 0> {
     using type = integer_sequence<Int>;
 };
 
-#if _ALA_ENABLE_MAKE_INTEGER_SEQ
+#if ALA_HAS_BUILTIN(__make_integer_seq) || defined(_ALA_MSVC)
 
 template<typename Int, Int N>
 using make_integer_sequence = __make_integer_seq<integer_sequence, Int, N>;
@@ -152,14 +152,27 @@ struct ndim_indexer<I, Is...> {
     };
 
     template<size_t Flat>
-    using flat2nd = typename _flat2nd_impl<Flat, index_sequence<>>::type;
+    using flat2nd_t = typename _flat2nd_impl<Flat, index_sequence<>>::type;
 
     template<size_t Idx, size_t... Idxs>
-    struct nd2flat
-        : integral_constant<size_t, ndim_indexer<Is...>::template nd2flat<Idxs...>::value +
-                                        Idx * ndsize> {
+    struct nd2flat_t
+        : integral_constant<size_t,
+                            ndim_indexer<Is...>::template nd2flat_t<Idxs...>::value +
+                                Idx * ndsize> {
         static_assert(Idx < I, "Index out of range");
     };
+
+    static constexpr void flat2nd(size_t flat, size_t *array) {
+        assert(flat / ndsize < I); // Index out of range
+        return (*array = flat / ndsize),
+               ndim_indexer<Is...>::flat2nd(flat % ndsize, array + 1);
+    }
+
+    template<class SizeT, class... SizeTs>
+    static constexpr size_t nd2flat(SizeT idx, SizeTs... idxs) {
+        assert(idx < I); // Index out of range
+        return ndim_indexer<Is...>::nd2flat(idxs...) + idx * ndsize;
+    }
 };
 
 template<>
@@ -173,10 +186,16 @@ struct ndim_indexer<> {
     };
 
     template<size_t flat>
-    using flat2nd = typename _flat2nd_impl<flat, index_sequence<>>::type;
+    using flat2nd_t = typename _flat2nd_impl<flat, index_sequence<>>::type;
 
     template<size_t...>
-    struct nd2flat: integral_constant<size_t, 0> {};
+    struct nd2flat_t: integral_constant<size_t, 0> {};
+
+    static constexpr void flat2nd(size_t flat, size_t *array) {}
+
+    static constexpr size_t nd2flat(...) {
+        return 0;
+    }
 };
 
 } // namespace ala

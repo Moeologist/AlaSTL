@@ -11,6 +11,7 @@
 #include <cstddef>
 #include <cstring>
 #include <cstdlib>
+#include <cmath>
 
 namespace ala {
 using ::std::exception;

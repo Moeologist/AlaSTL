@@ -30,8 +30,8 @@ template<typename T, typename... Ts>
 using _type_pack_index_t = typename decltype(_type_pack_index_cast<T>(
     _type_pack_element_index<index_sequence_for<Ts...>, Ts...>{}))::index;
 
-// #if 0
-#if _ALA_ENABLE_TYPE_PACK_ELEMENT
+
+#if ALA_HAS_BUILTIN(__type_pack_element)
 
 template<size_t I, typename... Ts>
 using type_pack_element_t = __type_pack_element<I, Ts...>;
@@ -65,7 +65,7 @@ struct _type_pack_index_helper<void_t<_type_pack_index_t<T, Ts...>>, T, Ts...>
 template<typename T, typename... Ts>
 struct type_pack_index: _type_pack_index_helper<void, T, Ts...> {};
 
-#ifdef _ALA_ENABLE_INLINE_VAR
+#if _ALA_ENABLE_INLINE_VAR
 template<typename T, typename... Ts>
 inline constexpr size_t type_pack_index_v = type_pack_index<T, Ts...>::value;
 #endif

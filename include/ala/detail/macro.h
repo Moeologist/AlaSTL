@@ -24,9 +24,6 @@ namespace ala {
 template<class...>
 struct TypeCheck;
 
-template<auto...>
-struct ValueCheck;
-
 } // namespace ala
 
 #define ALA_STRINGIFY0(x) #x
@@ -37,7 +34,6 @@ struct ValueCheck;
 #define ALA_COUNTER_ID ALA_CONCAT(_ala_id_, __COUNTER__)
 
 #define ALA_TYPE(...) ala::TypeCheck<__VA_ARGS__> ALA_COUNTER_ID
-#define ALA_VALUE(...) ala::ValueCheck<__VA_ARGS__> ALA_COUNTER_ID
 #define ALA_TYPEOF(...) ALA_TYPE(decltype(__VA_ARGS__))
 
 #endif

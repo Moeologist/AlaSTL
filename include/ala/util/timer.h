@@ -22,7 +22,6 @@ namespace util {
 
 template<class Fn, class... Args>
 long long timer(Fn &&fn, Args &&... args) {
-    std::string units[] = {"ns", "us", "ms", "s"};
     LARGE_INTEGER before, after, frequency;
     QueryPerformanceFrequency(&frequency);
     QueryPerformanceCounter(&before);
@@ -37,7 +36,6 @@ long long timer(Fn &&fn, Args &&... args) {
 
 template<class Fn, class... Args>
 long long timer(Fn &&fn, Args &&... args) {
-    std::string units[] = {"ns", "us", "ms", "s"};
     struct timespec before, after;
     clock_gettime(CLOCK_MONOTONIC, &before);
     ala::invoke(ala::forward<Fn>(fn), ala::forward<Args>(args)...);
@@ -51,7 +49,6 @@ long long timer(Fn &&fn, Args &&... args) {
 
 template<class Fn, class... Args>
 long long timer(Fn &&fn, Args &&... args) {
-    std::string units[] = {"ns", "us", "ms", "s"};
     uint_fast64_t before, after;
     mach_timebase_info_data_t info;
     mach_timebase_info(&info);

@@ -250,7 +250,7 @@ struct is_destructible: _and_<_not_<is_unbounded_array<T>>,
                               _is_destructible_helper<remove_all_extents_t<T>>> {};
 
 
-#if _ALA_ENABLE_IS_TRIVIALLY_DESTRUCTIBLE
+#if ALA_HAS_BUILTIN(__is_trivially_destructible) || defined(_ALA_MSVC)
 template <class T> struct is_trivially_destructible: integral_constant<bool, __is_trivially_destructible(T)> {};
 #else
 template<typename T>

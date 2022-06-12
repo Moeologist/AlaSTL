@@ -21,12 +21,6 @@
     #endif
 #endif
 
-#if ALA_LANG > 201703L
-    #define ALA_CONSTEXPR20 constexpr
-#else
-    #define ALA_CONSTEXPR20
-#endif
-
 #if defined(__is_identifier)
     #define ALA_IS_IDENTIFIER(x) __is_identifier(x)
 #else
@@ -51,36 +45,11 @@
     #endif
 #endif
 
-#if ALA_HAS_BUILTIN(__is_trivially_destructible) || defined(_ALA_MSVC)
-    #define _ALA_ENABLE_IS_TRIVIALLY_DESTRUCTIBLE 1
-#else
-    #define _ALA_ENABLE_IS_TRIVIALLY_DESTRUCTIBLE 0
-#endif
-
 #if ALA_HAS_BUILTIN(__builtin_is_constant_evaluated) || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1925)
     #define _ALA_ENABLE_BUILTIN_IS_CONSTANT_EVALUATED 1
 #else
     #define _ALA_ENABLE_BUILTIN_IS_CONSTANT_EVALUATED 0
-#endif
-
-#if ALA_HAS_BUILTIN(__make_integer_seq) || defined(_ALA_MSVC)
-    #define _ALA_ENABLE_MAKE_INTEGER_SEQ 1
-#else
-    #define _ALA_ENABLE_MAKE_INTEGER_SEQ 0
-#endif
-
-#if ALA_HAS_BUILTIN(__type_pack_element)
-    #define _ALA_ENABLE_TYPE_PACK_ELEMENT 1
-#else
-    #define _ALA_ENABLE_TYPE_PACK_ELEMENT 0
-#endif
-
-#if ALA_HAS_BUILTIN(__builtin_bit_cast) || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1927)
-    #define _ALA_ENABLE_BUILTIN_BIT_CAST 1
-#else
-    #define _ALA_ENABLE_BUILTIN_BIT_CAST 0
 #endif
 
 #if ALA_HAS_CPP_ATTRIBUTE(nodiscard) || \
@@ -118,8 +87,9 @@
     #define _ALA_ENABLE_IF_CONSTEXPR 0
 #endif
 
-#if __cpp_inline_variables >= 201606L || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1912 && ALA_LANG >= 201703L)
+#if (__cpp_inline_variables >= 201606L || \
+     (defined(_ALA_MSVC) && _MSC_VER >= 1912)) && \
+    ALA_LANG >= 201703L
     #define _ALA_ENABLE_INLINE_VAR 1
 #else
     #define _ALA_ENABLE_INLINE_VAR 0
@@ -155,16 +125,24 @@
 
 #if __cpp_constexpr >= 201907L || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1929 && ALA_LANG >= 202002L)
-    #define _ALA_CONSTEXPR \
-        20 // no compiler implement all C++20 constexpr features
+    #define _ALA_CONSTEXPR_VER 20
+    // no compiler implement all C++20 constexpr features
+    #define ALA_CONSTEXPR20 constexpr
+    #define ALA_CONSTEXPR17 constexpr
 #elif __cpp_constexpr >= 201603L || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1911 && ALA_LANG >= 201703L)
-    #define _ALA_CONSTEXPR 17 // constexpr lambda
+    #define _ALA_CONSTEXPR_VER 17 // constexpr lambda
+    #define ALA_CONSTEXPR20
+    #define ALA_CONSTEXPR17 constexpr
 #elif __cpp_constexpr >= 201304L || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1910 && ALA_LANG >= 201103L)
-    #define _ALA_CONSTEXPR 14
+    #define _ALA_CONSTEXPR_VER 14
+    #define ALA_CONSTEXPR20
+    #define ALA_CONSTEXPR17
 #else
-    #define _ALA_CONSTEXPR 11
+    #define _ALA_CONSTEXPR_VER 11
+    #define ALA_CONSTEXPR20
+    #define ALA_CONSTEXPR17
 #endif
 
 #if __cpp_char8_t >= 201811L
@@ -207,6 +185,22 @@
 
 #ifndef ALA_TEMPLATE_RECURSIVE_DEPTH
     #define ALA_TEMPLATE_RECURSIVE_DEPTH 512
+#endif
+
+#if _ALA_ENABLE_INLINE_VAR
+    #define ALA_INLINE_CONSTEXPR_V inline constexpr
+#else
+    #define ALA_INLINE_CONSTEXPR_V constexpr
+    #undef _ALA_ENABLE_INLINE_VAR
+    #define _ALA_ENABLE_INLINE_VAR 1
+#endif
+
+#ifndef ALA_USE_RTTI
+    #define ALA_USE_RTTI 1
+#endif
+
+#ifndef ALA_USE_EXCEPTION
+    #define ALA_USE_EXCEPTION 1
 #endif
 
 #endif // HEAD

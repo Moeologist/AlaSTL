@@ -13,7 +13,8 @@ ALA_NODISCARD constexpr enable_if_t<
           is_trivially_copyable<From>>::value,
     To>
 bit_cast(const From &x) noexcept {
-#if _ALA_ENABLE_BUILTIN_BIT_CAST
+#if ALA_HAS_BUILTIN(__builtin_bit_cast) || \
+    (defined(_ALA_MSVC) && _MSC_VER >= 1927)
     return __builtin_bit_cast(To, x);
 #else
     static_assert(is_trivially_constructible_v<To>,
