@@ -9,6 +9,7 @@
 #ifdef _ALA_CLANG
     #pragma clang diagnostic push
     #pragma clang diagnostic ignored "-Wreturn-type"
+    #pragma clang diagnostic ignored "-Wdeprecated-volatile"
 #endif
 
 namespace ala {
@@ -38,7 +39,7 @@ struct variant_size<volatile T>: variant_size<T> {};
 template<class T>
 struct variant_size<const volatile T>: variant_size<T> {};
 
-#ifdef _ALA_ENABLE_INLINE_VAR
+#if _ALA_ENABLE_INLINE_VAR
 template<class T>
 inline constexpr size_t variant_size_v = variant_size<T>::value;
 #endif
@@ -232,14 +233,14 @@ struct _union_op<Trivial, T> {
     template<class Fn, class Union>
     static constexpr auto fmap(size_t I, Fn &&fn, Union &&un)
         -> decltype(ala::forward<Fn>(fn)(ala::forward<Union>(un)._value)) {
-        assert(I == 0);
+        assert(I == 0); // Internal error
         return ala::forward<Fn>(fn)(ala::forward<Union>(un)._value);
     }
 
     template<size_t I, class Fn, class Union>
     static constexpr auto fmap(Fn &&fn, Union &&un)
         -> decltype(ala::forward<Fn>(fn)(ala::forward<Union>(un)._value)) {
-        static_assert(I == 0);
+        static_assert(I == 0, "Internal error");
         return ala::forward<Fn>(fn)(ala::forward<Union>(un)._value);
     }
 };
@@ -310,14 +311,12 @@ struct _variant_base
 
     template<size_t I>
     constexpr const type_pack_element_t<I, Ts...> &_get() const noexcept {
-        auto f = [](auto &&v) -> decltype(v) { return v; };
-        return _union_op_t::template fmap<I>(f, _union);
+        return _union_op_t::template fmap<I>(ala::identity{}, _union);
     }
 
     template<size_t I>
     constexpr type_pack_element_t<I, Ts...> &_get() noexcept {
-        auto f = [](auto &&v) -> decltype(v) { return v; };
-        return _union_op_t::template fmap<I>(f, _union);
+        return _union_op_t::template fmap<I>(ala::identity{}, _union);
     }
 
     size_t _hash() const noexcept {
@@ -567,6 +566,8 @@ class variant: _make_controller_t<_variant_base<Ts...>, Ts...> {
                     _and_<is_arithmetic<Ti>, _not_<_is_no_narrow<Ti, T>>>::value>
     struct _overload_set_base {
         static integral_constant<size_t, I> _test(Ti);
+        using _test_f = integral_constant<size_t, I> (&)(Ti);
+        operator _test_f();
     };
 
     template<size_t I, class Ti, class T>
@@ -584,8 +585,10 @@ class variant: _make_controller_t<_variant_base<Ts...>, Ts...> {
     };
 
     template<class T>
-    using _fuzzy_i = decltype(_overload_set<T, index_sequence_for<Ts...>>::_test(
-        declval<T>()));
+    using _fuzzy_i =
+        decltype(_overload_set<T, index_sequence_for<Ts...>>{}(declval<T>()));
+    // using _fuzzy_i = decltype(_overload_set<T, index_sequence_for<Ts...>>::_test(
+    //     declval<T>()));
 
     template<class T>
     using _fuzzy_t = type_pack_element_t<_fuzzy_i<T>::value, Ts...>;
@@ -796,10 +799,13 @@ constexpr add_pointer_t<const T> get_if(const variant<Ts...> *v) noexcept {
 }
 
 // visitation
+// TODO switch-case imple / __builtin_unreachable
 
-struct _visit_no_return {};
+template<class... Ts>
+static constexpr auto _convert_to_variant(const variant<Ts...> &)
+    -> variant<Ts...>;
 
-template<class R, class Visitor, class... Variants>
+template<class Visitor, class... Variants>
 struct _visit_impl {
     template<size_t... Is>
     struct _dispatcher {
@@ -807,14 +813,13 @@ struct _visit_impl {
         static constexpr auto _invoke_ol(int, Visitor1 &&vis, Variants1 &&...vars)
             -> decltype(ala::invoke(ala::forward<Visitor1>(vis),
                                     ala::get<Is>(ala::forward<Variants1>(vars))...)) {
-            return ala::invoke(ala::forward<Visitor>(vis),
+            return ala::invoke(ala::forward<Visitor1>(vis),
                                ala::get<Is>(ala::forward<Variants1>(vars))...);
         }
 
         template<class... Args>
         static constexpr void _invoke_ol(char, Args &&...) {
-            assert(false);
-            // ala::visit not available for these variants
+            assert(false); // ala::visit not available for these variants
         }
 
         static constexpr auto _invoke(Visitor &&vis, Variants &&...vars)
@@ -826,58 +831,8 @@ struct _visit_impl {
     };
 
     template<size_t... Is>
-    struct _dispatcher_r {
-        template<class Visitor1, class... Variants1>
-        static constexpr auto _invoke_ol(int, Visitor1 &&vis, Variants1 &&...vars)
-            -> decltype(ala::invoke(ala::forward<Visitor1>(vis),
-                                    ala::get<Is>(ala::forward<Variants1>(vars))...)) {
-            return ala::invoke(ala::forward<Visitor>(vis),
-                               ala::get<Is>(ala::forward<Variants1>(vars))...);
-        }
-
-        template<class... Args>
-        static constexpr R _invoke_ol(char, Args &&...) {
-            assert(false);
-            // ala::visit not available for these variants
-        }
-
-        static constexpr R _invoke(Visitor &&vis, Variants &&...vars) {
-            return _invoke_ol(0, ala::forward<Visitor>(vis),
-                              ala::forward<Variants>(vars)...);
-        }
-    };
-
-    template<size_t... Is>
-    struct _dispatcher_rvoid {
-        template<class Visitor1, class... Variants1>
-        static constexpr auto _invoke_ol(int, Visitor1 &&vis, Variants1 &&...vars)
-            -> decltype(ala::invoke(ala::forward<Visitor1>(vis),
-                                    ala::get<Is>(ala::forward<Variants1>(vars))...)) {
-            return ala::invoke(ala::forward<Visitor>(vis),
-                               ala::get<Is>(ala::forward<Variants1>(vars))...);
-        }
-
-        template<class... Args>
-        static constexpr R _invoke_ol(char, Args &&...) {
-            assert(false);
-            // ala::visit not available for these variants
-        }
-
-        static constexpr R _invoke(Visitor &&vis, Variants &&...vars) {
-            _invoke_ol(0, ala::forward<Visitor>(vis),
-                       ala::forward<Variants>(vars)...);
-        }
-    };
-
-    template<size_t... Is>
-    using dispatcher_t =
-        conditional_t<is_void<R>::value, _dispatcher_rvoid<Is...>,
-                      conditional_t<is_same<R, _visit_no_return>::value,
-                                    _dispatcher<Is...>, _dispatcher_r<Is...>>>;
-
-    template<size_t... Is>
     static constexpr auto _make_visit(index_sequence<Is...>) {
-        return dispatcher_t<Is...>::_invoke;
+        return _dispatcher<Is...>::_invoke;
     }
 
     template<class Void, class... Ts>
@@ -928,6 +883,100 @@ struct _visit_impl {
         return _view(a[i], ii...);
     }
 
+    template<size_t Offset, size_t... Is>
+    static constexpr decltype(auto) _case(true_type, index_sequence<Is...>,
+                                          Visitor &&vis, Variants &&...vars) {
+        return _dispatcher<Is...>::_invoke(ala::forward<Visitor>(vis),
+                                           ala::forward<Variants>(vars)...);
+    }
+
+    template<size_t Offset, size_t... Is>
+    static constexpr auto _case(false_type, index_sequence<Is...> seq,
+                                Visitor &&vis, Variants &&...vars)
+        -> decltype(_visit_impl::_case<Offset>(true_type{}, seq,
+                                               ala::forward<Visitor>(vis),
+                                               ala::forward<Variants>(vars)...)) {
+        ALA_UNREACHABLE();
+    }
+
+    template<size_t Offset, size_t... Is>
+    static constexpr decltype(auto) _def(true_type, index_sequence<Is...>,
+                                         Visitor &&vis, Variants &&...vars) {
+        return _visit_impl::_switch<Offset>(ala::forward<Visitor>(vis),
+                                            ala::forward<Variants>(vars)...);
+    }
+
+    template<size_t Offset, size_t... Is>
+    static constexpr auto _def(false_type, index_sequence<Is...> seq,
+                               Visitor &&vis, Variants &&...vars)
+        -> decltype(_visit_impl::_case<Offset>(true_type{}, seq,
+                                               ala::forward<Visitor>(vis),
+                                               ala::forward<Variants>(vars)...)) {
+        ALA_UNREACHABLE();
+    }
+
+    template<size_t Base = 0>
+    static constexpr decltype(auto) _switch(Visitor &&vis, Variants &&...vars) {
+        using index_t = ndim_indexer<
+            variant_size<decltype(ala::_convert_to_variant(vars))>::value...>;
+        using limit_t =
+            _prod_<integral_constant<size_t, 1>,
+                   variant_size<decltype(ala::_convert_to_variant(vars))>...>;
+        if (_or_constexpr_helper_((vars.index() == variant_npos)...))
+            throw bad_variant_access{};
+        size_t flat = index_t::nd2flat(vars.index()...);
+// clang-format off
+        #define ALA_DISPATCH(f, n) \
+            _visit_impl::f<n>(bool_constant<(n < limit_t::value)>{}, \
+                              typename index_t::template flat2nd_t<(n < limit_t::value ? n : 0)>{}, \
+                              ala::forward<Visitor>(vis), ala::forward<Variants>(vars)...)
+
+        switch (flat) {
+            case Base + 0: return ALA_DISPATCH(_case, Base + 0);
+            case Base + 1: return ALA_DISPATCH(_case, Base + 1);
+            case Base + 2: return ALA_DISPATCH(_case, Base + 2);
+            case Base + 3: return ALA_DISPATCH(_case, Base + 3);
+            case Base + 4: return ALA_DISPATCH(_case, Base + 4);
+            case Base + 5: return ALA_DISPATCH(_case, Base + 5);
+            case Base + 6: return ALA_DISPATCH(_case, Base + 6);
+            case Base + 7: return ALA_DISPATCH(_case, Base + 7);
+            case Base + 8: return ALA_DISPATCH(_case, Base + 8);
+            case Base + 9: return ALA_DISPATCH(_case, Base + 9);
+            case Base + 10: return ALA_DISPATCH(_case, Base + 10);
+            case Base + 11: return ALA_DISPATCH(_case, Base + 11);
+            case Base + 12: return ALA_DISPATCH(_case, Base + 12);
+            case Base + 13: return ALA_DISPATCH(_case, Base + 13);
+            case Base + 14: return ALA_DISPATCH(_case, Base + 14);
+            case Base + 15: return ALA_DISPATCH(_case, Base + 15);
+            case Base + 16: return ALA_DISPATCH(_case, Base + 16);
+            case Base + 17: return ALA_DISPATCH(_case, Base + 17);
+            case Base + 18: return ALA_DISPATCH(_case, Base + 18);
+            case Base + 19: return ALA_DISPATCH(_case, Base + 19);
+            case Base + 20: return ALA_DISPATCH(_case, Base + 20);
+            case Base + 21: return ALA_DISPATCH(_case, Base + 21);
+            case Base + 22: return ALA_DISPATCH(_case, Base + 22);
+            case Base + 23: return ALA_DISPATCH(_case, Base + 23);
+            case Base + 24: return ALA_DISPATCH(_case, Base + 24);
+            case Base + 25: return ALA_DISPATCH(_case, Base + 25);
+            case Base + 26: return ALA_DISPATCH(_case, Base + 26);
+            case Base + 27: return ALA_DISPATCH(_case, Base + 27);
+            case Base + 28: return ALA_DISPATCH(_case, Base + 28);
+            case Base + 29: return ALA_DISPATCH(_case, Base + 29);
+            case Base + 30: return ALA_DISPATCH(_case, Base + 30);
+            case Base + 31: return ALA_DISPATCH(_case, Base + 31);
+            default:        return ALA_DISPATCH(_def, Base + 32);
+        }
+        #undef ALA_DISPATCH
+        // clang-format on
+    }
+
+    // static constexpr auto _visit_helper(Visitor &&vis, Variants &&...vars)
+    //     -> decltype(_visit_impl::_switch(ala::forward<Visitor>(vis),
+    //                                      ala::forward<Variants>(vars)...)) {
+    //     return _visit_impl::_switch(ala::forward<Visitor>(vis),
+    //                                 ala::forward<Variants>(vars)...);
+    // }
+
     static constexpr auto _visit_helper(Visitor &&vis, Variants &&...vars)
         -> decltype(_visit_impl::_view(_visit_impl::_make_visit_array(),
                                        vars.index()...)(
@@ -937,10 +986,6 @@ struct _visit_impl {
                                                    ala::forward<Variants>(vars)...);
     }
 };
-
-template<class... Ts>
-static constexpr auto _convert_to_variant(const variant<Ts...> &)
-    -> variant<Ts...>;
 
 template<class Variant, class = void>
 struct _can_visit1: false_type {};
@@ -959,7 +1004,7 @@ struct _can_visit: _and_<_can_visit1<Variants>...> {};
 template<class R, class Visitor, class... Variants>
 constexpr auto visit_r(Visitor &&vis, Variants &&...vars)
     -> enable_if_t<_can_visit<Variants...>::value, R> {
-    return _visit_impl<R, Visitor, typename _can_visit1<Variants>::variant_type...>::_visit_helper(
+    return _visit_impl<Visitor, typename _can_visit1<Variants>::variant_type...>::_visit_helper(
         ala::forward<Visitor>(vis), ala::forward<Variants>(vars)...);
 }
 
@@ -967,19 +1012,15 @@ template<class R, class Visitor, class... Variants>
 constexpr auto visit(Visitor &&vis, Variants &&...vars)
     -> enable_if_t<_can_visit<Variants...>::value, R> {
     return ala::visit_r<R>(ala::forward<Visitor>(vis),
-                      ala::forward<Variants>(vars)...);
+                           ala::forward<Variants>(vars)...);
 }
 
 template<class Visitor, class... Variants>
 constexpr auto visit(Visitor &&vis, Variants &&...vars)
-    -> decltype(_visit_impl<_visit_no_return, Visitor,
-                            typename _can_visit1<Variants>::variant_type...>::
-                    _visit_helper(ala::forward<Visitor>(vis),
-                                  ala::forward<Variants>(vars)...)) {
-    return _visit_impl<_visit_no_return, Visitor,
-                       typename _can_visit1<Variants>::variant_type...>::
-        _visit_helper(ala::forward<Visitor>(vis),
-                      ala::forward<Variants>(vars)...);
+    -> decltype(_visit_impl<Visitor, typename _can_visit1<Variants>::variant_type...>::_visit_helper(
+        ala::forward<Visitor>(vis), ala::forward<Variants>(vars)...)) {
+    return _visit_impl<Visitor, typename _can_visit1<Variants>::variant_type...>::_visit_helper(
+        ala::forward<Visitor>(vis), ala::forward<Variants>(vars)...);
 }
 
 // relational operators

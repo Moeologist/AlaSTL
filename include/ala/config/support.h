@@ -159,9 +159,17 @@
 
 #if !defined(ALA_EXPECT)
     #if ALA_HAS_BUILTIN(__builtin_expect)
-        #define ALA_EXPECT(x) (__builtin_expect(!!(x), 1))
+        #define ALA_EXPECT(x) __builtin_expect(!!(x), 1)
     #else
         #define ALA_EXPECT(x) (x)
+    #endif
+#endif
+
+#if !defined(ALA_UNREACHABLE)
+    #if ALA_HAS_BUILTIN(__builtin_unreachable)
+        #define ALA_UNREACHABLE() __builtin_unreachable()
+    #else
+        #define ALA_UNREACHABLE()
     #endif
 #endif
 

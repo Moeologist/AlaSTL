@@ -168,8 +168,317 @@ protected:
     Ptr _ptr = nullptr;
 };
 
+class rb_tree_base {
+public:
+    using _hdle_t = rb_node *;
+
+    _hdle_t _root = nullptr;
+    rb_node _guard[2];
+
+    _hdle_t left_nil() noexcept {
+        _hdle_t p = _guard;
+        return p;
+    }
+
+    _hdle_t rght_nil() noexcept {
+        _hdle_t p = _guard;
+        return p + 1;
+    }
+
+    struct locate_states {
+        _hdle_t postion;
+        bool found;
+        Dir lr;
+    };
+
+    void initialize() {
+        left_nil()->_parent = rght_nil();
+        left_nil()->_rght = rght_nil();
+        rght_nil()->_parent = left_nil();
+        rght_nil()->_left = left_nil();
+        _root = nullptr;
+    }
+
+    // rotate
+    /*-------------------------------------
+    |      x        left        y         |
+    |     / \       ====>      / \        |
+    |    a   y                x   c       |
+    |       / \     <====    / \          |
+    |      b   c    right   a   b         |
+    --------------------------------------*/
+
+    _hdle_t rotate_left(_hdle_t x) noexcept {
+        _hdle_t y = x->_rght;
+        if ((x->_rght = y->_left) != nullptr)
+            // b can't be equal to NIL,so using is_nil is correct,too
+            y->_left->_parent = x;
+        y->_left = x;
+        if ((y->_parent = x->_parent) == nullptr)
+            _root = y;
+        else if (x == x->_parent->_left)
+            x->_parent->_left = y;
+        else
+            x->_parent->_rght = y;
+        x->_parent = y;
+        return y;
+    }
+
+    _hdle_t rotate_rght(_hdle_t y) noexcept {
+        _hdle_t x = y->_left;
+        if ((y->_left = x->_rght) != nullptr)
+            x->_rght->_parent = y;
+        x->_rght = y;
+        if ((x->_parent = y->_parent) == nullptr)
+            _root = x;
+        else if (y == y->_parent->_left)
+            y->_parent->_left = x;
+        else
+            y->_parent->_rght = x;
+        y->_parent = x;
+        return x;
+    }
+
+    /*---------------------------------
+    |      up     trans     up        |
+    |       \     ====>      \        |
+    |        u                v       |
+    ---------------------------------*/
+
+    void transplant(_hdle_t u, _hdle_t v) noexcept {
+        _hdle_t uparent = u->_parent;
+        if (uparent == nullptr)
+            _root = v;
+        else if (u == uparent->_left)
+            uparent->_left = v;
+        else
+            uparent->_rght = v;
+        if (v != nullptr)
+            v->_parent = uparent;
+    }
+
+    void fix_nil() noexcept {
+        if (_root == nullptr) {
+            initialize();
+        } else {
+            _hdle_t lleaf = left_leaf(_root);
+            _hdle_t rleaf = rght_leaf(_root);
+            lleaf->_left = left_nil();
+            rleaf->_rght = rght_nil();
+            left_nil()->_parent = lleaf;
+            rght_nil()->_parent = rleaf;
+            left_nil()->_rght = rght_nil()->_left = nullptr;
+        }
+    }
+
+    void attach(locate_states states, _hdle_t p) noexcept {
+        _hdle_t pos = states.postion;
+        p->_color = Color::Red;
+        p->_left = p->_rght = nullptr;
+        p->_parent = pos;
+        if (pos == nullptr) { // empty tree
+            _root = p;
+            left_nil()->_parent = rght_nil()->_parent = p;
+            left_nil()->_rght = rght_nil()->_left = nullptr;
+            p->_left = left_nil();
+            p->_rght = rght_nil();
+        } else if (states.lr == Dir::Left) {
+            if (pos->_left == left_nil()) { // fix nil
+                p->_left = left_nil();
+                left_nil()->_parent = p;
+            }
+            pos->_left = p;
+        } else {
+            if (pos->_rght == rght_nil()) { // fix nil
+                p->_rght = rght_nil();
+                rght_nil()->_parent = p;
+            }
+            pos->_rght = p;
+        }
+        rebalance_for_attach(p);
+    }
+
+    /*---------------------------------------------------------------------------------
+    |      Gb       P.c=b        Gb                    Gb                    Pb       |
+    |     / \       U.c=b       / \       RotL(P)     / \       RotR(G)     / \       |
+    |   Pr   Ur     ====>*    Pr   Ub     ====>     Pr   Ub     ====>     Xr   Gr     |
+    |  / \          G.c=r    / \          P<->X    / \          P.c=b         / \     |
+    |     Xr        X<-G        Xr                Xr            G.c=r            Ub   |
+    ---------------------------------------------------------------------------------*/
+    // remove continuous red
+    // X: current, P: parent, U:uncle, G:grandp
+    // b/r: black/red
+    // c: color, L: left, R: right
+    // <-: assign, <->: swap
+    // =>: jump to next case, *: jump to a possiable case
+    void rebalance_for_attach(_hdle_t current) noexcept {
+        _hdle_t parent, grandp, uncle;
+        while (is_red(parent = current->_parent)) {
+            grandp = parent->_parent;
+            if (parent == grandp->_left) { // see graph
+                uncle = grandp->_rght;
+                if (is_red(uncle)) {
+                    parent->_color = uncle->_color = Color::Black;
+                    grandp->_color = Color::Red;
+                    current = grandp;
+                } else {
+                    if (parent->_rght == current)
+                        parent = rotate_left(current = parent);
+                    parent->_color = Color::Black;
+                    grandp->_color = Color::Red;
+                    rotate_rght(grandp);
+                }
+            } else { // symmetrical
+                uncle = grandp->_left;
+                if (is_red(uncle)) {
+                    parent->_color = uncle->_color = Color::Black;
+                    grandp->_color = Color::Red;
+                    current = grandp;
+                } else {
+                    if (parent->_left == current)
+                        parent = rotate_rght(current = parent);
+                    parent->_color = Color::Black;
+                    grandp->_color = Color::Red;
+                    rotate_left(grandp);
+                }
+            }
+        }
+        _root->_color = Color::Black;
+    }
+
+    _hdle_t detach(_hdle_t current) noexcept {
+        _hdle_t child, parent, subs, fix = nullptr;
+        Color color;
+        if (is_nil(current->_left)) {
+            color = current->_color;
+            child = current->_rght;
+            parent = current->_parent;
+            transplant(current, child);
+            fix = child == nullptr ? parent : child;
+        } else if (is_nil(current->_rght)) {
+            color = current->_color;
+            child = current->_left;
+            parent = current->_parent;
+            transplant(current, child);
+            fix = child == nullptr ? parent : child;
+        } else {
+            subs = left_leaf(current->_rght);
+            color = subs->_color;
+            child = subs->_rght;
+            parent = subs->_parent;
+            if (parent == current) {
+                parent = subs;
+            } else {
+                transplant(subs, child);
+                subs->_rght = current->_rght;
+                subs->_rght->_parent = subs;
+            }
+            transplant(current, subs);
+            subs->_left = current->_left;
+            subs->_left->_parent = subs;
+            subs->_color = current->_color;
+            fix = subs;
+        }
+        if (_root != nullptr && color == Color::Black)
+            rebalance_for_detach(child, parent);
+        if (fix)
+            fix_nil_detach(current, fix);
+        return current;
+    }
+
+    /*----------------------------------------------------------------------------------------------------
+    |      Pb       P.c=r        P?                    P?       Y.L.c=b      P?       Y.c=P.c      Y?    |
+    |     / \       Y.c=b       / \       Y.c=R       / \       Y.c=r       / \       P.c=b       / \    |
+    |   Xb   Yr     ====>*    Xb   Yb     ====>*    Xb   Yb     ====>     Xb   Yb     ====>     Pb   b   |
+    |       / \     RotL(P)       / \     X<-P          / \     RotR(Y)       / \     Y.R.c=b  / \       |
+    |     P.R       Y=P.R        b   b                 r   b    Y=P.R            r    RotL(Y) X          |
+    ----------------------------------------------------------------------------------------------------*/
+    // make current black-height + 1
+    // Y: brother
+
+    void rebalance_for_detach(_hdle_t current, _hdle_t parent) noexcept {
+        _hdle_t brother;
+        while (current != _root && is_black(current)) {
+            if (parent->_left == current) {
+                brother = parent->_rght;
+                assert(!is_nil(brother));
+                if (brother->_color == Color::Red) {
+                    brother->_color = Color::Black;
+                    parent->_color = Color::Red;
+                    rotate_left(parent);
+                    brother = parent->_rght;
+                }
+                if (is_black(brother->_left) && is_black(brother->_rght)) {
+                    brother->_color = Color::Red;
+                    current = parent;
+                    parent = current->_parent;
+                } else {
+                    if (is_black(brother->_rght)) {
+                        if (!is_nil(brother->_left))
+                            brother->_left->_color = Color::Black;
+                        brother->_color = Color::Red;
+                        rotate_rght(brother);
+                        brother = parent->_rght;
+                    }
+                    brother->_color = parent->_color;
+                    parent->_color = Color::Black;
+                    if (!is_nil(brother->_rght))
+                        brother->_rght->_color = Color::Black;
+                    rotate_left(parent);
+                    current = _root; // make root black
+                    break;
+                }
+            } else {
+                brother = parent->_left;
+                if (brother->_color == Color::Red) {
+                    brother->_color = Color::Black;
+                    parent->_color = Color::Red;
+                    rotate_rght(parent);
+                    brother = parent->_left;
+                }
+                if (is_black(brother->_left) && is_black(brother->_rght)) {
+                    brother->_color = Color::Red;
+                    current = parent;
+                    parent = current->_parent;
+                } else {
+                    if (is_black(brother->_left)) {
+                        if (!is_nil(brother->_rght))
+                            brother->_rght->_color = Color::Black;
+                        brother->_color = Color::Red;
+                        rotate_left(brother);
+                        brother = parent->_left;
+                    }
+                    brother->_color = parent->_color;
+                    parent->_color = Color::Black;
+                    if (!is_nil(brother->_left))
+                        brother->_left->_color = Color::Black;
+                    rotate_rght(parent);
+                    current = _root;
+                    break;
+                }
+            }
+        }
+        if (!is_nil(current))
+            current->_color = Color::Black;
+    }
+
+    void fix_nil_detach(_hdle_t current, _hdle_t subs) noexcept {
+        if (current->_left == left_nil()) {
+            if (current->_rght == rght_nil()) {
+                initialize();
+            } else {
+                subs->_left = left_nil();
+                left_nil()->_parent = subs;
+            }
+        } else if (current->_rght == rght_nil()) {
+            subs->_rght = rght_nil();
+            rght_nil()->_parent = subs;
+        }
+    }
+};
+
 template<class Value, class Comp, class Alloc, bool IsMap, bool IsUniq>
-class rb_tree {
+class rb_tree: public rb_tree_base {
 public:
     using value_type = Value;
     using value_compare = Comp;
@@ -185,22 +494,9 @@ protected:
     template<class, class, class, bool, bool>
     friend class rb_tree;
 
-    _hdle_t _root = nullptr;
-    rb_node _guard[2];
-
     size_type _size = 0;
     allocator_type _alloc;
     value_compare _comp;
-
-    _hdle_t left_nil() noexcept {
-        rb_node *p = _guard;
-        return static_cast<_hdle_t>(p);
-    }
-
-    _hdle_t rght_nil() noexcept {
-        rb_node *p = _guard;
-        return static_cast<_hdle_t>(p + 1);
-    }
 
     template<typename T>
     struct _is_pair: false_type {};
@@ -287,6 +583,17 @@ protected:
         other._root = nullptr;
         other._size = 0;
         other.fix_nil();
+    }
+
+    void attach(locate_states states, _hdle_t p) noexcept {
+        rb_tree_base::attach(states, p);
+        ++_size;
+    }
+
+    _hdle_t detach(_hdle_t current) noexcept {
+        _hdle_t r = rb_tree_base::detach(current);
+        --_size;
+        return r;
     }
 
 public:
@@ -441,12 +748,6 @@ public:
         this->fix_nil();
         other.fix_nil();
     }
-
-    struct locate_states {
-        _hdle_t postion;
-        bool found;
-        Dir lr;
-    };
 
     template<class RBTree>
     void merge(RBTree &src) {
@@ -750,293 +1051,6 @@ protected:
         node->_left = copy_tree_mv(other->_left, node);
         node->_rght = copy_tree_mv(other->_rght, node);
         return node;
-    }
-
-    void initialize() {
-        left_nil()->_parent = rght_nil();
-        left_nil()->_rght = rght_nil();
-        rght_nil()->_parent = left_nil();
-        rght_nil()->_left = left_nil();
-        _root = nullptr;
-    }
-
-    // rotate
-    /*-------------------------------------
-    |      x        left        y         |
-    |     / \       ====>      / \        |
-    |    a   y                x   c       |
-    |       / \     <====    / \          |
-    |      b   c    right   a   b         |
-    --------------------------------------*/
-
-    _hdle_t rotate_left(_hdle_t x) noexcept {
-        _hdle_t y = x->_rght;
-        if ((x->_rght = y->_left) != nullptr)
-            // b can't be equal to NIL,so using is_nil is correct,too
-            y->_left->_parent = x;
-        y->_left = x;
-        if ((y->_parent = x->_parent) == nullptr)
-            _root = y;
-        else if (x == x->_parent->_left)
-            x->_parent->_left = y;
-        else
-            x->_parent->_rght = y;
-        x->_parent = y;
-        return y;
-    }
-
-    _hdle_t rotate_rght(_hdle_t y) noexcept {
-        _hdle_t x = y->_left;
-        if ((y->_left = x->_rght) != nullptr)
-            x->_rght->_parent = y;
-        x->_rght = y;
-        if ((x->_parent = y->_parent) == nullptr)
-            _root = x;
-        else if (y == y->_parent->_left)
-            y->_parent->_left = x;
-        else
-            y->_parent->_rght = x;
-        y->_parent = x;
-        return x;
-    }
-
-    /*---------------------------------
-    |      up     trans     up        |
-    |       \     ====>      \        |
-    |        u                v       |
-    ---------------------------------*/
-
-    void transplant(_hdle_t u, _hdle_t v) noexcept {
-        _hdle_t uparent = u->_parent;
-        if (uparent == nullptr)
-            _root = v;
-        else if (u == uparent->_left)
-            uparent->_left = v;
-        else
-            uparent->_rght = v;
-        if (v != nullptr)
-            v->_parent = uparent;
-    }
-
-    void fix_nil() noexcept {
-        if (_root == nullptr) {
-            initialize();
-        } else {
-            _hdle_t lleaf = left_leaf(_root);
-            _hdle_t rleaf = rght_leaf(_root);
-            lleaf->_left = left_nil();
-            rleaf->_rght = rght_nil();
-            left_nil()->_parent = lleaf;
-            rght_nil()->_parent = rleaf;
-            left_nil()->_rght = rght_nil()->_left = nullptr;
-        }
-    }
-
-    void attach(locate_states states, _hdle_t p) noexcept {
-        _hdle_t pos = states.postion;
-        p->_color = Color::Red;
-        p->_left = p->_rght = nullptr;
-        p->_parent = pos;
-        if (pos == nullptr) { // empty tree
-            _root = p;
-            left_nil()->_parent = rght_nil()->_parent = p;
-            left_nil()->_rght = rght_nil()->_left = nullptr;
-            p->_left = left_nil();
-            p->_rght = rght_nil();
-        } else if (states.lr == Dir::Left) {
-            if (pos->_left == left_nil()) { // fix nil
-                p->_left = left_nil();
-                left_nil()->_parent = p;
-            }
-            pos->_left = p;
-        } else {
-            if (pos->_rght == rght_nil()) { // fix nil
-                p->_rght = rght_nil();
-                rght_nil()->_parent = p;
-            }
-            pos->_rght = p;
-        }
-        ++_size;
-        rebalance_for_attach(p);
-    }
-
-    /*---------------------------------------------------------------------------------
-    |      Gb       P.c=b        Gb                    Gb                    Pb       |
-    |     / \       U.c=b       / \       RotL(P)     / \       RotR(G)     / \       |
-    |   Pr   Ur     ====>*    Pr   Ub     ====>     Pr   Ub     ====>     Xr   Gr     |
-    |  / \          G.c=r    / \          P<->X    / \          P.c=b         / \     |
-    |     Xr        X<-G        Xr                Xr            G.c=r            Ub   |
-    ---------------------------------------------------------------------------------*/
-    // remove continuous red
-    // X: current, P: parent, U:uncle, G:grandp
-    // b/r: black/red
-    // c: color, L: left, R: right
-    // <-: assign, <->: swap
-    // =>: jump to next case, *: jump to a possiable case
-    void rebalance_for_attach(_hdle_t current) noexcept {
-        _hdle_t parent, grandp, uncle;
-        while (is_red(parent = current->_parent)) {
-            grandp = parent->_parent;
-            if (parent == grandp->_left) { // see graph
-                uncle = grandp->_rght;
-                if (is_red(uncle)) {
-                    parent->_color = uncle->_color = Color::Black;
-                    grandp->_color = Color::Red;
-                    current = grandp;
-                } else {
-                    if (parent->_rght == current)
-                        parent = rotate_left(current = parent);
-                    parent->_color = Color::Black;
-                    grandp->_color = Color::Red;
-                    rotate_rght(grandp);
-                }
-            } else { // symmetrical
-                uncle = grandp->_left;
-                if (is_red(uncle)) {
-                    parent->_color = uncle->_color = Color::Black;
-                    grandp->_color = Color::Red;
-                    current = grandp;
-                } else {
-                    if (parent->_left == current)
-                        parent = rotate_rght(current = parent);
-                    parent->_color = Color::Black;
-                    grandp->_color = Color::Red;
-                    rotate_left(grandp);
-                }
-            }
-        }
-        _root->_color = Color::Black;
-    }
-
-    _hdle_t detach(_hdle_t current) noexcept {
-        _hdle_t child, parent, subs, fix = nullptr;
-        Color color;
-        if (is_nil(current->_left)) {
-            color = current->_color;
-            child = current->_rght;
-            parent = current->_parent;
-            transplant(current, child);
-            fix = child == nullptr ? parent : child;
-        } else if (is_nil(current->_rght)) {
-            color = current->_color;
-            child = current->_left;
-            parent = current->_parent;
-            transplant(current, child);
-            fix = child == nullptr ? parent : child;
-        } else {
-            subs = left_leaf(current->_rght);
-            color = subs->_color;
-            child = subs->_rght;
-            parent = subs->_parent;
-            if (parent == current) {
-                parent = subs;
-            } else {
-                transplant(subs, child);
-                subs->_rght = current->_rght;
-                subs->_rght->_parent = subs;
-            }
-            transplant(current, subs);
-            subs->_left = current->_left;
-            subs->_left->_parent = subs;
-            subs->_color = current->_color;
-            fix = subs;
-        }
-        --_size;
-        if (_root != nullptr && color == Color::Black)
-            rebalance_for_detach(child, parent);
-        if (fix)
-            fix_nil_detach(current, fix);
-        return current;
-    }
-
-    /*----------------------------------------------------------------------------------------------------
-    |      Pb       P.c=r        P?                    P?       Y.L.c=b      P?       Y.c=P.c      Y?    |
-    |     / \       Y.c=b       / \       Y.c=R       / \       Y.c=r       / \       P.c=b       / \    |
-    |   Xb   Yr     ====>*    Xb   Yb     ====>*    Xb   Yb     ====>     Xb   Yb     ====>     Pb   b   |
-    |       / \     RotL(P)       / \     X<-P          / \     RotR(Y)       / \     Y.R.c=b  / \       |
-    |     P.R       Y=P.R        b   b                 r   b    Y=P.R            r    RotL(Y) X          |
-    ----------------------------------------------------------------------------------------------------*/
-    // make current black-height + 1
-    // Y: brother
-
-    void rebalance_for_detach(_hdle_t current, _hdle_t parent) noexcept {
-        _hdle_t brother;
-        while (current != _root && is_black(current)) {
-            if (parent->_left == current) {
-                brother = parent->_rght;
-                assert(!is_nil(brother));
-                if (brother->_color == Color::Red) {
-                    brother->_color = Color::Black;
-                    parent->_color = Color::Red;
-                    rotate_left(parent);
-                    brother = parent->_rght;
-                }
-                if (is_black(brother->_left) && is_black(brother->_rght)) {
-                    brother->_color = Color::Red;
-                    current = parent;
-                    parent = current->_parent;
-                } else {
-                    if (is_black(brother->_rght)) {
-                        if (!is_nil(brother->_left))
-                            brother->_left->_color = Color::Black;
-                        brother->_color = Color::Red;
-                        rotate_rght(brother);
-                        brother = parent->_rght;
-                    }
-                    brother->_color = parent->_color;
-                    parent->_color = Color::Black;
-                    if (!is_nil(brother->_rght))
-                        brother->_rght->_color = Color::Black;
-                    rotate_left(parent);
-                    current = _root; // make root black
-                    break;
-                }
-            } else {
-                brother = parent->_left;
-                if (brother->_color == Color::Red) {
-                    brother->_color = Color::Black;
-                    parent->_color = Color::Red;
-                    rotate_rght(parent);
-                    brother = parent->_left;
-                }
-                if (is_black(brother->_left) && is_black(brother->_rght)) {
-                    brother->_color = Color::Red;
-                    current = parent;
-                    parent = current->_parent;
-                } else {
-                    if (is_black(brother->_left)) {
-                        if (!is_nil(brother->_rght))
-                            brother->_rght->_color = Color::Black;
-                        brother->_color = Color::Red;
-                        rotate_left(brother);
-                        brother = parent->_left;
-                    }
-                    brother->_color = parent->_color;
-                    parent->_color = Color::Black;
-                    if (!is_nil(brother->_left))
-                        brother->_left->_color = Color::Black;
-                    rotate_rght(parent);
-                    current = _root;
-                    break;
-                }
-            }
-        }
-        if (!is_nil(current))
-            current->_color = Color::Black;
-    }
-
-    void fix_nil_detach(_hdle_t current, _hdle_t subs) noexcept {
-        if (current->_left == left_nil()) {
-            if (current->_rght == rght_nil()) {
-                initialize();
-            } else {
-                subs->_left = left_nil();
-                left_nil()->_parent = subs;
-            }
-        } else if (current->_rght == rght_nil()) {
-            subs->_rght = rght_nil();
-            rght_nil()->_parent = subs;
-        }
     }
 }; // namespace ala
 

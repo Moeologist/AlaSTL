@@ -21,7 +21,7 @@ struct nullopt_t {
     explicit constexpr nullopt_t(_dummy) {}
 };
 
-#ifdef _ALA_ENABLE_INLINE_VAR
+#if _ALA_ENABLE_INLINE_VAR
 inline constexpr nullopt_t nullopt{nullopt_t::_dummy{}};
 #else
 constexpr nullopt_t nullopt{nullopt_t::_dummy{}};
@@ -245,8 +245,8 @@ public:
         is_assignable<T &, optional<U> &&>, is_assignable<T &, const optional<U> &&>>>;
 
     template<class U>
-    constexpr enable_if_t<_check_asgn<U>::value && is_constructible_v<T, const U &> &&
-                              is_assignable_v<T &, const U &>,
+    constexpr enable_if_t<_check_asgn<U>::value && is_constructible<T, const U &>::value &&
+                              is_assignable<T &, const U &>::value,
                           optional> &
     operator=(const optional<U> &other) {
         if (other.has_value()) {
@@ -258,8 +258,8 @@ public:
     }
 
     template<class U>
-    constexpr enable_if_t<_check_asgn<U>::value && is_constructible_v<T, U> &&
-                              is_assignable_v<T &, U>,
+    constexpr enable_if_t<_check_asgn<U>::value && is_constructible<T, U>::value &&
+                              is_assignable<T &, U>::value,
                           optional> &
     operator=(optional<U> &&other) {
         if (other.has_value()) {
@@ -487,7 +487,7 @@ public:
     }
 };
 
-#ifdef _ALA_ENABLE_DEDUCTION_GUIDES
+#if _ALA_ENABLE_DEDUCTION_GUIDES
 template<class T>
 optional(T) -> optional<T>;
 #endif
