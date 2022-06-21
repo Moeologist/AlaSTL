@@ -22,6 +22,7 @@ extern void __cpuidex(int[4], int, int);
 #include <cpuid.h>
 #endif
 
+// TODO static
 namespace ala {
 
 // Read

@@ -27,23 +27,37 @@ class contiguous_iterator_tag;
 
 namespace ala {
 
-using ::std::input_iterator_tag;
-using ::std::output_iterator_tag;
-using ::std::forward_iterator_tag;
-using ::std::bidirectional_iterator_tag;
-using ::std::random_access_iterator_tag;
+// using ::std::input_iterator_tag;
+// using ::std::output_iterator_tag;
+// using ::std::forward_iterator_tag;
+// using ::std::bidirectional_iterator_tag;
+// using ::std::random_access_iterator_tag;
+// #if ALA_API_VER >= 20
+// using ::std::contiguous_iterator_tag;
+// #endif
+
+struct input_iterator_tag {};
+struct output_iterator_tag {};
+struct forward_iterator_tag: input_iterator_tag {};
+struct bidirectional_iterator_tag: forward_iterator_tag {};
+struct random_access_iterator_tag: bidirectional_iterator_tag {};
 #if ALA_API_VER >= 20
-using ::std::contiguous_iterator_tag;
+struct contiguous_iterator_tag: random_access_iterator_tag {};
 #endif
 
-// struct input_iterator_tag {};
-// struct output_iterator_tag {};
-// struct forward_iterator_tag: input_iterator_tag {};
-// struct bidirectional_iterator_tag: forward_iterator_tag {};
-// struct random_access_iterator_tag: bidirectional_iterator_tag {};
-// #if ALA_API_VER >= 20
-// struct contiguous_iterator_tag: random_access_iterator_tag {};
-// #endif
+// clang-format off
+template<class Tag> struct _trans_iter_tag { using type = Tag; };
+template<> struct _trans_iter_tag<::std::input_iterator_tag> { using type = input_iterator_tag; };
+template<> struct _trans_iter_tag<::std::output_iterator_tag> { using type = output_iterator_tag; };
+template<> struct _trans_iter_tag<::std::forward_iterator_tag> { using type = forward_iterator_tag; };
+template<> struct _trans_iter_tag<::std::bidirectional_iterator_tag> { using type = bidirectional_iterator_tag; };
+template<> struct _trans_iter_tag<::std::random_access_iterator_tag> { using type = random_access_iterator_tag; };
+#if ALA_API_VER >= 20
+template<> struct _trans_iter_tag<::std::contiguous_iterator_tag> { using type = contiguous_iterator_tag; };
+#endif
+// clang-format on
+template<class Tag>
+using _trans_iter_tag_t = typename _trans_iter_tag<Tag>::type;
 
 template<typename Iter, typename Void = void>
 struct _iterator_traits_helper {};
@@ -91,6 +105,52 @@ struct iterator_traits<const T *> {
     using iterator_category = random_access_iterator_tag;
 };
 #endif
+
+ALA_HAS_MEM_TYPE(_iter_traits_no_spec)
+ALA_HAS_MEM_TYPE(iterator_category)
+ALA_HAS_MEM_TYPE(iterator_concept)
+
+template<bool FallBack, class Iter, class Traits,
+         bool HasNoSpec =
+             FallBack &&_has__iter_traits_no_spec<iterator_traits<Iter>>::value>
+struct _iter_concept_def {
+    using _tag_t = random_access_iterator_tag;
+};
+
+template<bool FallBack, class Iter, class Traits>
+struct _iter_concept_def<FallBack, Iter, Traits, false> {};
+
+template<bool FallBack, class Iter, class Traits,
+         bool HasCategory = _has_iterator_category<Traits>::value>
+struct _iter_concept_category {
+    using _tag_t = typename Traits::iterator_category;
+};
+
+template<bool FallBack, class Iter, class Traits>
+struct _iter_concept_category<FallBack, Iter, Traits, false>
+    : _iter_concept_def<FallBack, Iter, Traits> {};
+
+template<bool FallBack, class Iter, class Traits,
+         bool HasConcept = _has_iterator_concept<Traits>::value>
+struct _iter_concept_concept {
+    using _tag_t = typename Traits::iterator_concept;
+};
+
+template<bool FallBack, class Iter, class Traits>
+struct _iter_concept_concept<FallBack, Iter, Traits, false>
+    : _iter_concept_category<FallBack, Iter, Traits> {};
+
+template<class Iter, class Traits = conditional_t<
+                         _has__iter_traits_no_spec<iterator_traits<Iter>>::value,
+                         Iter, iterator_traits<Iter>>>
+using _iter_concept_t =
+    _trans_iter_tag_t<typename _iter_concept_concept<true, Iter, Traits>::_tag_t>;
+
+template<class Iter, class Traits = conditional_t<
+                         _has__iter_traits_no_spec<iterator_traits<Iter>>::value,
+                         Iter, iterator_traits<Iter>>>
+using _iter_tag_t =
+    _trans_iter_tag_t<typename _iter_concept_concept<false, Iter, Traits>::_tag_t>;
 
 template<class Iter>
 struct reverse_iterator {
@@ -233,38 +293,36 @@ constexpr reverse_iterator<Iter> make_reverse_iterator(Iter i) {
 };
 
 template<class Iter>
-constexpr enable_if_t<is_base_of<random_access_iterator_tag,
-                                 typename iterator_traits<Iter>::iterator_category>::value,
-                      typename iterator_traits<Iter>::difference_type>
-distance(Iter first, Iter last) {
+constexpr typename iterator_traits<Iter>::difference_type
+_distance_dispatch(random_access_iterator_tag, Iter first, Iter last) {
     return last - first;
 }
 
 template<class Iter>
-constexpr enable_if_t<!is_base_of<random_access_iterator_tag,
-                                  typename iterator_traits<Iter>::iterator_category>::value,
-                      typename iterator_traits<Iter>::difference_type>
-distance(Iter first, Iter last) {
+constexpr typename iterator_traits<Iter>::difference_type
+_distance_dispatch(input_iterator_tag, Iter first, Iter last) {
     typename iterator_traits<Iter>::difference_type result = 0;
     for (; first != last; ++first)
         ++result;
     return result;
 }
 
+template<class Iter>
+constexpr typename iterator_traits<Iter>::difference_type distance(Iter first,
+                                                                   Iter last) {
+    using tag_t = _iter_tag_t<Iter>;
+    return ala::_distance_dispatch(tag_t{}, first, last);
+}
+
 template<class Iter, class Distance>
-constexpr enable_if_t<is_base_of<random_access_iterator_tag,
-                                 typename iterator_traits<Iter>::iterator_category>::value>
-advance(Iter &it, Distance n) {
+constexpr void _advance_dispatch(random_access_iterator_tag, Iter &it,
+                                 Distance n) {
     it += n;
 }
 
 template<class Iter, class Distance>
-constexpr enable_if_t<
-    !is_base_of<random_access_iterator_tag,
-                typename iterator_traits<Iter>::iterator_category>::value &&
-    is_base_of<bidirectional_iterator_tag,
-               typename iterator_traits<Iter>::iterator_category>::value>
-advance(Iter &it, Distance n) {
+constexpr void _advance_dispatch(bidirectional_iterator_tag, Iter &it,
+                                 Distance n) {
     if (n > 0)
         for (Distance i = 0; i < n; ++i)
             ++it;
@@ -274,16 +332,16 @@ advance(Iter &it, Distance n) {
 }
 
 template<class Iter, class Distance>
-constexpr enable_if_t<
-    !is_base_of<random_access_iterator_tag,
-                typename iterator_traits<Iter>::iterator_category>::value &&
-    !is_base_of<bidirectional_iterator_tag,
-                typename iterator_traits<Iter>::iterator_category>::value &&
-    is_base_of<input_iterator_tag, typename iterator_traits<Iter>::iterator_category>::value>
-advance(Iter &it, Distance n) {
+constexpr void _advance_dispatch(input_iterator_tag, Iter &it, Distance n) {
     if (n > 0)
         for (Distance i = 0; i < n; ++i)
             ++it;
+}
+
+template<class Iter, class Distance>
+constexpr void advance(Iter &it, Distance n) {
+    using tag_t = _iter_tag_t<Iter>;
+    return ala::_advance_dispatch(tag_t{}, it, n);
 }
 
 template<class BidirIter>
@@ -836,8 +894,6 @@ requires __has_member_element_type<T> &&
     same_as<remove_cv_t<typename T::element_type>, remove_cv_t<typename T::value_type>>
 struct indirectly_readable_traits<T>: _rmcv_for_obj<typename T::value_type> {};
 
-ALA_HAS_MEM_TYPE(_iter_traits_no_spec)
-
 template<class Iter>
 using iter_value_t = typename conditional_t<
     _has__iter_traits_no_spec<iterator_traits<remove_cvref_t<Iter>>>::value,
@@ -973,41 +1029,6 @@ concept sized_sentinel_for =
     { __s - i } -> same_as<iter_difference_t<I>>;
     { i - __s } -> same_as<iter_difference_t<I>>;
 };
-
-template<bool HasCategory>
-struct _iter_concept_category {
-    template<class It, class Traits>
-    using _iter = typename Traits::iterator_category;
-};
-
-template<>
-struct _iter_concept_category<false> {
-    template<class It, class Traits>
-    requires _has__iter_traits_no_spec<iterator_traits<It>>::value using _iter =
-        random_access_iterator_tag;
-};
-
-template<bool HasConcept>
-struct _iter_concept_concept {
-    template<class It, class Traits>
-    using _iter = typename Traits::iterator_concept;
-};
-
-ALA_HAS_MEM_TYPE(iterator_category)
-ALA_HAS_MEM_TYPE(iterator_concept)
-
-template<>
-struct _iter_concept_concept<false> {
-    template<class It, class Traits>
-    using _iter = typename _iter_concept_category<
-        _has_iterator_category<Traits>::value>::template _iter<It, Traits>;
-};
-
-template<class It, class Traits = conditional_t<
-                       _has__iter_traits_no_spec<iterator_traits<It>>::value,
-                       It, iterator_traits<It>>>
-using _iter_concept_t = typename _iter_concept_concept<
-    _has_iterator_concept<Traits>::value>::template _iter<It, Traits>;
 
 template<class I>
 concept input_iterator = input_or_output_iterator<I> &&
@@ -1150,9 +1171,9 @@ template<class I1, class I2>
 void iter_swap(I1, I2) = delete;
 
 template<class I1, class I2>
-concept ___enable_adl =
-    (__class_or_enum<remove_cvref_t<I1>> ||
-     __class_or_enum<remove_cvref_t<I2>>)&&requires(I1 &&x, I2 &&y) {
+concept __enable_adl = (__class_or_enum<remove_cvref_t<I1>> ||
+                         __class_or_enum<remove_cvref_t<I2>>)&&requires(I1 &&x,
+                                                                        I2 &&y) {
     iter_swap(ala::forward<I1>(x), ala::forward<I2>(y));
 };
 
@@ -1163,22 +1184,22 @@ concept __readable_and_swappable = indirectly_readable<I1> &&
 
 struct _cpo_fn {
     template<class I1, class I2>
-    requires ___enable_adl<I1, I2>
+    requires __enable_adl<I1, I2>
     constexpr void operator()(I1 &&x, I2 &&y) const
         noexcept(noexcept(iter_swap(ala::forward<I1>(x), ala::forward<I2>(y)))) {
         (void)iter_swap(ala::forward<I1>(x), ala::forward<I2>(y));
     }
 
     template<class I1, class I2>
-    requires(!___enable_adl<I1, I2>) && __readable_and_swappable<I1, I2> constexpr void
-                                       operator()(I1 &&x, I2 &&y) const
+    requires(!__enable_adl<I1, I2>) && __readable_and_swappable<I1, I2> constexpr void
+                                        operator()(I1 &&x, I2 &&y) const
         noexcept(noexcept(ranges::swap(*ala::forward<I1>(x),
                                        *ala::forward<I2>(y)))) {
         ranges::swap(*ala::forward<I1>(x), *ala::forward<I2>(y));
     }
 
     template<class I1, class I2>
-    requires(!___enable_adl<I1, I2> && !__readable_and_swappable<I1, I2>) &&
+    requires(!__enable_adl<I1, I2> && !__readable_and_swappable<I1, I2>) &&
         indirectly_movable_storable<I1, I2>
             &&indirectly_movable_storable<I2, I1> constexpr void
             operator()(I1 &&x, I2 &&y) const

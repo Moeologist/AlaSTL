@@ -181,8 +181,7 @@ protected:
     }
 
     template<class InputIter>
-    enable_if_t<!is_base_of<forward_iterator_tag,
-                            typename iterator_traits<InputIter>::iterator_category>::value>
+    enable_if_t<!is_base_of<forward_iterator_tag, _iter_tag_t<InputIter>>::value>
     iter_ctor_helper(InputIter first, InputIter last) {
         for (; first != last; ++first) {
             size_type new_size = size() + 1;
@@ -201,8 +200,7 @@ protected:
     }
 
     template<class ForwardIter>
-    enable_if_t<is_base_of<forward_iterator_tag,
-                           typename iterator_traits<ForwardIter>::iterator_category>::value>
+    enable_if_t<is_base_of<forward_iterator_tag, _iter_tag_t<ForwardIter>>::value>
     iter_ctor_helper(ForwardIter first, ForwardIter last) {
         if (ala::distance(first, last) < 1)
             return;
@@ -243,9 +241,8 @@ public:
     }
 
     template<class InputIter,
-             typename = enable_if_t<is_base_of<
-                 input_iterator_tag,
-                 typename iterator_traits<InputIter>::iterator_category>::value>>
+             typename = enable_if_t<
+                 is_base_of<input_iterator_tag, _iter_tag_t<InputIter>>::value>>
     vector(InputIter first, InputIter last,
            const allocator_type &a = allocator_type())
         : _alloc(a) {
@@ -395,11 +392,8 @@ protected:
 
 public:
     template<class InputIter>
-    enable_if_t<
-        is_base_of<input_iterator_tag,
-                   typename iterator_traits<InputIter>::iterator_category>::value &&
-        is_base_of<forward_iterator_tag,
-                   typename iterator_traits<InputIter>::iterator_category>::value>
+    enable_if_t<is_base_of<input_iterator_tag, _iter_tag_t<InputIter>>::value &&
+                is_base_of<forward_iterator_tag, _iter_tag_t<InputIter>>::value>
     assign(InputIter first, InputIter last) {
         typename iterator_traits<InputIter>::difference_type len;
         len = ala::distance(first, last);
@@ -410,11 +404,8 @@ public:
     }
 
     template<class InputIter>
-    enable_if_t<
-        is_base_of<input_iterator_tag,
-                   typename iterator_traits<InputIter>::iterator_category>::value &&
-        !is_base_of<forward_iterator_tag,
-                    typename iterator_traits<InputIter>::iterator_category>::value>
+    enable_if_t<is_base_of<input_iterator_tag, _iter_tag_t<InputIter>>::value &&
+                !is_base_of<forward_iterator_tag, _iter_tag_t<InputIter>>::value>
     assign(InputIter first, InputIter last) {
         this->assign_norealloc(first, last);
     }
@@ -673,12 +664,9 @@ public:
     }
 
     template<class InputIter>
-    enable_if_t<
-        is_base_of<input_iterator_tag,
-                   typename iterator_traits<InputIter>::iterator_category>::value &&
-            is_base_of<forward_iterator_tag,
-                       typename iterator_traits<InputIter>::iterator_category>::value,
-        iterator>
+    enable_if_t<is_base_of<input_iterator_tag, _iter_tag_t<InputIter>>::value &&
+                    is_base_of<forward_iterator_tag, _iter_tag_t<InputIter>>::value,
+                iterator>
     insert(const_iterator position, InputIter first, InputIter last) {
         using diff_t = typename iterator_traits<InputIter>::difference_type;
         diff_t n = ala::distance(first, last);
@@ -702,12 +690,9 @@ public:
     }
 
     template<class InputIter>
-    enable_if_t<
-        is_base_of<input_iterator_tag,
-                   typename iterator_traits<InputIter>::iterator_category>::value &&
-            !is_base_of<forward_iterator_tag,
-                        typename iterator_traits<InputIter>::iterator_category>::value,
-        iterator>
+    enable_if_t<is_base_of<input_iterator_tag, _iter_tag_t<InputIter>>::value &&
+                    !is_base_of<forward_iterator_tag, _iter_tag_t<InputIter>>::value,
+                iterator>
     insert(const_iterator position, InputIter first, InputIter last) {
         difference_type offset = position - cbegin();
         for (; first != last; ++first, (void)++position)

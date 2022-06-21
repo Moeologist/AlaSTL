@@ -307,9 +307,9 @@ constexpr bool equal(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2,
                      BinPred pred) {
     using tag_t =
         _and_<is_base_of<random_access_iterator_tag,
-                         typename iterator_traits<Iter1>::iterator_category>,
+                         _iter_tag_t<Iter1>>,
               is_base_of<random_access_iterator_tag,
-                         typename iterator_traits<Iter2>::iterator_category>>;
+                         _iter_tag_t<Iter2>>>;
     return ala::_equal_dispatch(first1, last1, first2, last2, pred, tag_t{});
 }
 

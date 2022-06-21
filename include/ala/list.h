@@ -189,7 +189,8 @@ protected:
         l_vnode<value_type> *vnode = static_cast<l_vnode<value_type> *>(node);
         _alloc_traits::destroy(_alloc, ala::addressof(vnode->_data));
         _hdle_t result = vnode->_suc;
-        _alloc_traits::template deallocate_object<l_vnode<value_type>>(_alloc, vnode, 1);
+        _alloc_traits::template deallocate_object<l_vnode<value_type>>(_alloc,
+                                                                       vnode, 1);
         return result;
     }
 
@@ -236,9 +237,8 @@ public:
     }
 
     template<class InputIter,
-             class = enable_if_t<is_base_of<
-                 input_iterator_tag,
-                 typename iterator_traits<InputIter>::iterator_category>::value>>
+             class = enable_if_t<
+                 is_base_of<input_iterator_tag, _iter_tag_t<InputIter>>::value>>
     list(InputIter first, InputIter last,
          const allocator_type &a = allocator_type())
         : _alloc(a) {
@@ -355,8 +355,7 @@ public:
     }
 
     template<class InputIter>
-    enable_if_t<is_base_of<input_iterator_tag,
-                           typename iterator_traits<InputIter>::iterator_category>::value>
+    enable_if_t<is_base_of<input_iterator_tag, _iter_tag_t<InputIter>>::value>
     assign(InputIter first, InputIter last) {
         iterator i = begin();
         for (; i != end() && first != last; ++i, (void)++first)
@@ -447,8 +446,8 @@ protected:
             iterator pos = this->locate(n);
             this->cut(pos);
         } else {
-            size_t n = n - size();
-            if (n == 0)
+            size_t m = n - size();
+            if (m == 0)
                 return;
             _hdle_t head = nullptr, prev = nullptr;
             try {
@@ -456,7 +455,7 @@ protected:
                 head->_pre = head->_suc = nullptr;
                 prev = head;
                 size_t i = 1;
-                for (; i != n; ++i) {
+                for (; i != m; ++i) {
                     _hdle_t node = this->construct_node(ala::forward<V>(v)...);
                     node->_suc = nullptr;
                     link(prev, node);
@@ -576,9 +575,7 @@ public:
     }
 
     template<class InputIter>
-    enable_if_t<is_base_of<input_iterator_tag,
-                           typename iterator_traits<InputIter>::iterator_category>::value,
-                iterator>
+    enable_if_t<is_base_of<input_iterator_tag, _iter_tag_t<InputIter>>::value, iterator>
     insert(const_iterator position, InputIter first, InputIter last) {
         if (first == last)
             return position;

@@ -227,7 +227,7 @@ public:
     template<class InputIter,
              class = enable_if_t<is_base_of<
                  input_iterator_tag,
-                 typename iterator_traits<InputIter>::iterator_category>::value>>
+                 _iter_tag_t<InputIter>>::value>>
     forward_list(InputIter first, InputIter last,
                  const allocator_type &a = allocator_type())
         : _alloc(a) {
@@ -349,7 +349,7 @@ public:
 
     template<class InputIter>
     enable_if_t<is_base_of<input_iterator_tag,
-                           typename iterator_traits<InputIter>::iterator_category>::value>
+                           _iter_tag_t<InputIter>>::value>
     assign(InputIter first, InputIter last) {
         iterator bi = before_begin(), i = begin();
         for (; i != end() && first != last; ++i, (void)++bi, ++first)
@@ -427,8 +427,8 @@ protected:
         if (size() > n) {
             this->cut_after(this->locate_before(n));
         } else {
-            size_t n = n - size();
-            if (n == 0)
+            size_t m = n - size();
+            if (m == 0)
                 return;
             _hdle_t head = nullptr, prev = nullptr;
             try {
@@ -436,7 +436,7 @@ protected:
                 head->_suc = nullptr;
                 prev = head;
                 size_t i = 1;
-                for (; i != n; ++i) {
+                for (; i != m; ++i) {
                     _hdle_t node = this->construct_node(ala::forward<V>(v)...);
                     node->_suc = nullptr;
                     link(prev, node);
@@ -536,7 +536,7 @@ public:
 
     template<class InputIter>
     enable_if_t<is_base_of<input_iterator_tag,
-                           typename iterator_traits<InputIter>::iterator_category>::value,
+                           _iter_tag_t<InputIter>>::value,
                 iterator>
     insert_after(const_iterator position, InputIter first, InputIter last) {
         if (first == last)
