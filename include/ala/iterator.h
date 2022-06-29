@@ -1,7 +1,6 @@
 #ifndef _ALA_ITERATOR_H
 #define _ALA_ITERATOR_H
 
-#include "ala/config/support.h"
 #include <ala/type_traits.h>
 #include <ala/detail/memory_base.h>
 #include <ala/detail/functional_base.h>
@@ -294,13 +293,13 @@ constexpr reverse_iterator<Iter> make_reverse_iterator(Iter i) {
 
 template<class Iter>
 constexpr typename iterator_traits<Iter>::difference_type
-_distance_dispatch(random_access_iterator_tag, Iter first, Iter last) {
+_distance_dispatch(Iter first, Iter last, random_access_iterator_tag) {
     return last - first;
 }
 
 template<class Iter>
 constexpr typename iterator_traits<Iter>::difference_type
-_distance_dispatch(input_iterator_tag, Iter first, Iter last) {
+_distance_dispatch(Iter first, Iter last, input_iterator_tag) {
     typename iterator_traits<Iter>::difference_type result = 0;
     for (; first != last; ++first)
         ++result;
@@ -311,7 +310,7 @@ template<class Iter>
 constexpr typename iterator_traits<Iter>::difference_type distance(Iter first,
                                                                    Iter last) {
     using tag_t = _iter_tag_t<Iter>;
-    return ala::_distance_dispatch(tag_t{}, first, last);
+    return ala::_distance_dispatch(first, last, tag_t{});
 }
 
 template<class Iter, class Distance>
@@ -321,8 +320,8 @@ constexpr void _advance_dispatch(random_access_iterator_tag, Iter &it,
 }
 
 template<class Iter, class Distance>
-constexpr void _advance_dispatch(bidirectional_iterator_tag, Iter &it,
-                                 Distance n) {
+constexpr void _advance_dispatch(Iter &it, Distance n,
+                                 bidirectional_iterator_tag) {
     if (n > 0)
         for (Distance i = 0; i < n; ++i)
             ++it;
@@ -332,7 +331,7 @@ constexpr void _advance_dispatch(bidirectional_iterator_tag, Iter &it,
 }
 
 template<class Iter, class Distance>
-constexpr void _advance_dispatch(input_iterator_tag, Iter &it, Distance n) {
+constexpr void _advance_dispatch(Iter &it, Distance n, input_iterator_tag) {
     if (n > 0)
         for (Distance i = 0; i < n; ++i)
             ++it;
@@ -341,18 +340,18 @@ constexpr void _advance_dispatch(input_iterator_tag, Iter &it, Distance n) {
 template<class Iter, class Distance>
 constexpr void advance(Iter &it, Distance n) {
     using tag_t = _iter_tag_t<Iter>;
-    return ala::_advance_dispatch(tag_t{}, it, n);
+    return ala::_advance_dispatch(it, n, tag_t{});
 }
 
 template<class BidirIter>
-BidirIter prev(BidirIter it,
+constexpr BidirIter prev(BidirIter it,
                typename iterator_traits<BidirIter>::difference_type n = 1) {
     ala::advance(it, -n);
     return it;
 }
 
 template<class ForwardIter>
-ForwardIter next(ForwardIter it,
+constexpr ForwardIter next(ForwardIter it,
                  typename iterator_traits<ForwardIter>::difference_type n = 1) {
     ala::advance(it, n);
     return it;
@@ -1172,8 +1171,8 @@ void iter_swap(I1, I2) = delete;
 
 template<class I1, class I2>
 concept __enable_adl = (__class_or_enum<remove_cvref_t<I1>> ||
-                         __class_or_enum<remove_cvref_t<I2>>)&&requires(I1 &&x,
-                                                                        I2 &&y) {
+                        __class_or_enum<remove_cvref_t<I2>>)&&requires(I1 &&x,
+                                                                       I2 &&y) {
     iter_swap(ala::forward<I1>(x), ala::forward<I2>(y));
 };
 
@@ -1192,7 +1191,7 @@ struct _cpo_fn {
 
     template<class I1, class I2>
     requires(!__enable_adl<I1, I2>) && __readable_and_swappable<I1, I2> constexpr void
-                                        operator()(I1 &&x, I2 &&y) const
+                                       operator()(I1 &&x, I2 &&y) const
         noexcept(noexcept(ranges::swap(*ala::forward<I1>(x),
                                        *ala::forward<I2>(y)))) {
         ranges::swap(*ala::forward<I1>(x), *ala::forward<I2>(y));

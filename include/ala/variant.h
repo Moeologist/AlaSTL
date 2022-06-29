@@ -332,8 +332,7 @@ struct _variant_base
         return _union_op_t::fmap(
             this->_index,
             [](auto &&v) {
-                return const_cast<void *>(
-                    reinterpret_cast<const volatile void *>(ala::addressof(v)));
+                return ala::_voidify(v);
             },
             _union);
     }
@@ -344,11 +343,6 @@ struct _variant_base
         try {
             this->_index = I;
             using T = type_pack_element_t<I, Ts...>;
-
-            // _union_op_t::fmap(this->_index, [&args...](auto &&v) -> decltype(auto) {
-            //     ala::construct_at(ala::addressof(v), ala::forward<Args>(args)...);
-            // });
-
             ::new (this->_address()) T(ala::forward<Args>(args)...);
         } catch (...) {
             this->_index = variant_npos;

@@ -17,8 +17,8 @@ struct ptr_iterator {
     using reference = value_type &;
 
     constexpr ptr_iterator() {}
+
     constexpr ptr_iterator(const ptr_iterator &other): _ptr(other._ptr) {}
-    constexpr ptr_iterator(const Ptr &ptr): _ptr(ptr) {}
 
     template<class Value1, class Ptr1>
     constexpr ptr_iterator(const ptr_iterator<Value1, Ptr1> &other)
@@ -39,7 +39,7 @@ struct ptr_iterator {
 
     template<class Value1, class Ptr1>
     constexpr bool operator!=(const ptr_iterator<Value1, Ptr1> &rhs) const {
-        return !(_ptr == rhs._ptr);
+        return !(*this == rhs);
     }
 
     template<class Value1, class Ptr1>
@@ -49,17 +49,17 @@ struct ptr_iterator {
 
     template<class Value1, class Ptr1>
     constexpr bool operator>(const ptr_iterator<Value1, Ptr1> &rhs) const {
-        return rhs._ptr < _ptr;
+        return rhs < *this;
     }
 
     template<class Value1, class Ptr1>
     constexpr bool operator<=(const ptr_iterator<Value1, Ptr1> &rhs) const {
-        return !(rhs._ptr < _ptr);
+        return !(rhs < *this);
     }
 
     template<class Value1, class Ptr1>
     constexpr bool operator>=(const ptr_iterator<Value1, Ptr1> &rhs) const {
-        return !(_ptr < rhs._ptr);
+        return !(*this < rhs);
     }
 
     constexpr ptr_iterator &operator++() {
@@ -122,13 +122,13 @@ struct ptr_iterator {
     }
 
 protected:
-    using _invc_t =
-        conditional_t<is_const<value_type>::value, remove_const_t<value_type>,
-                      add_const_t<value_type>>;
+    // using _invc_t =
+    //     conditional_t<is_const<value_type>::value, remove_const_t<value_type>,
+    //                   add_const_t<value_type>>;
+    // friend class ptr_iterator<_invc_t, Ptr>;
 
     template<class, class>
     friend class ptr_iterator;
-    // friend class ptr_iterator<_invc_t, Ptr>;
 
     template<class, class>
     friend class vector;
@@ -136,11 +136,13 @@ protected:
     template<class, size_t>
     friend class span;
 
+    constexpr ptr_iterator(const Ptr &ptr): _ptr(ptr) {}
+
     constexpr operator Ptr() {
         return _ptr;
     }
 
-    Ptr _ptr = nullptr;
+    Ptr _ptr = static_cast<Ptr>(nullptr);
 };
 } // namespace ala
 

@@ -24,7 +24,7 @@ include_paths = [
 if False:
     compiler = 'clang-cl'
     cflags = [
-        '/DTEST_STD_VER=20',
+        '/DTEST_STD_VER=17',
         '/DALA_USE_ALLOC_REBIND=1',
         '/Od',
         '/Z7',
@@ -43,7 +43,7 @@ else:
         '-DALA_USE_ALLOC_REBIND=1',
         '-D_ALA_VERSION=0',
         '-O0',
-        '-g',
+        '-g0',
         '-std=c++20',
         '-fexceptions',
         '-stdlib=libc++',
@@ -58,28 +58,29 @@ else:
 lflags = []
 srcs = [
     'std/algorithms',
-    'std/containers/container.node',
-    'std/containers/containers.general',
-    'std/containers/container.requirements',
-    'std/containers/associative/map',
-    'std/containers/associative/multimap',
-    'std/containers/associative/set',
-    'std/containers/associative/multiset',
-    'std/containers/sequences/array',
+    # 'std/containers/container.node',
+    # 'std/containers/containers.general',
+    # 'std/containers/container.requirements',
+    # 'std/containers/associative/map',
+    # 'std/containers/associative/multimap',
+    # 'std/containers/associative/set',
+    # 'std/containers/associative/multiset',
+    # 'std/containers/sequences/array',
     'std/containers/sequences/vector',
-    'std/containers/sequences/list',
-    'std/containers/sequences/forwardlist',
-    'std/containers/views',
-    'std/utilities/meta',
-    'std/utilities/function.objects',
-    'std/utilities/utility',
-    'std/utilities/tuple',
-    'std/utilities/any',
-    'std/utilities/variant',
-    'std/utilities/optional',
-    'std/utilities/smartptr',
-    'std/utilities/memory/util.smartptr',
-    'std/concepts',
+    'std/containers/sequences/deque',
+    # 'std/containers/sequences/list',
+    # 'std/containers/sequences/forwardlist',
+    # 'std/containers/views',
+    # 'std/utilities/meta',
+    # 'std/utilities/function.objects',
+    # 'std/utilities/utility',
+    # 'std/utilities/tuple',
+    # 'std/utilities/any',
+    # 'std/utilities/variant',
+    # 'std/utilities/optional',
+    # 'std/utilities/smartptr',
+    # 'std/utilities/memory/util.smartptr',
+    # 'std/concepts',
 ]
 
 
@@ -163,13 +164,13 @@ skips = [
 if '-fsanitize=address' in cflags:
     skips += [
         # uncompat with asan
-        # 'std/containers/sequences/list/list.ops/sort_comp.pass.cpp',
-        # 'std/containers/associative/map/map.access/at.pass.cpp',
         'std/containers/sequences/list/list.modifiers/insert_iter_size_value.pass.cpp',
         'std/utilities/memory/util.smartptr/util.smartptr.shared/util.smartptr.shared.const/pointer_deleter_throw.pass.cpp',
         'std/utilities/memory/util.smartptr/util.smartptr.shared/util.smartptr.shared.const/pointer_throw.pass.cpp',
         'std/utilities/memory/util.smartptr/util.smartptr.shared/util.smartptr.shared.const/nullptr_t_deleter_throw.pass.cpp',
         'std/utilities/memory/util.smartptr/util.smartptr.shared/util.smartptr.shared.const/unique_ptr.pass.cpp',
+        'std/containers/sequences/deque/deque.modifiers/push_back_exception_safety.pass.cpp',
+        'std/containers/sequences/deque/deque.modifiers/push_front_exception_safety.pass.cpp',
     ]
 
 
@@ -230,6 +231,7 @@ def patch(str):
         '#include <iterator>', '#include <ala/iterator.h>').replace(
         '#include <random>', '#include <random>\n#include <ala/random.h>').replace(
         '#include <vector>', '#include <ala/vector.h>\n#include <ala/functional.h>').replace(
+        '#include <deque>', '#include <ala/deque.h>').replace(
         '#include <optional>', '#include <ala/optional.h>').replace(
         '#include <variant>', '#include <ala/variant.h>\n#include <ala/tuple.h>').replace(
         '#include <list>', '#include <ala/list.h>').replace(
@@ -256,7 +258,6 @@ def patch(str):
         'std::mt19937', 'ALASTD::mt19937').replace(
         'std::mt19937_64', 'ALASTD::mt19937_64').replace(
         'std::uniform_int_distribution', 'ALASTD::uniform_int_distribution').replace(
-        'std::deque', 'ALASTD::deque').replace(
         'std::unordered_map', 'ALASTD::unordered_map').replace(
         'std::unordered_set', 'ALASTD::unordered_set').replace(
         'std::unordered_multimap', 'ALASTD::unordered_multimap').replace(
@@ -364,7 +365,7 @@ def main():
     okbin = join(build, 'ok.bin')
     if (len(sys.argv) == 2):
         srcs = sys.argv[1:]
-        # srcs = [abspath(i) for i in srcs]
+        srcs = [i.replace(os.sep, '/') for i in srcs]
 
     if os.path.exists(okbin):
         with open(okbin, 'rb') as okf:

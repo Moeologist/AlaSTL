@@ -413,30 +413,6 @@ constexpr OutputIter reverse_copy(BidirIter first, BidirIter last,
     return out;
 }
 
-template<class ForwardIter>
-constexpr ForwardIter rotate(ForwardIter first, ForwardIter middle,
-                             ForwardIter last) {
-    if (first == middle)
-        return last;
-    if (middle == last)
-        return first;
-
-    ForwardIter tmp, next_mid;
-    for (bool flg = true; middle != first; middle = next_mid) {
-        next_mid = middle;
-        while (middle != last) {
-            if (first == next_mid)
-                next_mid = middle;
-            ala::iter_swap(first++, middle++);
-        }
-        if (flg) {
-            tmp = first;
-            flg = false;
-        }
-    }
-    return tmp;
-}
-
 template<class ForwardIter, class OutputIter>
 constexpr OutputIter rotate_copy(ForwardIter first, ForwardIter middle,
                                  ForwardIter last, OutputIter out) {
@@ -460,9 +436,9 @@ constexpr void shuffle(RandomIter first, RandomIter last, URBG &&g) {
 }
 
 template<class ForwardIter, class OutputIter, class Distance, class URBG>
-constexpr OutputIter _sample_dispatch(input_iterator_tag, ForwardIter first,
-                                      ForwardIter last, OutputIter out,
-                                      Distance n, URBG &&g) {
+constexpr OutputIter _sample_dispatch(ForwardIter first, ForwardIter last,
+                                      OutputIter out, Distance n, URBG &&g,
+                                      input_iterator_tag) {
     Distance i = 0;
     for (; first != last && i < n; ++first, (void)++i)
         *(out + i) = *first;
@@ -475,9 +451,9 @@ constexpr OutputIter _sample_dispatch(input_iterator_tag, ForwardIter first,
 }
 
 template<class ForwardIter, class OutputIter, class Distance, class URBG>
-constexpr OutputIter _sample_dispatch(forward_iterator_tag, ForwardIter first,
-                                      ForwardIter last, OutputIter out,
-                                      Distance n, URBG &&g) {
+constexpr OutputIter _sample_dispatch(ForwardIter first, ForwardIter last,
+                                      OutputIter out, Distance n, URBG &&g,
+                                      forward_iterator_tag) {
     Distance len = ala::distance(first, last);
     for (n = ala::min(n, len); n != 0; ++first) {
         Distance r = ala::uniform_int_distribution<Distance>(0, --len)(g);
@@ -493,8 +469,8 @@ template<class ForwardIter, class OutputIter, class Distance, class URBG>
 constexpr OutputIter sample(ForwardIter first, ForwardIter last, OutputIter out,
                             Distance n, URBG &&g) {
     using tag_t = _iter_tag_t<ForwardIter>;
-    return ala::_sample_dispatch(tag_t{}, first, last, out, n,
-                                 ala::forward<URBG>(g));
+    return ala::_sample_dispatch(first, last, out, n, ala::forward<URBG>(g),
+                                 tag_t{});
 }
 
 // Partitioning operations
@@ -748,9 +724,8 @@ constexpr pair<const T &, const T &> minmax(const T &a, const T &b) {
 
 template<class ForwardIter, class Comp>
 constexpr ForwardIter min_element(ForwardIter first, ForwardIter last, Comp comp) {
-    static_assert(
-        is_base_of<forward_iterator_tag, _iter_tag_t<ForwardIter>>::value,
-        "ala::min_element need Forward Iterator");
+    static_assert(is_base_of<forward_iterator_tag, _iter_tag_t<ForwardIter>>::value,
+                  "ala::min_element need Forward Iterator");
     if (first == last)
         return last;
     ForwardIter min = first;
@@ -768,9 +743,8 @@ constexpr ForwardIter min_element(ForwardIter first, ForwardIter last) {
 
 template<class ForwardIter, class Comp>
 constexpr ForwardIter max_element(ForwardIter first, ForwardIter last, Comp comp) {
-    static_assert(
-        is_base_of<forward_iterator_tag, _iter_tag_t<ForwardIter>>::value,
-        "ala::max_element need Forward Iterator");
+    static_assert(is_base_of<forward_iterator_tag, _iter_tag_t<ForwardIter>>::value,
+                  "ala::max_element need Forward Iterator");
     if (first == last)
         return last;
     ForwardIter max = first;
@@ -789,9 +763,8 @@ constexpr ForwardIter max_element(ForwardIter first, ForwardIter last) {
 template<class ForwardIter, class Comp>
 constexpr pair<ForwardIter, ForwardIter>
 minmax_element(ForwardIter first, ForwardIter last, Comp comp) {
-    static_assert(
-        is_base_of<forward_iterator_tag, _iter_tag_t<ForwardIter>>::value,
-        "ala::minmax_element need Forward Iterator");
+    static_assert(is_base_of<forward_iterator_tag, _iter_tag_t<ForwardIter>>::value,
+                  "ala::minmax_element need Forward Iterator");
     if (first == last)
         return pair<ForwardIter, ForwardIter>(last, last);
     ForwardIter min = first;
@@ -993,9 +966,9 @@ template<class ForwardIter1, class ForwardIter2, class BinPred>
 constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
                               ForwardIter2 first2, ForwardIter2 last2,
                               BinPred pred) {
-    using tag_t = _and_<
-        is_base_of<random_access_iterator_tag, _iter_tag_t<ForwardIter1>>,
-        is_base_of<random_access_iterator_tag, _iter_tag_t<ForwardIter2>>>;
+    using tag_t =
+        _and_<is_base_of<random_access_iterator_tag, _iter_tag_t<ForwardIter1>>,
+              is_base_of<random_access_iterator_tag, _iter_tag_t<ForwardIter2>>>;
     return ala::_is_permutation_dispatch(first1, last1, first2, last2, pred,
                                          tag_t{});
 }
@@ -1003,9 +976,9 @@ constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
 template<class ForwardIter1, class ForwardIter2>
 constexpr bool is_permutation(ForwardIter1 first1, ForwardIter1 last1,
                               ForwardIter2 first2, ForwardIter2 last2) {
-    using tag_t = _and_<
-        is_base_of<random_access_iterator_tag, _iter_tag_t<ForwardIter1>>,
-        is_base_of<random_access_iterator_tag, _iter_tag_t<ForwardIter2>>>;
+    using tag_t =
+        _and_<is_base_of<random_access_iterator_tag, _iter_tag_t<ForwardIter1>>,
+              is_base_of<random_access_iterator_tag, _iter_tag_t<ForwardIter2>>>;
     return ala::_is_permutation_dispatch(first1, last1, first2, last2, tag_t{});
 }
 
@@ -1042,8 +1015,9 @@ shift_left(ForwardIter first, ForwardIter last,
 
 template<class BidirIter>
 constexpr BidirIter
-_shift_right_dispatch(bidirectional_iterator_tag, BidirIter first, BidirIter last,
-                      typename iterator_traits<BidirIter>::difference_type n) {
+_shift_right_dispatch(BidirIter first, BidirIter last,
+                      typename iterator_traits<BidirIter>::difference_type n,
+                      bidirectional_iterator_tag) {
     using diff_t = typename iterator_traits<BidirIter>::difference_type;
     diff_t len = ala::distance(first, last);
     if (!(0 < n))
@@ -1057,8 +1031,9 @@ _shift_right_dispatch(bidirectional_iterator_tag, BidirIter first, BidirIter las
 
 template<class ForwardIter>
 constexpr ForwardIter
-_shift_right_dispatch(forward_iterator_tag, ForwardIter first, ForwardIter last,
-                      typename iterator_traits<ForwardIter>::difference_type n) {
+_shift_right_dispatch(ForwardIter first, ForwardIter last,
+                      typename iterator_traits<ForwardIter>::difference_type n,
+                      forward_iterator_tag) {
     using diff_t = typename iterator_traits<ForwardIter>::difference_type;
     diff_t len = ala::distance(first, last);
     if (!(0 < n))
@@ -1098,7 +1073,7 @@ constexpr ForwardIter
 shift_right(ForwardIter first, ForwardIter last,
             typename iterator_traits<ForwardIter>::difference_type n) {
     using tag_t = _iter_tag_t<ForwardIter>;
-    return ala::_shift_right_dispatch(tag_t{}, first, last, n);
+    return ala::_shift_right_dispatch(first, last, n, tag_t{});
 }
 
 } // namespace ala

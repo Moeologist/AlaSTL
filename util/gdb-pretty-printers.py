@@ -531,6 +531,60 @@ class StdVectorPrinter(object):
         return "array"
 
 
+class StdRingPrinter(object):
+    """Print a ala::ring."""
+
+    def __init__(self, val):
+        """Set val, length, capacity, and iterator for bool and normal vectors."""
+        self.val = val
+        self.typename = _remove_generics(_prettify_typename(val.type))
+        self.data = self.val["_data"]
+        self.circ = self.val["_circ"]
+        self.head = self.val["_head"]
+        self.tail = self.val["_tail"]
+
+    def _size(self):
+        return (self.tail + self.circ - self.head) % self.circ;
+
+    def to_string(self):
+        return ("%s of length %d, capacity %d" %
+                (self.typename, self._size(), self.circ - 1))
+
+    def __iter__(self):
+        for i in range(self._size()):
+            yield "%d" % i, (self.data + (self.head + i) % self.circ).dereference()
+
+    def children(self):
+        return self
+
+    def display_hint(self):
+        return "array"
+
+
+class RingIteratorPrinter(object):
+    """Abstract super class for std::list iterator."""
+
+    def __init__(self, val):
+        self.val = val
+        self.addr = val["_ptr"]
+        self.ref = val["_ref"]
+
+    def to_string(self):
+        typename = _remove_generics(_prettify_typename(self.val.type))
+        if not self.addr:
+            return "%s is nullptr" % typename
+        elif self.ref["_data"] + self.ref["_tail"] == self.addr:
+            return "%s = end()" % typename
+        return "%s " % typename
+
+    def __iter__(self):
+        addr_str = "[%s]" % str(self.addr)
+        yield addr_str, self.addr.dereference()
+
+    def children(self):
+        return self if self.addr else iter(())
+
+
 class StdBitsetPrinter(object):
     """Print a std::bitset."""
 
@@ -563,59 +617,6 @@ class StdBitsetPrinter(object):
         return self
 
 
-class StdDequePrinter(object):
-    """Print a std::deque."""
-
-    def __init__(self, val):
-        self.val = val
-        self.size = int(_value_of_pair_first(val["__size_"]))
-        self.start_ptr = self.val["__map_"]["__begin_"]
-        self.first_block_start_index = int(self.val["__start_"])
-        self.node_type = self.start_ptr.type
-        self.block_size = self._calculate_block_size(
-            val.type.template_argument(0))
-
-    def _calculate_block_size(self, element_type):
-        """Calculates the number of elements in a full block."""
-        size = element_type.sizeof
-        # Copied from struct __deque_block_size implementation of libcxx.
-        return 4096 / size if size < 256 else 16
-
-    def _bucket_it(self, start_addr, start_index, end_index):
-        for i in range(start_index, end_index):
-            yield i, (start_addr.dereference() + i).dereference()
-
-    def _list_it(self):
-        """Primary iteration worker."""
-        num_emitted = 0
-        current_addr = self.start_ptr
-        start_index = self.first_block_start_index
-        while num_emitted < self.size:
-            end_index = min(start_index + self.size -
-                            num_emitted, self.block_size)
-            for _, elem in self._bucket_it(current_addr, start_index, end_index):
-                yield "", elem
-            num_emitted += end_index - start_index
-            current_addr = gdb.Value(addr_as_long(current_addr) + _pointer_size) \
-                              .cast(self.node_type)
-            start_index = 0
-
-    def to_string(self):
-        typename = _remove_generics(_prettify_typename(self.val.type))
-        if self.size:
-            return "%s with %d elements" % (typename, self.size)
-        return "%s is empty" % typename
-
-    def __iter__(self):
-        return self._list_it()
-
-    def children(self):
-        return self
-
-    def display_hint(self):
-        return "array"
-
-
 class StdListPrinter(object):
     """Print a std::list."""
 
@@ -623,7 +624,8 @@ class StdListPrinter(object):
         self.val = val
         self.size = self.val["_size"]
         dummy_node = self.val["_guard"][0]
-        self.nodetype = dummy_node.type.strip_typedefs().template_argument(0).pointer()
+        self.cast_name = "ala::l_vnode<%s>" % self.val.type.template_argument(0)
+        self.cast_type = gdb.lookup_type(self.cast_name).pointer()
         self.first_node = dummy_node["_suc"]
 
     def to_string(self):
@@ -633,16 +635,16 @@ class StdListPrinter(object):
         return "%s is empty" % typename
 
     def _list_iter(self):
-        current_node = self.first_node
+        node = self.first_node
         for i in range(self.size):
-            yield "%d" % i, current_node.cast(self.nodetype).dereference()["_data"]
-            current_node = current_node.dereference()["_suc"]
+            yield "%d" % i, node.cast(self.cast_type).dereference()["_data"]
+            node = node.dereference()["_suc"]
 
     def __iter__(self):
         return self._list_iter()
 
     def children(self):
-        return self if self.nodetype and self.size > 0 else iter(())
+        return self if self.cast_type and self.size > 0 else iter(())
 
     def display_hint(self):
         return "array"
@@ -695,24 +697,21 @@ class AbstractRBTreePrinter(object):
         self.val = val["tree"]
         self.size = int(self.val["_size"])
         self.root = self.val["_root"]
-        self.cast_type = self.root.dereference().type.strip_typedefs().pointer()
-
-    def _get_key_value(self, node):
-        """Subclasses should override to return a list of values to yield."""
-        raise NotImplementedError
+        self.cast_name = "ala::rb_vnode<%s>" % self.val.type.template_argument(0)
+        self.cast_type = gdb.lookup_type(self.cast_name).pointer()
 
     def is_nil(self, node):
         return node == 0 or node.dereference()["_is_nil"]
 
     def _traverse(self, node):
         """Traverses the binary search tree in order."""
-        if not self.is_nil(node["_left"]):
-            for i in self._traverse(node["_left"]):
+        if not self.is_nil(node.dereference()["_left"]):
+            for i in self._traverse(node.dereference()["_left"]):
                 yield i
         for kv in self._get_key_value(node):
             yield "", kv
-        if not self.is_nil(node["_left"]):
-            for i in self._traverse(node["_rght"]):
+        if not self.is_nil(node.dereference()["_left"]):
+            for i in self._traverse(node.dereference()["_rght"]):
                 yield i
 
     def __iter__(self):
@@ -729,8 +728,9 @@ class AbstractRBTreePrinter(object):
 
     def _get_key_value(self, node):
         if self._is_map():
-            return [node.dereference()["_data"]["first"], node.dereference()["_data"]["second"]]
-        return [node.dereference()["_data"]];
+            return [node.cast(self.cast_type).dereference()["_data"]["first"],
+                    node.cast(self.cast_type).dereference()["_data"]["second"]]
+        return [node.cast(self.cast_type).dereference()["_data"]];
 
     def _is_map(self):
         return self.val.type.template_argument(3) == True
@@ -745,22 +745,22 @@ class AbstractRBTreeIteratorPrinter(object):
     def __init__(self, val):
         self.val = val
         self.addr = val["_ptr"]
-        cast_type = self.addr.dereference().type.strip_typedefs().pointer()
+        self.cast_name = "ala::rb_vnode<%s>" % self.val.type.template_argument(0)
+        self.cast_type = gdb.lookup_type(self.cast_name).pointer()
         if self.addr:
-            self.node = self.addr.cast(cast_type).dereference()
+            self.node = self.addr.cast(self.cast_type).dereference()
 
     def to_string(self):
         typename = _remove_generics(_prettify_typename(self.val.type))
         if not self.addr:
             return "%s is nullptr" % typename
+        elif self.node["_is_nil"]:
+            return "%s = end()" % typename
         return "%s " % typename
 
     def __iter__(self):
         addr_str = "[%s]" % str(self.addr)
-        if self.node["_is_nil"]:
-            yield addr_str, "end()"
-        else:
-            yield addr_str, self.node["_data"]
+        yield addr_str, self.node["_data"]
 
     def children(self):
         return self if self.addr else iter(())
@@ -772,41 +772,25 @@ class ListIteratorPrinter(object):
     def __init__(self, val):
         self.val = val
         self.addr = val["_ptr"]
-        cast_type = self.addr.dereference().type.strip_typedefs().pointer()
+        self.cast_name = "ala::l_vnode<%s>" % self.val.type.template_argument(0)
+        self.cast_type = gdb.lookup_type(self.cast_name).pointer()
         if self.addr:
-            self.node = self.addr.cast(cast_type).dereference()
+            self.node = self.addr.cast(self.cast_type).dereference()
 
     def to_string(self):
         typename = _remove_generics(_prettify_typename(self.val.type))
         if not self.addr:
             return "%s is nullptr" % typename
+        elif not self.node["_suc"]:
+            return "%s = end()" % typename
         return "%s " % typename
 
     def __iter__(self):
         addr_str = "[%s]" % str(self.addr)
-        if not self.node["_suc"]:
-            yield addr_str, "end()"
-        else:
-            yield addr_str, self.node["_data"]
+        yield addr_str, self.node["_data"]
 
     def children(self):
         return self if self.addr else iter(())
-
-
-class StdFposPrinter(object):
-    """Print a std::fpos or std::streampos."""
-
-    def __init__(self, val):
-        self.val = val
-
-    def to_string(self):
-        typename = _remove_generics(_prettify_typename(self.val.type))
-        offset = self.val["__off_"]
-        state = self.val["__st_"]
-        count = state["__count"]
-        value = state["__value"]["__wch"]
-        return "%s with stream offset:%s with state: {count:%s value:%s}" % (
-            typename, offset, count, value)
 
 
 class AbstractUnorderedCollectionPrinter(object):
@@ -948,7 +932,7 @@ class LibcxxPrettyPrinter(object):
             "shared_ptr": StdSharedPointerPrinter,
             "weak_ptr": StdSharedPointerPrinter,
             "bitset": StdBitsetPrinter,
-            "deque": StdDequePrinter,
+            "ring": StdRingPrinter,
             "list": StdListPrinter,
             "forward_list": StdListPrinter,
             "queue": StdQueueOrStackPrinter,
@@ -961,7 +945,7 @@ class LibcxxPrettyPrinter(object):
             "vector": StdVectorPrinter,
             "rb_iterator": AbstractRBTreeIteratorPrinter,
             "l_iterator": ListIteratorPrinter,
-            "fpos": StdFposPrinter,
+            "ring_iterator": RingIteratorPrinter,
             "unordered_set": StdUnorderedSetPrinter,
             "unordered_multiset": StdUnorderedSetPrinter,
             "unordered_map": StdUnorderedMapPrinter,

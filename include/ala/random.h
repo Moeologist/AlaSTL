@@ -253,14 +253,14 @@ using xorshift64 = xorshift<uint_fast64_t, 13, 7, 17>;
 
 using minstd_rand = linear_congruential_engine<uint_fast32_t, 48271, 0, 2147483647>;
 
+// https://news.ycombinator.com/item?id=9352905
+// https://www.open-std.org/jtc1/sc22/wg21/docs/papers/2018/p0952r0.html
 template<class URBG>
 conditional_t<(sizeof(typename remove_cvref_t<URBG>::result_type) * 8 >= 52),
               double, float>
 generate_real(URBG &g) {
     using UInt = typename remove_cvref_t<URBG>::result_type;
-    using Real =
-        conditional_t<(sizeof(typename remove_cvref_t<URBG>::result_type) * 8 >= 52),
-                      double, float>;
+    using Real = conditional_t<(sizeof(UInt) * 8 >= 52), double, float>;
     static_assert(numeric_limits<Real>::is_iec559 &&
                       (is_same<double, Real>::value ||
                        is_same<float, Real>::value),

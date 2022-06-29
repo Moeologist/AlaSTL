@@ -410,8 +410,13 @@ struct pointer_holder {
     Alloc &_alloc;
     size_t _size = 0;
     using _alloc_traits = ala::allocator_traits<Alloc>;
+
     pointer_holder(Alloc &a, size_t s): _alloc(a) {
         _ptr = _alloc.allocate(s);
+        _size = s;
+    }
+    pointer_holder(Alloc &a, Pointer p, size_t s): _alloc(a) {
+        _ptr = p;
         _size = s;
     }
     ~pointer_holder() {
@@ -425,12 +430,6 @@ struct pointer_holder {
     }
     Pointer get() {
         return _ptr;
-    }
-    void reset(Pointer p = nullptr) noexcept {
-        Pointer tmp = _ptr;
-        _ptr = p;
-        if (tmp)
-            _alloc.deallocate(tmp, _size);
     }
 };
 
@@ -446,6 +445,10 @@ struct pointer_holder<T *, Alloc> {
         _ptr = _alloc_traits::template allocate_object<T>(_alloc, s);
         _size = s;
     }
+    pointer_holder(Alloc &a, Pointer p, size_t s): _alloc(a) {
+        _ptr = p;
+        _size = s;
+    }
     ~pointer_holder() {
         if (_ptr)
             _alloc_traits::template deallocate_object<T>(_alloc, _ptr, _size);
@@ -457,12 +460,6 @@ struct pointer_holder<T *, Alloc> {
     }
     Pointer get() {
         return _ptr;
-    }
-    void reset(Pointer p = nullptr) noexcept {
-        Pointer tmp = _ptr;
-        _ptr = p;
-        if (tmp)
-            _alloc_traits::template deallocate_object<T>(_alloc, tmp, _size);
     }
 };
 

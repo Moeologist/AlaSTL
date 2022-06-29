@@ -306,10 +306,8 @@ template<class Iter1, class Iter2, class BinPred>
 constexpr bool equal(Iter1 first1, Iter1 last1, Iter2 first2, Iter2 last2,
                      BinPred pred) {
     using tag_t =
-        _and_<is_base_of<random_access_iterator_tag,
-                         _iter_tag_t<Iter1>>,
-              is_base_of<random_access_iterator_tag,
-                         _iter_tag_t<Iter2>>>;
+        _and_<is_base_of<random_access_iterator_tag, _iter_tag_t<Iter1>>,
+              is_base_of<random_access_iterator_tag, _iter_tag_t<Iter2>>>;
     return ala::_equal_dispatch(first1, last1, first2, last2, pred, tag_t{});
 }
 
@@ -447,6 +445,83 @@ constexpr ForwardIter remove_if(ForwardIter first, ForwardIter last,
             if (!pred(*i))
                 *first++ = ala::move(*i);
     return first;
+}
+
+template<class ForwardIter>
+constexpr ForwardIter _rotate_left(ForwardIter first, ForwardIter last) {
+    using T = typename iterator_traits<ForwardIter>::value_type;
+    T tmp = ala::move(*first);
+    ForwardIter r = ala::move(ala::next(first), last, first);
+    *r = ala::move(tmp);
+    return r;
+}
+
+template<class BidirIter>
+constexpr BidirIter _rotate_right(BidirIter first, BidirIter last) {
+    using T = typename iterator_traits<BidirIter>::value_type;
+    BidirIter mid = ala::prev(last);
+    T tmp = ala::move(*mid);
+    BidirIter r = ala::move_backward(first, mid, last);
+    *first = ala::move(tmp);
+    return r;
+}
+
+template<class ForwardIter>
+constexpr ForwardIter _rotate_forward(ForwardIter first, ForwardIter middle,
+                                      ForwardIter last) {
+    ForwardIter next = middle;
+    while (middle != last) {
+        if (first == next)
+            next = middle;
+        ala::iter_swap(first++, middle++);
+    }
+    middle = next;
+    ForwardIter r = first;
+    for (; middle != first; middle = next) {
+        next = middle;
+        while (middle != last) {
+            if (first == next)
+                next = middle;
+            ala::iter_swap(first++, middle++);
+        }
+    }
+    return r;
+}
+
+template<class ForwardIter>
+constexpr ForwardIter _rotate_dispatch(ForwardIter first, ForwardIter middle,
+                                       ForwardIter last, forward_iterator_tag) {
+    using T = typename iterator_traits<ForwardIter>::value_type;
+    if (is_trivially_move_assignable<T>::value) {
+        if (ala::next(first) == middle)
+            return ala::_rotate_left(first, last);
+    }
+    return ala::_rotate_forward(first, middle, last);
+}
+
+template<class ForwardIter>
+constexpr ForwardIter _rotate_dispatch(ForwardIter first, ForwardIter middle,
+                                       ForwardIter last,
+                                       bidirectional_iterator_tag) {
+    using T = typename iterator_traits<ForwardIter>::value_type;
+    if (is_trivially_move_assignable<T>::value) {
+        if (ala::next(first) == middle)
+            return ala::_rotate_left(first, last);
+        if (ala::next(middle) == last)
+            return ala::_rotate_right(first, last);
+    }
+    return ala::_rotate_forward(first, middle, last);
+}
+
+template<class ForwardIter>
+constexpr ForwardIter rotate(ForwardIter first, ForwardIter middle,
+                             ForwardIter last) {
+    using tag_t = _iter_tag_t<ForwardIter>;
+    if (first == middle)
+        return last;
+    if (middle == last)
+        return first;
+    return ala::_rotate_dispatch(first, middle, last, tag_t{});
 }
 
 } // namespace ala
