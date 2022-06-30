@@ -233,8 +233,8 @@ class StdAnyPrinter(object):
             regex = r"""^ala::_any_handle<(.*)>::operate\(ala::AnyOP\)"""
             m = re.match(regex, self.hname)
             self.holdname = m.group(1)
-            localsym = gdb.lookup_symbol(self.hname.replace("operate\(ala::AnyOP\)", "_is_local"))[0]
-            self.local = localsym.value()
+            localsym = gdb.lookup_symbol(self.hname.replace("operate(ala::AnyOP)", "local"))[0]
+            self.local = localsym.value()()
             self.holdtype = gdb.lookup_type(self.holdname)
             if self.local:
                 self.addr = self.val["_placehold"].address.cast(self.holdtype.pointer())

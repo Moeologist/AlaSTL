@@ -402,7 +402,21 @@ struct _is_allocator<Alloc, void_t<typename Alloc::value_type,
                                    decltype(declval<Alloc &>().allocate(size_t{}))>>
     : true_type {};
 
-} // namespace ala
+template<class T, class Alloc, class = void>
+struct _use_allocator_impl: false_type {};
+
+template<class T, class Alloc>
+struct _use_allocator_impl<
+    T, Alloc, enable_if_t<is_convertible<Alloc, typename T::allocator_type>::value>>
+    : true_type {};
+
+template<class T, class Alloc>
+struct uses_allocator: _use_allocator_impl<T, Alloc> {};
+
+#if _ALA_ENABLE_INLINE_VAR
+template<class T, class Alloc>
+inline constexpr bool uses_allocator_v = uses_allocator<T, Alloc>::value;
+#endif
 
 template<class Pointer, class Alloc>
 struct pointer_holder {
@@ -462,7 +476,7 @@ struct pointer_holder<T *, Alloc> {
         return _ptr;
     }
 };
-
+} // namespace ala
 #ifdef _ALA_MSVC
     #pragma warning(pop)
 #endif

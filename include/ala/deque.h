@@ -1,7 +1,6 @@
 #ifndef _ALA_DEQUE_H
 #define _ALA_DEQUE_H
 
-#include <deque>
 #include <ala/ring.h>
 
 namespace ala {

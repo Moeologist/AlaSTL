@@ -14,7 +14,7 @@
 
 namespace ala {
 
-#ifdef _ALA_INLINE_VAR
+#if _ALA_ENABLE_INLINE_VAR
 inline constexpr size_t variant_npos = -1;
 #else
 constexpr size_t variant_npos = -1;

@@ -42,7 +42,7 @@ else:
         '-DTEST_STD_VER=20',
         '-DALA_USE_ALLOC_REBIND=1',
         '-D_ALA_VERSION=0',
-        '-O0',
+        '-O2',
         '-g0',
         '-std=c++20',
         '-fexceptions',
@@ -52,12 +52,15 @@ else:
         '-fsanitize=undefined',
         # '-fsanitize=thread',
         # '-fsanitize=memory',
-        '-ferror-limit=1'
+        '-ferror-limit=1',
     ]
 
-lflags = []
+lflags = [
+    '-rpath',
+    '/opt/llvm/lib/x86_64-unknown-linux-gnu/',
+]
 srcs = [
-    'std/algorithms',
+    # 'std/algorithms',
     # 'std/containers/container.node',
     # 'std/containers/containers.general',
     # 'std/containers/container.requirements',
@@ -66,10 +69,13 @@ srcs = [
     # 'std/containers/associative/set',
     # 'std/containers/associative/multiset',
     # 'std/containers/sequences/array',
-    'std/containers/sequences/vector',
-    'std/containers/sequences/deque',
+    # 'std/containers/sequences/vector',
+    # 'std/containers/sequences/deque',
     # 'std/containers/sequences/list',
     # 'std/containers/sequences/forwardlist',
+    'std/containers/container.adaptors/stack',
+    'std/containers/container.adaptors/queue',
+    'std/containers/container.adaptors/priority.queue',
     # 'std/containers/views',
     # 'std/utilities/meta',
     # 'std/utilities/function.objects',
@@ -139,6 +145,10 @@ skips = [
     'std/utilities/function.objects/range.cmp',
     'std/utilities/utility/utility.intcmp',
     'std/utilities/utility/utility.underlying/to_underlying.pass.cpp',
+    'std/containers/sequences/deque/deque.modifiers/push_back_exception_safety.pass.cpp',
+    'std/containers/sequences/deque/deque.modifiers/push_front_exception_safety.pass.cpp',
+    'std/containers/sequences/deque/deque.cons/deduct.pass.cpp',
+
 
     # not deprecated
     'std/utilities/meta/meta.unary/meta.unary.prop/is_literal_type.deprecated.fail.cpp',
@@ -169,8 +179,7 @@ if '-fsanitize=address' in cflags:
         'std/utilities/memory/util.smartptr/util.smartptr.shared/util.smartptr.shared.const/pointer_throw.pass.cpp',
         'std/utilities/memory/util.smartptr/util.smartptr.shared/util.smartptr.shared.const/nullptr_t_deleter_throw.pass.cpp',
         'std/utilities/memory/util.smartptr/util.smartptr.shared/util.smartptr.shared.const/unique_ptr.pass.cpp',
-        'std/containers/sequences/deque/deque.modifiers/push_back_exception_safety.pass.cpp',
-        'std/containers/sequences/deque/deque.modifiers/push_front_exception_safety.pass.cpp',
+
     ]
 
 
@@ -232,6 +241,8 @@ def patch(str):
         '#include <random>', '#include <random>\n#include <ala/random.h>').replace(
         '#include <vector>', '#include <ala/vector.h>\n#include <ala/functional.h>').replace(
         '#include <deque>', '#include <ala/deque.h>').replace(
+        '#include <stack>', '#include <ala/stack.h>\n#include <ala/deque.h>').replace(
+        '#include <queue>', '#include <ala/queue.h>\n#include <ala/deque.h>').replace(
         '#include <optional>', '#include <ala/optional.h>').replace(
         '#include <variant>', '#include <ala/variant.h>\n#include <ala/tuple.h>').replace(
         '#include <list>', '#include <ala/list.h>').replace(
@@ -265,9 +276,6 @@ def patch(str):
         'std::lock_guard', 'ALASTD::lock_guard').replace(
         'std::mutex', 'ALASTD::mutex').replace(
         'std::basic_string', 'ALASTD::basic_string').replace(
-        'std::stack', 'ALASTD::stack').replace(
-        'std::queue', 'ALASTD::queue').replace(
-        'std::priority_queue', 'ALASTD::priority_queue').replace(
         'std::', 'ala::').replace(
         'assert(distance(', 'assert(ala::distance(').replace(
         'assert(*next(', 'assert(*ala::next(').replace(

@@ -321,4 +321,32 @@ pair(T1, T2) -> pair<T1, T2>;
 
 } // namespace ala
 
+#ifndef NAMESPACE_FOR_HASH_FUNCTIONS
+#define NAMESPACE_FOR_HASH_FUNCTIONS hash_util
+#endif
+
+namespace NAMESPACE_FOR_HASH_FUNCTIONS {
+
+#if _ALA_ENABLE_INT128T
+#if !defined(uint128_t)
+#define uint128_t __uint128_t
+#endif
+inline uint64_t Uint128Low64(const uint128_t x) {
+  return static_cast<uint64_t>(x);
+}
+inline uint64_t Uint128High64(const uint128_t x) {
+  return static_cast<uint64_t>(x >> 64);
+}
+inline uint128_t Uint128(uint64_t lo, uint64_t hi) {
+  return lo + (((uint128_t)hi) << 64);
+}
+#else
+using uint128_t = ala::pair<uint64_t, uint64_t>;
+inline uint64_t Uint128Low64(const uint128_t x) { return x.first; }
+inline uint64_t Uint128High64(const uint128_t x) { return x.second; }
+inline uint128_t Uint128(uint64_t lo, uint64_t hi) { return uint128_t(lo, hi); }
+#endif
+
+}
+
 #endif

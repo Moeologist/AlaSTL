@@ -15,22 +15,6 @@ namespace ala {
 using ::std::type_info;
 #endif
 
-template<class T, class Alloc, class = void>
-struct _use_allocator_impl: false_type {};
-
-template<class T, class Alloc>
-struct _use_allocator_impl<
-    T, Alloc, enable_if_t<is_convertible<Alloc, typename T::allocator_type>::value>>
-    : true_type {};
-
-template<class T, class Alloc>
-struct uses_allocator: _use_allocator_impl<T, Alloc> {};
-
-#ifdef _ALA_INLINE_VAE
-template<class T, class Alloc>
-inline constexpr bool uses_allocator_v = uses_allocator<T, Alloc>::value;
-#endif
-
 // uses-allocator construction
 template<class T, class Alloc, class... Args>
 constexpr auto uses_allocator_construction_args(const Alloc &alloc,
@@ -83,7 +67,7 @@ inline void *align(size_t alignment, size_t size, void *&ptr, size_t &space) {
 }
 
 template<size_t N, class T>
-[[nodiscard]] constexpr T *assume_aligned(T *ptr);
+ALA_NODISCARD constexpr T *assume_aligned(T *ptr);
 
 // class template unique_­ptr
 template<class T>

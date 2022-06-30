@@ -1,6 +1,8 @@
 #ifndef _ALA_INTRIN_BIT_H
 #define _ALA_INTRIN_BIT_H
 
+#include <ala/config.h>
+
 #ifdef _ALA_MSVC
 extern unsigned char _BitScanForward(unsigned long *, unsigned long);
 extern unsigned char _BitScanReverse(unsigned long *, unsigned long);
