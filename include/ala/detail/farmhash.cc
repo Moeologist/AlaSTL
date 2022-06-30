@@ -20,6 +20,7 @@
 //
 // FarmHash, by Geoff Pike
 
+#include <ala/intrin/bit.h>
 #include <ala/detail/farmhash.h>
 // FARMHASH ASSUMPTIONS: Modify as needed, or use -DFARMHASH_ASSUME_SSE42 etc.
 // Note that if you use -DFARMHASH_ASSUME_SSE42 you likely need -msse42
@@ -63,19 +64,6 @@
 #define STATIC_INLINE static inline
 #endif
 
-// FARMHASH PORTABILITY LAYER: LIKELY and UNLIKELY
-
-#if !defined(LIKELY)
-#if defined(FARMHASH_NO_BUILTIN_EXPECT) || (defined(FARMHASH_OPTIONAL_BUILTIN_EXPECT) && !defined(HAVE_BUILTIN_EXPECT))
-#define LIKELY(x) (x)
-#else
-#define LIKELY(x) (__builtin_expect(!!(x), 1))
-#endif
-#endif
-
-#undef UNLIKELY
-#define UNLIKELY(x) !LIKELY(!(x))
-
 // FARMHASH PORTABILITY LAYER: endianness and byteswapping functions
 
 #ifdef WORDS_BIGENDIAN
@@ -91,100 +79,9 @@
 #define FARMHASH_UNKNOWN_ENDIAN 1
 #endif
 
-#if !defined(bswap_32) || !defined(bswap_64)
-#undef bswap_32
-#undef bswap_64
-
-#if defined(HAVE_BUILTIN_BSWAP) || defined(__clang__) ||                \
-  (defined(__GNUC__) && ((__GNUC__ == 4 && __GNUC_MINOR__ >= 8) ||      \
-                         __GNUC__ >= 5))
-// Easy case for bswap: no header file needed.
-#define bswap_32(x) __builtin_bswap32(x)
-#define bswap_64(x) __builtin_bswap64(x)
-#endif
-
-#endif
-
-#if defined(FARMHASH_UNKNOWN_ENDIAN) || !defined(bswap_64)
-
-#ifdef _WIN32
-
-#undef bswap_32
-#undef bswap_64
-#define bswap_32(x) _byteswap_ulong(x)
-#define bswap_64(x) _byteswap_uint64(x)
-
-#elif defined(__APPLE__)
-
-// Mac OS X / Darwin features
-#include <libkern/OSByteOrder.h>
-#undef bswap_32
-#undef bswap_64
-#define bswap_32(x) OSSwapInt32(x)
-#define bswap_64(x) OSSwapInt64(x)
-
-#elif defined(__sun) || defined(sun)
-
-#include <sys/byteorder.h>
-#undef bswap_32
-#undef bswap_64
-#define bswap_32(x) BSWAP_32(x)
-#define bswap_64(x) BSWAP_64(x)
-
-#elif defined(__FreeBSD__) || defined(__DragonFly__)
-
-#include <sys/endian.h>
-#undef bswap_32
-#undef bswap_64
-#define bswap_32(x) bswap32(x)
-#define bswap_64(x) bswap64(x)
-
-#elif defined(__OpenBSD__)
-
-#include <sys/types.h>
-#undef bswap_32
-#undef bswap_64
-#define bswap_32(x) swap32(x)
-#define bswap_64(x) swap64(x)
-
-#elif defined(__NetBSD__)
-
-#include <sys/types.h>
-#include <machine/bswap.h>
-#if defined(__BSWAP_RENAME) && !defined(__bswap_32)
-#undef bswap_32
-#undef bswap_64
-#define bswap_32(x) bswap32(x)
-#define bswap_64(x) bswap64(x)
-#endif
-
-#elif defined(__HAIKU__)
-
-#define _BSD_SOURCE
-#include <bsd/endian.h>
-#undef bswap_32
-#undef bswap_64
-#define bswap_32(x) bswap32(x)
-#define bswap_64(x) bswap64(x)
-
-#else
-
-#undef bswap_32
-#undef bswap_64
-#undef _BYTESWAP_H
-#include <byteswap.h>
-
-#endif
-
-#ifdef WORDS_BIGENDIAN
-#define FARMHASH_BIG_ENDIAN 1
-#endif
-
-#endif
-
 #ifdef FARMHASH_BIG_ENDIAN
-#define uint32_in_expected_order(x) (bswap_32(x))
-#define uint64_in_expected_order(x) (bswap_64(x))
+#define uint32_in_expected_order(x) (ala::intrin::bswap32(x))
+#define uint64_in_expected_order(x) (ala::intrin::bswap64(x))
 #else
 #define uint32_in_expected_order(x) (x)
 #define uint64_in_expected_order(x) (x)
@@ -204,8 +101,8 @@ STATIC_INLINE uint32_t Fetch32(const char *p) {
   return uint32_in_expected_order(result);
 }
 
-STATIC_INLINE uint32_t Bswap32(uint32_t val) { return bswap_32(val); }
-STATIC_INLINE uint64_t Bswap64(uint64_t val) { return bswap_64(val); }
+STATIC_INLINE uint32_t Bswap32(uint32_t val) { return ala::intrin::bswap32(val); }
+STATIC_INLINE uint64_t Bswap64(uint64_t val) { return ala::intrin::bswap64(val); }
 
 // FARMHASH PORTABILITY LAYER: bitwise rot
 
@@ -1825,7 +1722,7 @@ uint128_t CityHash128WithSeed(const char *s, size_t len, uint128_t seed) {
     ala::swap(z, x);
     s += 64;
     len -= 128;
-  } while (LIKELY(len >= 128));
+  } while (ALA_EXPECT(len >= 128));
   x += Rotate(v.first + z, 49) * k0;
   y = y * k0 + Rotate(w.second, 37);
   z = z * k0 + Rotate(w.first, 27);
