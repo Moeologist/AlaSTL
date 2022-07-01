@@ -12,11 +12,7 @@ struct piecewise_construct_t {
     explicit piecewise_construct_t() = default;
 };
 
-#if _ALA_ENABLE_INLINE_VAR
-inline constexpr piecewise_construct_t piecewise_construct{};
-#else
-constexpr piecewise_construct_t piecewise_construct{};
-#endif
+ALA_INLINE_CONSTEXPR_V piecewise_construct_t piecewise_construct{};
 
 template<typename T1, typename T2>
 struct pair {

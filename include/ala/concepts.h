@@ -141,7 +141,7 @@ struct _cpo_fn {
 } // namespace _swap
 
 inline namespace _cpos {
-inline constexpr _swap::_cpo_fn swap;
+ALA_INLINE_CONSTEXPR_V _swap::_cpo_fn swap;
 }
 } // namespace ranges
 

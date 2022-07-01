@@ -413,10 +413,8 @@ struct _use_allocator_impl<
 template<class T, class Alloc>
 struct uses_allocator: _use_allocator_impl<T, Alloc> {};
 
-#if _ALA_ENABLE_INLINE_VAR
 template<class T, class Alloc>
-inline constexpr bool uses_allocator_v = uses_allocator<T, Alloc>::value;
-#endif
+ALA_INLINE_CONSTEXPR_V bool uses_allocator_v = uses_allocator<T, Alloc>::value;
 
 template<class Pointer, class Alloc>
 struct pointer_holder {

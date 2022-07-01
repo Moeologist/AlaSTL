@@ -69,26 +69,13 @@ struct in_place_index_t {
     explicit in_place_index_t() = default;
 };
 
-#if _ALA_ENABLE_INLINE_VAR
-inline constexpr in_place_t in_place{};
+ALA_INLINE_CONSTEXPR_V in_place_t in_place{};
 
 template<class T>
-inline constexpr in_place_type_t<T> in_place_type{};
+ALA_INLINE_CONSTEXPR_V in_place_type_t<T> in_place_type{};
 
 template<size_t I>
-inline constexpr in_place_index_t<I> in_place_index{};
-#else
-constexpr in_place_t in_place{};
-
-    #ifdef _ALA_ENABLE_TEMPLATE_VAR
-template<class T>
-constexpr in_place_type_t<T> in_place_type{};
-
-template<size_t I>
-constexpr in_place_index_t<I> in_place_index{};
-    #endif
-
-#endif
+ALA_INLINE_CONSTEXPR_V in_place_index_t<I> in_place_index{};
 
 } // namespace ala
 #endif

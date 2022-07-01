@@ -21,11 +21,7 @@ struct nullopt_t {
     explicit constexpr nullopt_t(_dummy) {}
 };
 
-#if _ALA_ENABLE_INLINE_VAR
-inline constexpr nullopt_t nullopt{nullopt_t::_dummy{}};
-#else
-constexpr nullopt_t nullopt{nullopt_t::_dummy{}};
-#endif
+ALA_INLINE_CONSTEXPR_V nullopt_t nullopt{nullopt_t::_dummy{}};
 
 template<class T, bool = is_trivially_destructible<T>::value>
 struct _optional_destroy {

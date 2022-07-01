@@ -63,29 +63,18 @@ template<int N>
 struct _placeholder_t {};
 
 namespace placeholders {
-#if _ALA_ENABLE_INLINE_VAR
-inline constexpr _placeholder_t<1> _1;
-inline constexpr _placeholder_t<2> _2;
-inline constexpr _placeholder_t<3> _3;
-inline constexpr _placeholder_t<4> _4;
-inline constexpr _placeholder_t<5> _5;
-inline constexpr _placeholder_t<6> _6;
-inline constexpr _placeholder_t<7> _7;
-inline constexpr _placeholder_t<8> _8;
-inline constexpr _placeholder_t<9> _9;
-inline constexpr _placeholder_t<10> _10;
-#else
-constexpr _placeholder_t<1> _1;
-constexpr _placeholder_t<2> _2;
-constexpr _placeholder_t<3> _3;
-constexpr _placeholder_t<4> _4;
-constexpr _placeholder_t<5> _5;
-constexpr _placeholder_t<6> _6;
-constexpr _placeholder_t<7> _7;
-constexpr _placeholder_t<8> _8;
-constexpr _placeholder_t<9> _9;
-constexpr _placeholder_t<10> _10;
-#endif
+
+ALA_INLINE_CONSTEXPR_V _placeholder_t<1> _1;
+ALA_INLINE_CONSTEXPR_V _placeholder_t<2> _2;
+ALA_INLINE_CONSTEXPR_V _placeholder_t<3> _3;
+ALA_INLINE_CONSTEXPR_V _placeholder_t<4> _4;
+ALA_INLINE_CONSTEXPR_V _placeholder_t<5> _5;
+ALA_INLINE_CONSTEXPR_V _placeholder_t<6> _6;
+ALA_INLINE_CONSTEXPR_V _placeholder_t<7> _7;
+ALA_INLINE_CONSTEXPR_V _placeholder_t<8> _8;
+ALA_INLINE_CONSTEXPR_V _placeholder_t<9> _9;
+ALA_INLINE_CONSTEXPR_V _placeholder_t<10> _10;
+
 } // namespace placeholders
 
 template<class T>
@@ -109,13 +98,11 @@ struct _is_bind_expression_helper<_bind_t<Ts...>>: true_type {};
 template<class T>
 struct is_bind_expression: _is_bind_expression_helper<remove_cv_t<T>> {};
 
-#if _ALA_ENABLE_INLINE_VAR
 template<class T>
-inline constexpr int is_placeholder_v = is_placeholder<T>::value;
+ALA_INLINE_CONSTEXPR_V int is_placeholder_v = is_placeholder<T>::value;
 
 template<class T>
-inline constexpr bool is_bind_expression_v = is_bind_expression<T>::value;
-#endif
+ALA_INLINE_CONSTEXPR_V bool is_bind_expression_v = is_bind_expression<T>::value;
 
 struct _unknown_result {};
 struct _unknown_arg {};

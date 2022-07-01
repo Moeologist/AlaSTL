@@ -65,10 +65,8 @@ struct _type_pack_index_helper<void_t<_type_pack_index_t<T, Ts...>>, T, Ts...>
 template<typename T, typename... Ts>
 struct type_pack_index: _type_pack_index_helper<void, T, Ts...> {};
 
-#if _ALA_ENABLE_INLINE_VAR
 template<typename T, typename... Ts>
-inline constexpr size_t type_pack_index_v = type_pack_index<T, Ts...>::value;
-#endif
+ALA_INLINE_CONSTEXPR_V size_t type_pack_index_v = type_pack_index<T, Ts...>::value;
 
 } // namespace ala
 

@@ -14,11 +14,7 @@
 
 namespace ala {
 
-#if _ALA_ENABLE_INLINE_VAR
-inline constexpr size_t variant_npos = -1;
-#else
-constexpr size_t variant_npos = -1;
-#endif
+ALA_INLINE_CONSTEXPR_V size_t variant_npos = -1;
 
 template<class... Ts>
 class variant;
@@ -39,10 +35,8 @@ struct variant_size<volatile T>: variant_size<T> {};
 template<class T>
 struct variant_size<const volatile T>: variant_size<T> {};
 
-#if _ALA_ENABLE_INLINE_VAR
 template<class T>
-inline constexpr size_t variant_size_v = variant_size<T>::value;
-#endif
+ALA_INLINE_CONSTEXPR_V size_t variant_size_v = variant_size<T>::value;
 
 template<size_t I, class... Ts>
 struct variant_alternative<I, variant<Ts...>>: type_pack_element<I, Ts...> {};

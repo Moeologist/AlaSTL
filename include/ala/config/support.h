@@ -173,12 +173,12 @@
     #define ALA_TEMPLATE_RECURSIVE_DEPTH 512
 #endif
 
-#if _ALA_ENABLE_INLINE_VAR
+#if (__cpp_inline_variables >= 201606L || \
+     (defined(_ALA_MSVC) && _MSC_VER >= 1912)) && \
+    ALA_LANG >= 201703L
     #define ALA_INLINE_CONSTEXPR_V inline constexpr
 #else
     #define ALA_INLINE_CONSTEXPR_V constexpr
-    #undef _ALA_ENABLE_INLINE_VAR
-    #define _ALA_ENABLE_INLINE_VAR 1
 #endif
 
 #ifndef ALA_USE_RTTI

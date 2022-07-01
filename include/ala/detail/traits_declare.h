@@ -179,114 +179,106 @@ template<typename B>    struct negation;
 enum class endian;
 
 // primary type categories
-#if _ALA_ENABLE_INLINE_VAR
-template<typename T> inline constexpr bool is_void_v                    = is_void<T>::value;
-template<typename T> inline constexpr bool is_null_pointer_v            = is_null_pointer<T>::value;
-template<typename T> inline constexpr bool is_integral_v                = is_integral<T>::value;
-template<typename T> inline constexpr bool is_floating_point_v          = is_floating_point<T>::value;
-template<typename T> inline constexpr bool is_array_v                   = is_array<T>::value;
-template<typename T> inline constexpr bool is_pointer_v                 = is_pointer<T>::value;
-template<typename T> inline constexpr bool is_lvalue_reference_v        = is_lvalue_reference<T>::value;
-template<typename T> inline constexpr bool is_rvalue_reference_v        = is_rvalue_reference<T>::value;
-template<typename T> inline constexpr bool is_member_object_pointer_v   = is_member_object_pointer<T>::value;
-template<typename T> inline constexpr bool is_member_function_pointer_v = is_member_function_pointer<T>::value;
-template<typename T> inline constexpr bool is_enum_v                    = is_enum<T>::value;
-template<typename T> inline constexpr bool is_union_v                   = is_union<T>::value;
-template<typename T> inline constexpr bool is_class_v                   = is_class<T>::value;
-template<typename T> inline constexpr bool is_function_v                = is_function<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_void_v                    = is_void<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_null_pointer_v            = is_null_pointer<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_integral_v                = is_integral<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_floating_point_v          = is_floating_point<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_array_v                   = is_array<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_pointer_v                 = is_pointer<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_lvalue_reference_v        = is_lvalue_reference<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_rvalue_reference_v        = is_rvalue_reference<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_member_object_pointer_v   = is_member_object_pointer<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_member_function_pointer_v = is_member_function_pointer<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_enum_v                    = is_enum<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_union_v                   = is_union<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_class_v                   = is_class<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_function_v                = is_function<T>::value;
 
 // composite type categories
-template<typename T> inline constexpr bool is_reference_v      = is_reference<T>::value;
-template<typename T> inline constexpr bool is_arithmetic_v     = is_arithmetic<T>::value;
-template<typename T> inline constexpr bool is_fundamental_v    = is_fundamental<T>::value;
-template<typename T> inline constexpr bool is_object_v         = is_object<T>::value;
-template<typename T> inline constexpr bool is_scalar_v         = is_scalar<T>::value;
-template<typename T> inline constexpr bool is_compound_v       = is_compound<T>::value;
-template<typename T> inline constexpr bool is_member_pointer_v = is_member_pointer<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_reference_v      = is_reference<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_arithmetic_v     = is_arithmetic<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_fundamental_v    = is_fundamental<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_object_v         = is_object<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_scalar_v         = is_scalar<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_compound_v       = is_compound<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_member_pointer_v = is_member_pointer<T>::value;
 
 // type properties
-template<typename T, typename... Args> inline constexpr bool is_constructible_v           = is_constructible<T, Args...>::value;
-template<typename T, typename... Args> inline constexpr bool is_trivially_constructible_v = is_trivially_constructible<T, Args...>::value;
-template<typename T, typename... Args> inline constexpr bool is_nothrow_constructible_v   = is_nothrow_constructible<T, Args...>::value;
-template<typename T, typename U> inline constexpr bool is_assignable_v             = is_assignable<T, U>::value;
-template<typename T, typename U> inline constexpr bool is_swappable_with_v         = is_swappable_with<T, U>::value;
-template<typename T, typename U> inline constexpr bool is_trivially_assignable_v   = is_trivially_assignable<T, U>::value;
-template<typename T, typename U> inline constexpr bool is_nothrow_assignable_v     = is_nothrow_assignable<T, U>::value;
-template<typename T, typename U> inline constexpr bool is_nothrow_swappable_with_v = is_nothrow_swappable_with<T, U>::value;
-template<typename T> inline constexpr bool is_const_v                           = is_const<T>::value;
-template<typename T> inline constexpr bool is_volatile_v                        = is_volatile<T>::value;
-template<typename T> inline constexpr bool is_trivial_v                         = is_trivial<T>::value;
-template<typename T> inline constexpr bool is_trivially_copyable_v              = is_trivially_copyable<T>::value;
-template<typename T> inline constexpr bool is_standard_layout_v                 = is_standard_layout<T>::value;
-template<typename T> inline constexpr bool is_pod_v                             = is_pod<T>::value;
-template<typename T> inline constexpr bool is_empty_v                           = is_empty<T>::value;
-template<typename T> inline constexpr bool is_polymorphic_v                     = is_polymorphic<T>::value;
-template<typename T> inline constexpr bool is_abstract_v                        = is_abstract<T>::value;
-template<typename T> inline constexpr bool is_final_v                           = is_final<T>::value;
-template<typename T> inline constexpr bool is_signed_v                          = is_signed<T>::value;
-template<typename T> inline constexpr bool is_unsigned_v                        = is_unsigned<T>::value;
-template<typename T> inline constexpr bool is_default_constructible_v           = is_default_constructible<T>::value;
-template<typename T> inline constexpr bool is_copy_constructible_v              = is_copy_constructible<T>::value;
-template<typename T> inline constexpr bool is_move_constructible_v              = is_move_constructible<T>::value;
-template<typename T> inline constexpr bool is_copy_assignable_v                 = is_copy_assignable<T>::value;
-template<typename T> inline constexpr bool is_move_assignable_v                 = is_move_assignable<T>::value;
-template<typename T> inline constexpr bool is_swappable_v                       = is_swappable<T>::value;
-template<typename T> inline constexpr bool is_destructible_v                    = is_destructible<T>::value;
-template<typename T> inline constexpr bool is_trivially_default_constructible_v = is_trivially_default_constructible<T>::value;
-template<typename T> inline constexpr bool is_trivially_copy_constructible_v    = is_trivially_copy_constructible<T>::value;
-template<typename T> inline constexpr bool is_trivially_move_constructible_v    = is_trivially_move_constructible<T>::value;
-template<typename T> inline constexpr bool is_trivially_copy_assignable_v       = is_trivially_copy_assignable<T>::value;
-template<typename T> inline constexpr bool is_trivially_move_assignable_v       = is_trivially_move_assignable<T>::value;
-template<typename T> inline constexpr bool is_trivially_destructible_v          = is_trivially_destructible<T>::value;
-template<typename T> inline constexpr bool is_nothrow_default_constructible_v   = is_nothrow_default_constructible<T>::value;
-template<typename T> inline constexpr bool is_nothrow_copy_constructible_v      = is_nothrow_copy_constructible<T>::value;
-template<typename T> inline constexpr bool is_nothrow_move_constructible_v      = is_nothrow_move_constructible<T>::value;
-template<typename T> inline constexpr bool is_nothrow_copy_assignable_v         = is_nothrow_copy_assignable<T>::value;
-template<typename T> inline constexpr bool is_nothrow_move_assignable_v         = is_nothrow_move_assignable<T>::value;
-template<typename T> inline constexpr bool is_nothrow_swappable_v               = is_nothrow_swappable<T>::value;
-template<typename T> inline constexpr bool is_nothrow_destructible_v            = is_nothrow_destructible<T>::value;
-template<typename T> inline constexpr bool has_virtual_destructor_v             = has_virtual_destructor<T>::value;
-template<typename T> inline constexpr bool is_literal_type_v                    = is_literal_type<T>::value;
-#endif
+template<typename T, typename... Args> ALA_INLINE_CONSTEXPR_V bool is_constructible_v           = is_constructible<T, Args...>::value;
+template<typename T, typename... Args> ALA_INLINE_CONSTEXPR_V bool is_trivially_constructible_v = is_trivially_constructible<T, Args...>::value;
+template<typename T, typename... Args> ALA_INLINE_CONSTEXPR_V bool is_nothrow_constructible_v   = is_nothrow_constructible<T, Args...>::value;
+template<typename T, typename U> ALA_INLINE_CONSTEXPR_V bool is_assignable_v             = is_assignable<T, U>::value;
+template<typename T, typename U> ALA_INLINE_CONSTEXPR_V bool is_swappable_with_v         = is_swappable_with<T, U>::value;
+template<typename T, typename U> ALA_INLINE_CONSTEXPR_V bool is_trivially_assignable_v   = is_trivially_assignable<T, U>::value;
+template<typename T, typename U> ALA_INLINE_CONSTEXPR_V bool is_nothrow_assignable_v     = is_nothrow_assignable<T, U>::value;
+template<typename T, typename U> ALA_INLINE_CONSTEXPR_V bool is_nothrow_swappable_with_v = is_nothrow_swappable_with<T, U>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_const_v                           = is_const<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_volatile_v                        = is_volatile<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_trivial_v                         = is_trivial<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_trivially_copyable_v              = is_trivially_copyable<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_standard_layout_v                 = is_standard_layout<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_pod_v                             = is_pod<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_empty_v                           = is_empty<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_polymorphic_v                     = is_polymorphic<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_abstract_v                        = is_abstract<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_final_v                           = is_final<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_signed_v                          = is_signed<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_unsigned_v                        = is_unsigned<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_default_constructible_v           = is_default_constructible<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_copy_constructible_v              = is_copy_constructible<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_move_constructible_v              = is_move_constructible<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_copy_assignable_v                 = is_copy_assignable<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_move_assignable_v                 = is_move_assignable<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_swappable_v                       = is_swappable<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_destructible_v                    = is_destructible<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_trivially_default_constructible_v = is_trivially_default_constructible<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_trivially_copy_constructible_v    = is_trivially_copy_constructible<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_trivially_move_constructible_v    = is_trivially_move_constructible<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_trivially_copy_assignable_v       = is_trivially_copy_assignable<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_trivially_move_assignable_v       = is_trivially_move_assignable<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_trivially_destructible_v          = is_trivially_destructible<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_nothrow_default_constructible_v   = is_nothrow_default_constructible<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_nothrow_copy_constructible_v      = is_nothrow_copy_constructible<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_nothrow_move_constructible_v      = is_nothrow_move_constructible<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_nothrow_copy_assignable_v         = is_nothrow_copy_assignable<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_nothrow_move_assignable_v         = is_nothrow_move_assignable<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_nothrow_swappable_v               = is_nothrow_swappable<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_nothrow_destructible_v            = is_nothrow_destructible<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool has_virtual_destructor_v             = has_virtual_destructor<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_literal_type_v                    = is_literal_type<T>::value;
 
 #if (defined(_ALA_CLANG) && !ALA_IS_IDENTIFIER(__has_unique_object_representations)) || \
     (defined(_ALA_GCC) && __GNUC__ >= 7) || \
     (defined(_ALA_MSVC) && MSC_VER >= 1911)
 template<typename T> struct has_unique_object_representations;
-#if _ALA_ENABLE_INLINE_VAR
-template<typename T> inline constexpr bool has_unique_object_representations_v = has_unique_object_representations<T>::value;
-#endif
+template<typename T> ALA_INLINE_CONSTEXPR_V bool has_unique_object_representations_v = has_unique_object_representations<T>::value;
 #endif
 
 #if (defined(_ALA_CLANG) && !ALA_IS_IDENTIFIER(__is_aggregate)) || \
     (defined(_ALA_GCC) && _ALA_GCC_VER >= 7001) || \
     (defined(_ALA_MSVC) && MSC_VER >= 1915)
 template<typename T> struct is_aggregate;
-#if _ALA_ENABLE_INLINE_VAR
-template<typename T> inline constexpr bool is_aggregate_v = is_aggregate<T>::value;
-#endif
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_aggregate_v = is_aggregate<T>::value;
 #endif
 
 // type property queries
-#if _ALA_ENABLE_INLINE_VAR
-template<typename T>                 inline constexpr size_t alignment_of_v = alignment_of<T>::value;
-template<typename T>                 inline constexpr size_t rank_v         = rank<T>::value;
-template<typename T, unsigned I = 0> inline constexpr size_t extent_v       = extent<T, I>::value;
+template<typename T>                 ALA_INLINE_CONSTEXPR_V size_t alignment_of_v = alignment_of<T>::value;
+template<typename T>                 ALA_INLINE_CONSTEXPR_V size_t rank_v         = rank<T>::value;
+template<typename T, unsigned I = 0> ALA_INLINE_CONSTEXPR_V size_t extent_v       = extent<T, I>::value;
 
 // type relations
-template<typename T, typename U>                    inline constexpr bool is_same_v                = is_same<T, U>::value;
-template<typename Base, typename Derived>           inline constexpr bool is_base_of_v             = is_base_of<Base, Derived>::value;
-template<typename From, typename To>                inline constexpr bool is_convertible_v         = is_convertible<From, To>::value;
-template<typename Fn, typename... Args>             inline constexpr bool is_invocable_v           = is_invocable<Fn, Args...>::value;
-template<typename R, typename Fn, typename... Args> inline constexpr bool is_invocable_r_v         = is_invocable_r<R, Fn, Args...>::value;
-template<typename Fn, typename... Args>             inline constexpr bool is_nothrow_invocable_v   = is_nothrow_invocable<Fn, Args...>::value;
-template<typename R, typename Fn, typename... Args> inline constexpr bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<R, Fn, Args...>::value;
+template<typename T, typename U>                    ALA_INLINE_CONSTEXPR_V bool is_same_v                = is_same<T, U>::value;
+template<typename Base, typename Derived>           ALA_INLINE_CONSTEXPR_V bool is_base_of_v             = is_base_of<Base, Derived>::value;
+template<typename From, typename To>                ALA_INLINE_CONSTEXPR_V bool is_convertible_v         = is_convertible<From, To>::value;
+template<typename Fn, typename... Args>             ALA_INLINE_CONSTEXPR_V bool is_invocable_v           = is_invocable<Fn, Args...>::value;
+template<typename R, typename Fn, typename... Args> ALA_INLINE_CONSTEXPR_V bool is_invocable_r_v         = is_invocable_r<R, Fn, Args...>::value;
+template<typename Fn, typename... Args>             ALA_INLINE_CONSTEXPR_V bool is_nothrow_invocable_v   = is_nothrow_invocable<Fn, Args...>::value;
+template<typename R, typename Fn, typename... Args> ALA_INLINE_CONSTEXPR_V bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<R, Fn, Args...>::value;
 
 // logical operator traits:
-template<typename... Bs> inline constexpr bool conjunction_v = conjunction<Bs...>::value;
-template<typename... Bs> inline constexpr bool disjunction_v = disjunction<Bs...>::value;
-template<typename B>     inline constexpr bool negation_v    = negation<B>::value;
-#endif
+template<typename... Bs> ALA_INLINE_CONSTEXPR_V bool conjunction_v = conjunction<Bs...>::value;
+template<typename... Bs> ALA_INLINE_CONSTEXPR_V bool disjunction_v = disjunction<Bs...>::value;
+template<typename B>     ALA_INLINE_CONSTEXPR_V bool negation_v    = negation<B>::value;
 
 // C++20
 
@@ -308,11 +300,9 @@ struct is_bounded_array;
 template<typename T>
 struct is_unbounded_array;
 
-#if _ALA_ENABLE_INLINE_VAR
-template<typename From, typename To> inline constexpr bool is_nothrow_convertible_v = is_nothrow_convertible<From, To>::value;
-template<typename T>                 inline constexpr bool is_bounded_array_v = is_bounded_array<T>::value;
-template<typename T>                 inline constexpr bool is_unbounded_array_v = is_unbounded_array<T>::value;
-#endif
+template<typename From, typename To> ALA_INLINE_CONSTEXPR_V bool is_nothrow_convertible_v = is_nothrow_convertible<From, To>::value;
+template<typename T>                 ALA_INLINE_CONSTEXPR_V bool is_bounded_array_v = is_bounded_array<T>::value;
+template<typename T>                 ALA_INLINE_CONSTEXPR_V bool is_unbounded_array_v = is_unbounded_array<T>::value;
 
 template<typename...>
 struct common_reference;
@@ -328,12 +318,10 @@ template<class T>                                 struct is_reference_wrapper;
 template<class T>                                 struct is_implicitly_default_constructible;
 template<typename T, template<typename...> class> struct is_specification;
 
-#if _ALA_ENABLE_INLINE_VAR
-template<typename T> inline constexpr bool is_reference_wrapper_v = is_reference_wrapper<T>::value;
-template<typename T> inline constexpr bool is_implicitly_default_constructible_v = is_implicitly_default_constructible<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_reference_wrapper_v = is_reference_wrapper<T>::value;
+template<typename T> ALA_INLINE_CONSTEXPR_V bool is_implicitly_default_constructible_v = is_implicitly_default_constructible<T>::value;
 template<typename T, template<typename...> class Templt>
-inline constexpr bool is_specification_v = is_specification<T, Templt>::value;
-#endif
+ALA_INLINE_CONSTEXPR_V bool is_specification_v = is_specification<T, Templt>::value;
 // clang-format on
 
 } // namespace ala

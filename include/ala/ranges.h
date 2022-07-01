@@ -9,7 +9,7 @@ namespace ala {
 namespace ranges {
 
 template<class R>
-inline constexpr bool enable_borrowed_range = false;
+ALA_INLINE_CONSTEXPR_V bool enable_borrowed_range = false;
 
 template<class T>
 concept __can_borrow = is_lvalue_reference_v<T> ||
@@ -73,7 +73,7 @@ struct _cpo_fn {
 } // namespace _begin
 
 inline namespace _cpos {
-inline constexpr auto begin = _begin::_cpo_fn{};
+ALA_INLINE_CONSTEXPR_V auto begin = _begin::_cpo_fn{};
 } // namespace _cpos
 
 template<class T>
@@ -128,7 +128,7 @@ public:
 } // namespace _end
 
 inline namespace _cpos {
-inline constexpr auto end = _end::_cpo_fn{};
+ALA_INLINE_CONSTEXPR_V auto end = _end::_cpo_fn{};
 } // namespace _cpos
 
 namespace _cbegin {
@@ -152,7 +152,7 @@ struct _cpo_fn {
 } // namespace _cbegin
 
 inline namespace _cpos {
-inline constexpr auto cbegin = _cbegin::_cpo_fn{};
+ALA_INLINE_CONSTEXPR_V auto cbegin = _cbegin::_cpo_fn{};
 } // namespace _cpos
 
 namespace _cend {
@@ -176,11 +176,11 @@ struct _cpo_fn {
 } // namespace _cend
 
 inline namespace _cpos {
-inline constexpr auto cend = _cend::_cpo_fn{};
+ALA_INLINE_CONSTEXPR_V auto cend = _cend::_cpo_fn{};
 } // namespace _cpos
 
 template<class>
-inline constexpr bool disable_sized_range = false;
+ALA_INLINE_CONSTEXPR_V bool disable_sized_range = false;
 
 namespace _size {
 void size(auto &) = delete;
@@ -245,7 +245,7 @@ struct _cpo_fn {
 } // namespace _size
 
 inline namespace _cpos {
-inline constexpr auto size = _size::_cpo_fn{};
+ALA_INLINE_CONSTEXPR_V auto size = _size::_cpo_fn{};
 } // namespace _cpos
 
 namespace _ssize {
@@ -266,7 +266,7 @@ struct _cpo_fn {
 } // namespace _ssize
 
 inline namespace _cpos {
-inline constexpr auto ssize = _ssize::_cpo_fn{};
+ALA_INLINE_CONSTEXPR_V auto ssize = _ssize::_cpo_fn{};
 } // namespace _cpos
 
 template<class T>
@@ -354,7 +354,7 @@ struct _cpo_fn {
 } // namespace _data
 
 inline namespace _cpos {
-inline constexpr auto data = _data::_cpo_fn{};
+ALA_INLINE_CONSTEXPR_V auto data = _data::_cpo_fn{};
 } // namespace _cpos
 
 namespace _cdata {
@@ -378,7 +378,7 @@ struct _cpo_fn {
 } // namespace _cdata
 
 inline namespace _cpos {
-inline constexpr auto cdata = _cdata::_cpo_fn{};
+ALA_INLINE_CONSTEXPR_V auto cdata = _cdata::_cpo_fn{};
 } // namespace _cpos
 
 template<class T>

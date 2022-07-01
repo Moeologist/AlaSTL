@@ -855,7 +855,7 @@ struct _cpo_fn {
 };
 } // namespace _iter_move
 inline namespace _cpos {
-inline constexpr _iter_move::_cpo_fn iter_move;
+ALA_INLINE_CONSTEXPR_V _iter_move::_cpo_fn iter_move;
 } // namespace _cpos
 } // namespace ranges
 
@@ -1033,7 +1033,7 @@ concept sentinel_for = semiregular<S> && input_or_output_iterator<I> &&
     __weakly_equality_comparable_with<S, I>;
 
 template<class, class>
-inline constexpr bool disable_sized_sentinel_for = false;
+ALA_INLINE_CONSTEXPR_V bool disable_sized_sentinel_for = false;
 
 template<class S, class I>
 concept sized_sentinel_for =
@@ -1227,7 +1227,7 @@ struct _cpo_fn {
 };
 } // namespace _iter_swap
 inline namespace _cpos {
-inline constexpr _iter_swap::_cpo_fn iter_swap;
+ALA_INLINE_CONSTEXPR_V _iter_swap::_cpo_fn iter_swap;
 } // namespace _cpos
 } // namespace ranges
 
