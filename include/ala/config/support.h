@@ -48,79 +48,61 @@
 #if ALA_HAS_BUILTIN(__builtin_is_constant_evaluated) || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1925)
     #define _ALA_ENABLE_BUILTIN_IS_CONSTANT_EVALUATED 1
-#else
-    #define _ALA_ENABLE_BUILTIN_IS_CONSTANT_EVALUATED 0
 #endif
 
-#if ALA_HAS_CPP_ATTRIBUTE(nodiscard) || \
-    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && ALA_LANG >= 202002L)
-    #define ALA_NODISCARD [[nodiscard]]
-#else
-    #define ALA_NODISCARD
-#endif
-
-#if __cpp_aligned_new >= 201606L
+#if __cpp_aligned_new >= 201606L || \
+    (defined(_ALA_MSVC) && _MSC_VER >= 1912 && ALA_LANG >= 201703L)
     #define _ALA_ENABLE_ALIGNED_NEW 1
-#else
-    #define _ALA_ENABLE_ALIGNED_NEW 0
 #endif
 
-// funll support in _MSC_VER=1930
+// full support in _MSC_VER=1930
 #if __cpp_concepts >= 201907L || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1923 && ALA_LANG >= 201703L)
     #define _ALA_ENABLE_CONCEPTS 1
-#else
-    #define _ALA_ENABLE_CONCEPTS 0
 #endif
 
 #if __cpp_deduction_guides >= 201606L || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1914 && ALA_LANG >= 201703L)
     #define _ALA_ENABLE_DEDUCTION_GUIDES 1
-#else
-    #define _ALA_ENABLE_DEDUCTION_GUIDES 0
 #endif
 
 #if __cpp_if_constexpr >= 201606L || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1911 && ALA_LANG >= 201703L)
     #define _ALA_ENABLE_IF_CONSTEXPR 1
-#else
-    #define _ALA_ENABLE_IF_CONSTEXPR 0
 #endif
 
 #if (__cpp_inline_variables >= 201606L || \
      (defined(_ALA_MSVC) && _MSC_VER >= 1912)) && \
     ALA_LANG >= 201703L
     #define _ALA_ENABLE_INLINE_VAR 1
-#else
-    #define _ALA_ENABLE_INLINE_VAR 0
 #endif
 
 #if __cpp_noexcept_function_type >= 201510L || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1912 && ALA_LANG >= 201703L)
     #define _ALA_ENABLE_NOEXCEPT_TYPE 1
-#else
-    #define _ALA_ENABLE_NOEXCEPT_TYPE 0
 #endif
 
 #if __cpp_structured_bindings >= 201606L || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1911 && ALA_LANG >= 201703L)
     #define _ALA_ENABLE_STRUCT_BIND 1
-#else
-    #define _ALA_ENABLE_STRUCT_BIND 0
 #endif
 
 #if __cpp_variable_templates >= 201304L || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1910 && ALA_LANG >= 201103L)
     #define _ALA_ENABLE_TEMPLATE_VAR 1
-#else
-    #define _ALA_ENABLE_TEMPLATE_VAR 0
 #endif
 
 #if __cpp_fold_expressions >= 201603L || \
     (defined(_ALA_MSVC) && _MSC_VER >= 1912 && ALA_LANG >= 201703L)
     #define _ALA_ENABLE_FOLD_EXPRESSIONS 1
-#else
-    #define _ALA_ENABLE_FOLD_EXPRESSIONS 0
+#endif
+
+#if __cpp_char8_t >= 201811L
+    #define _ALA_ENABLE_CHAR8T 1
+#endif
+
+#ifdef __SIZEOF_INT128__
+    #define _ALA_ENABLE_INT128T 1
 #endif
 
 #if __cpp_constexpr >= 201907L || \
@@ -145,16 +127,11 @@
     #define ALA_CONSTEXPR17
 #endif
 
-#if __cpp_char8_t >= 201811L
-    #define _ALA_ENABLE_CHAR8T 1
+#if ALA_HAS_CPP_ATTRIBUTE(nodiscard) || \
+    (defined(_ALA_MSVC) && _MSC_VER >= 1911 && ALA_LANG >= 202002L)
+    #define ALA_NODISCARD [[nodiscard]]
 #else
-    #define _ALA_ENABLE_CHAR8T 0
-#endif
-
-#ifdef __SIZEOF_INT128__
-    #define _ALA_ENABLE_INT128T 1
-#else
-    #define _ALA_ENABLE_INT128T 0
+    #define ALA_NODISCARD
 #endif
 
 #if !defined(ALA_EXPECT)
@@ -183,6 +160,7 @@
     #define ALA_NOINLINE __attribute__((noinline))
 #endif
 
+// configurable
 #ifndef ALA_INSERTION_THRESHOLD
     #define ALA_INSERTION_THRESHOLD 28
 #endif
@@ -209,6 +187,10 @@
 
 #ifndef ALA_USE_EXCEPTION
     #define ALA_USE_EXCEPTION 1
+#endif
+
+#ifndef ALA_USE_STD_ITER_TAG
+    #define ALA_USE_STD_ITER_TAG 0
 #endif
 
 #endif // HEAD

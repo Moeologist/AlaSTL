@@ -9,6 +9,12 @@
     #include <ala/concepts.h>
 #endif
 
+#if ALA_USE_STD_ITER_TAG
+
+#include <iterator>
+
+#else
+
 namespace std {
 #if defined(_LIBCPP_ABI_NAMESPACE)
 inline namespace _LIBCPP_ABI_NAMESPACE {
@@ -24,7 +30,11 @@ class contiguous_iterator_tag;
 #endif
 } // namespace std
 
+#endif
+
 namespace ala {
+
+#if ALA_USE_STD_ITER_TAG
 
 // using ::std::input_iterator_tag;
 // using ::std::output_iterator_tag;
@@ -35,6 +45,8 @@ namespace ala {
 // using ::std::contiguous_iterator_tag;
 // #endif
 
+#else
+
 struct input_iterator_tag {};
 struct output_iterator_tag {};
 struct forward_iterator_tag: input_iterator_tag {};
@@ -42,6 +54,8 @@ struct bidirectional_iterator_tag: forward_iterator_tag {};
 struct random_access_iterator_tag: bidirectional_iterator_tag {};
 #if ALA_API_VER >= 20
 struct contiguous_iterator_tag: random_access_iterator_tag {};
+#endif
+
 #endif
 
 // clang-format off
@@ -54,6 +68,7 @@ template<> struct _trans_iter_tag<::std::random_access_iterator_tag> { using typ
 #if ALA_API_VER >= 20
 template<> struct _trans_iter_tag<::std::contiguous_iterator_tag> { using type = contiguous_iterator_tag; };
 #endif
+
 // clang-format on
 template<class Tag>
 using _trans_iter_tag_t = typename _trans_iter_tag<Tag>::type;

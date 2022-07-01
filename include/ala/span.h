@@ -36,6 +36,7 @@ public:
     template<size_t E = Extent, class = enable_if_t<E == dynamic_extent || E == 0>>
     constexpr span() noexcept: _data(nullptr), _size(0) {}
 
+#if _ALA_ENABLE_CONCEPTS
     template<class It,
              class = enable_if_t<
                  contiguous_iterator<It> &&
@@ -73,6 +74,25 @@ public:
              char = 0>
     constexpr explicit span(It first, End last)
         : _data(ala::to_address(first)), _size(last - first) {}
+#else
+    template<size_t Dummy = Extent, class = enable_if_t<Dummy == dynamic_extent>>
+    constexpr span(pointer first, size_type count)
+        : _data(first), _size(count) {}
+
+    template<size_t Dummy = Extent, class = enable_if_t<Dummy == dynamic_extent>>
+    constexpr span(pointer first, pointer last)
+        : _data(first), _size(last - first) {}
+
+    template<size_t Dummy = Extent, class = void,
+             class = enable_if_t<Dummy != dynamic_extent>>
+    constexpr explicit span(pointer first, size_type count)
+        : _data(first), _size(count) {}
+
+    template<size_t Dummy = Extent, class = void,
+             class = enable_if_t<Dummy == dynamic_extent>>
+    constexpr explicit span(pointer first, pointer last)
+        : _data(first), _size(last - first) {}
+#endif
 
     template<
         size_t N,
@@ -172,7 +192,7 @@ public:
                                                                   dynamic_extent))>
     subspan() const noexcept {
         static_assert(Offset <= Extent &&
-               (Count == dynamic_extent || Count <= Extent - Offset));
+                      (Count == dynamic_extent || Count <= Extent - Offset));
         return span<element_type, (Count != dynamic_extent ?
                                        Count :
                                        (Extent != dynamic_extent ? Extent - Offset :
