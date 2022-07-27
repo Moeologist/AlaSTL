@@ -685,6 +685,7 @@ struct _ctblk_base {
 };
 
 // gdb be confused with find (size_t)AllocOnce RTTI symbol
+// https://gcc.gnu.org/legacy-ml/gcc-help/2017-08/msg00120.html
 template<class Pointer, class Deleter, class Alloc, int AllocOnce = 0>
 struct _ctblk: _ctblk_base {
     // TODO atomic, thread safety

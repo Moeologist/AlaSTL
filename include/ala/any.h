@@ -34,43 +34,36 @@ struct _any_handle {
     }
 #endif
 
-    static constexpr bool _is_local = sizeof(T) <= 2 * sizeof(size_t) &&
-                                      is_nothrow_move_constructible<T>::value;
-
     static bool local() {
-        return _is_local;
+        return sizeof(T) <= 2 * sizeof(size_t) &&
+               is_nothrow_move_constructible<T>::value;
     }
 
-    static void *operate(AnyOP op) {
-        switch (op) {
-            case AnyOP::Copy:
-                return reinterpret_cast<void *>(&_any_handle::copy);
-            case AnyOP::Move:
-                return reinterpret_cast<void *>(&_any_handle::move);
-            case AnyOP::Destroy:
-                return reinterpret_cast<void *>(&_any_handle::destroy);
-            case AnyOP::TypeInfo:
-                return reinterpret_cast<void *>(&_any_handle::typeinfo);
-            case AnyOP::Local:
-                return reinterpret_cast<void *>(&_any_handle::local);
-        }
-        return nullptr;
-    }
+    static void **get_vtable() {
+        static void *vtable[] = {
+            reinterpret_cast<void *>(&_any_handle::copy),
+            reinterpret_cast<void *>(&_any_handle::move),
+            reinterpret_cast<void *>(&_any_handle::destroy),
+            reinterpret_cast<void *>(&_any_handle::typeinfo),
+            reinterpret_cast<void *>(&_any_handle::local),
+        };
+        return vtable;
+    };
 };
 
 class any {
 protected:
     static_assert(sizeof(void *) == sizeof(size_t), "Unsupported platform");
 
-    using op_copy_t = void (*)(void *, const void *);
-    using op_move_t = void (*)(void *, void *);
-    using op_destroy_t = void (*)(void *);
+    using copy_t = decltype(&_any_handle<int>::copy);
+    using move_t = decltype(&_any_handle<int>::move);
+    using destroy_t = decltype(&_any_handle<int>::destroy);
 #if ALA_USE_RTTI
-    using op_typeinfo_t = const type_info &(*)();
+    using typeinfo_t = decltype(&_any_handle<int>::typeinfo);
 #endif
-    using op_local_t = bool (*)();
+    using local_t = decltype(&_any_handle<int>::local);
 
-    void *(*_op_handle)(AnyOP) = nullptr;
+    void **_vptr = nullptr;
     size_t _placehold[2] = {};
 
     template<class T>
@@ -106,51 +99,36 @@ protected:
         return *reinterpret_cast<void **>(_placehold);
     }
 
-    op_copy_t _op_copy() const noexcept {
-        return reinterpret_cast<op_copy_t>(_op_handle(AnyOP::Copy));
-    }
-
-    op_move_t _op_move() const noexcept {
-        return reinterpret_cast<op_move_t>(_op_handle(AnyOP::Move));
-    }
-
-    op_destroy_t _op_destroy() const noexcept {
-        return reinterpret_cast<op_destroy_t>(_op_handle(AnyOP::Destroy));
-    }
-
-    op_typeinfo_t _op_typeinfo() const noexcept {
-        return reinterpret_cast<op_typeinfo_t>(_op_handle(AnyOP::TypeInfo));
-    }
-
-    op_local_t _op_local() const noexcept {
-        return reinterpret_cast<op_local_t>(_op_handle(AnyOP::Local));
+    template<class F>
+    F _any_op(AnyOP op) const noexcept {
+        return reinterpret_cast<F>(_vptr[static_cast<size_t>(op)]);
     }
 
     bool is_local() const noexcept {
-        if (_op_handle == nullptr)
+        if (_vptr == nullptr)
             return true;
-        return _op_local()();
+        return _any_op<local_t>(AnyOP::Local)();
     }
 
     void _copy(const any &other) {
         if (other.has_value()) {
-            _op_handle = other._op_handle;
+            _vptr = other._vptr;
             if (other.is_local()) {
-                _op_copy()(this->_address(), other._address());
+                _any_op<copy_t>(AnyOP::Copy)(this->_address(), other._address());
             } else {
                 void *p = nullptr;
                 try {
                     p = ::operator new(other._size());
                     if (p == nullptr) {
-                        _op_handle = nullptr;
+                        _vptr = nullptr;
                         return;
                     }
-                    _op_copy()(p, other._address());
+                    _any_op<copy_t>(AnyOP::Copy)(p, other._address());
                     this->_addref() = p;
                     this->_size() = other._size();
                 } catch (...) {
                     ::operator delete(p);
-                    _op_handle = nullptr;
+                    _vptr = nullptr;
                     throw;
                 }
             }
@@ -159,9 +137,9 @@ protected:
 
     void _move(any &&other) {
         if (other.has_value()) {
-            _op_handle = other._op_handle;
+            _vptr = other._vptr;
             if (other.is_local()) {
-                _op_move()(this->_address(), other._address());
+                _any_op<move_t>(AnyOP::Move)(this->_address(), other._address());
                 other.reset();
             } else {
                 _addref() = other._addref();
@@ -169,7 +147,7 @@ protected:
                 other._addref() = nullptr;
                 other._size() = 0;
             }
-            other._op_handle = nullptr;
+            other._vptr = nullptr;
         }
     }
 
@@ -178,14 +156,14 @@ protected:
         using value_t = T;
         using handle_t = _any_handle<value_t>;
         reset();
-        _op_handle = &handle_t::operate;
+        _vptr = handle_t::get_vtable();
         void *p = nullptr;
         try {
             if (sizeof(value_t) > sizeof(_placehold) ||
                 !is_nothrow_move_constructible<value_t>::value) {
                 p = ::operator new(sizeof(value_t));
                 if (p == nullptr) {
-                    _op_handle = nullptr;
+                    _vptr = nullptr;
                     return;
                 }
                 this->_addref() = p;
@@ -194,7 +172,7 @@ protected:
             ::new (this->_address()) value_t(ala::forward<Args>(args)...);
         } catch (...) {
             ::operator delete(p);
-            _op_handle = nullptr;
+            _vptr = nullptr;
             throw;
         }
     }
@@ -281,12 +259,12 @@ public:
 
     void reset() noexcept {
         if (has_value())
-            _op_destroy()(this->_address());
+            _any_op<destroy_t>(AnyOP::Destroy)(this->_address());
         if (!is_local()) {
             void *p = this->_address();
             ::operator delete(p);
         }
-        _op_handle = nullptr;
+        _vptr = nullptr;
     }
 
     void swap(any &other) noexcept {
@@ -299,13 +277,13 @@ public:
 
     // observers
     bool has_value() const noexcept {
-        return _op_handle != nullptr;
+        return _vptr != nullptr;
     }
 
 #if ALA_USE_RTTI
     const type_info &type() const noexcept {
         if (has_value())
-            return _op_typeinfo()();
+            return _any_op<typeinfo_t>(AnyOP::TypeInfo)();
         return typeid(void);
     }
 #endif

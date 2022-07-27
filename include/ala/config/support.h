@@ -181,6 +181,8 @@
     #define ALA_INLINE_CONSTEXPR_V constexpr
 #endif
 
+#define ALA_CONCEPT ALA_INLINE_CONSTEXPR_V bool
+
 #ifndef ALA_USE_RTTI
     #define ALA_USE_RTTI 1
 #endif

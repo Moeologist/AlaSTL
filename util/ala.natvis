@@ -424,7 +424,7 @@
       <Item Name="[allocator]" ExcludeView="simple">_alloc</Item>
       <LinkedListItems>
         <Size>_size</Size>
-        <HeadPointer>_guard-&gt;_suc</HeadPointer>
+        <HeadPointer>_guard[0]._suc</HeadPointer>
         <NextPointer>_suc</NextPointer>
         <ValueNode>_data</ValueNode>
       </LinkedListItems>
@@ -448,11 +448,11 @@
   <Type Name="ala::vector&lt;*&gt;">
     <Intrinsic Name="size" Expression="_size" />
     <Intrinsic Name="capacity" Expression="_capacity" />
-    <DisplayString>{{ size={size()} capacity={capacity()} }}</DisplayString>
+    <DisplayString>{{ size={_size} capacity={_capacity} }}</DisplayString>
     <Expand>
       <Item Name="[allocator]" ExcludeView="simple">_alloc</Item>
       <ArrayItems>
-        <Size>size()</Size>
+        <Size>_size</Size>
         <ValuePointer>_data</ValuePointer>
       </ArrayItems>
     </Expand>
@@ -639,7 +639,7 @@
     </Expand>
   </Type>
 
-  <!-- <Type Name="aarray&lt;*,*&gt;">
+  <!-- <Type Name="ndarray&lt;*,*&gt;">
     <Expand>
       <ArrayItems Condition="_m != 0">
         <Direction>Forward</Direction>

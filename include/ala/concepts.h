@@ -3,6 +3,11 @@
 
 #include <ala/type_traits.h>
 
+#ifndef _ALA_ENABLE_CONCEPTS
+
+    #include <ala/compat/concepts.h>
+
+#else
 namespace ala {
 
 template<class T, class U>
@@ -104,7 +109,8 @@ void swap(T &, T &) = delete;
 
 template<class T, class U>
 concept __enable_adl = (__class_or_enum<remove_cvref_t<T>> ||
-                        __class_or_enum<remove_cvref_t<U>>)&&requires(T &&t, U &&u) {
+                        __class_or_enum<remove_cvref_t<U>>)&&requires(T &&t,
+                                                                      U &&u) {
     swap(static_cast<T &&>(t), static_cast<U &&>(u));
 };
 
@@ -244,5 +250,7 @@ concept equivalence_relation = relation<R, T, U>;
 template<class R, class T, class U>
 concept strict_weak_order = relation<R, T, U>;
 } // namespace ala
+
+#endif
 
 #endif
