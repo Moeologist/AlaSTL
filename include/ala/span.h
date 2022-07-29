@@ -135,13 +135,14 @@ public:
     struct _array_or_span<span<T1, Size>>: true_type {};
 
     template<class R>
-    requires ranges::contiguous_range<R> && ranges::sized_range<R> &&
-        (ranges::borrowed_range<R> ||
-         is_const_v<element_type>)&&(!_array_or_span<remove_cvref_t<R>>::value) &&
-        (!is_array_v<remove_cvref_t<R>>)&&is_convertible_v<
-            remove_reference_t<ranges::range_reference_t<R>> (*)[],
-            element_type (*)[]> constexpr explicit(extent != dynamic_extent)
-            span(R &&r)
+        requires ranges::contiguous_range<R> && ranges::sized_range<R> &&
+                 (ranges::borrowed_range<R> || is_const_v<element_type>) &&
+                 (!_array_or_span<remove_cvref_t<R>>::value) &&
+                 (!is_array_v<remove_cvref_t<R>>) &&
+                 is_convertible_v<
+                     remove_reference_t<ranges::range_reference_t<R>> (*)[],
+                     element_type (*)[]>
+    constexpr explicit(extent != dynamic_extent) span(R &&r)
         : span(ranges::data(r), ranges::size(r)) {
         (void)(extent != dynamic_extent || ranges::size(r) == Extent);
     }

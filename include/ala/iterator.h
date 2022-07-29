@@ -4,30 +4,27 @@
 #include <ala/type_traits.h>
 #include <ala/detail/memory_base.h>
 #include <ala/detail/functional_base.h>
-
-#if _ALA_ENABLE_CONCEPTS
-    #include <ala/concepts.h>
-#endif
+#include <ala/concepts.h>
 
 #if ALA_USE_STD_ITER_TAG
 
-#include <iterator>
+    #include <iterator>
 
 #else
 
 namespace std {
-#if defined(_LIBCPP_ABI_NAMESPACE)
+    #if defined(_LIBCPP_ABI_NAMESPACE)
 inline namespace _LIBCPP_ABI_NAMESPACE {
-#endif
+    #endif
 class input_iterator_tag;
 class output_iterator_tag;
 class forward_iterator_tag;
 class bidirectional_iterator_tag;
 class random_access_iterator_tag;
 class contiguous_iterator_tag;
-#if defined(_LIBCPP_ABI_NAMESPACE)
+    #if defined(_LIBCPP_ABI_NAMESPACE)
 }
-#endif
+    #endif
 } // namespace std
 
 #endif
@@ -36,14 +33,14 @@ namespace ala {
 
 #if ALA_USE_STD_ITER_TAG
 
-// using ::std::input_iterator_tag;
-// using ::std::output_iterator_tag;
-// using ::std::forward_iterator_tag;
-// using ::std::bidirectional_iterator_tag;
-// using ::std::random_access_iterator_tag;
-// #if ALA_API_VER >= 20
-// using ::std::contiguous_iterator_tag;
-// #endif
+using ::std::input_iterator_tag;
+using ::std::output_iterator_tag;
+using ::std::forward_iterator_tag;
+using ::std::bidirectional_iterator_tag;
+using ::std::random_access_iterator_tag;
+    #if ALA_API_VER >= 20
+using ::std::contiguous_iterator_tag;
+    #endif
 
 #else
 
@@ -52,9 +49,9 @@ struct output_iterator_tag {};
 struct forward_iterator_tag: input_iterator_tag {};
 struct bidirectional_iterator_tag: forward_iterator_tag {};
 struct random_access_iterator_tag: bidirectional_iterator_tag {};
-#if ALA_API_VER >= 20
+    #if ALA_API_VER >= 20
 struct contiguous_iterator_tag: random_access_iterator_tag {};
-#endif
+    #endif
 
 #endif
 
@@ -68,8 +65,8 @@ template<> struct _trans_iter_tag<::std::random_access_iterator_tag> { using typ
 #if ALA_API_VER >= 20
 template<> struct _trans_iter_tag<::std::contiguous_iterator_tag> { using type = contiguous_iterator_tag; };
 #endif
-
 // clang-format on
+
 template<class Tag>
 using _trans_iter_tag_t = typename _trans_iter_tag<Tag>::type;
 
@@ -359,15 +356,16 @@ constexpr void advance(Iter &it, Distance n) {
 }
 
 template<class BidirIter>
-constexpr BidirIter prev(BidirIter it,
-               typename iterator_traits<BidirIter>::difference_type n = 1) {
+constexpr BidirIter
+prev(BidirIter it, typename iterator_traits<BidirIter>::difference_type n = 1) {
     ala::advance(it, -n);
     return it;
 }
 
 template<class ForwardIter>
-constexpr ForwardIter next(ForwardIter it,
-                 typename iterator_traits<ForwardIter>::difference_type n = 1) {
+constexpr ForwardIter
+next(ForwardIter it,
+     typename iterator_traits<ForwardIter>::difference_type n = 1) {
     ala::advance(it, n);
     return it;
 }
@@ -819,31 +817,31 @@ constexpr const E *data(initializer_list<E> il) noexcept {
     return il.begin();
 }
 
+} // namespace ala
+
 #if _ALA_ENABLE_CONCEPTS
 
+namespace ala {
 namespace ranges {
 namespace _iter_move {
 
 void iter_move();
 
 template<class I>
-concept __enable_adl = __class_or_enum<remove_cvref_t<I>> && requires(I &&i) {
-    iter_move(ala::forward<I>(i));
-};
+concept __enable_adl = __class_or_enum<remove_cvref_t<I>> &&
+                       requires(I &&i) { iter_move(ala::forward<I>(i)); };
 
 struct _cpo_fn {
     template<class I>
-    requires __class_or_enum<remove_cvref_t<I>> && __enable_adl<I>
-        ALA_NODISCARD constexpr decltype(auto) operator()(I &&i) const
+        requires __class_or_enum<remove_cvref_t<I>> && __enable_adl<I>
+    ALA_NODISCARD constexpr decltype(auto) operator()(I &&i) const
         noexcept(noexcept(iter_move(ala::forward<I>(i)))) {
         return iter_move(ala::forward<I>(i));
     }
 
     template<class I>
-    requires(!(__class_or_enum<remove_cvref_t<I>> && __enable_adl<I>)) &&
-        requires(I &&i) {
-        *ala::forward<I>(i);
-    }
+        requires(!(__class_or_enum<remove_cvref_t<I>> && __enable_adl<I>)) &&
+                requires(I &&i) { *ala::forward<I>(i); }
     ALA_NODISCARD constexpr decltype(auto) operator()(I &&i) const
         noexcept(noexcept(*ala::forward<I>(i))) {
         if constexpr (is_lvalue_reference_v<decltype(*ala::forward<I>(i))>) {
@@ -863,26 +861,22 @@ template<class>
 struct _rmcv_for_obj {};
 
 template<class T>
-requires is_object_v<T>
+    requires is_object_v<T>
 struct _rmcv_for_obj<T> {
     using value_type = remove_cv_t<T>;
 };
 
 template<class T>
-concept __has_member_value_type = requires {
-    typename T::value_type;
-};
+concept __has_member_value_type = requires { typename T::value_type; };
 
 template<class T>
-concept __has_member_element_type = requires {
-    typename T::element_type;
-};
+concept __has_member_element_type = requires { typename T::element_type; };
 
 template<class>
 struct indirectly_readable_traits {};
 
 template<class I>
-requires is_array_v<I>
+    requires is_array_v<I>
 struct indirectly_readable_traits<I> {
     using value_type = remove_cv_t<remove_extent_t<I>>;
 };
@@ -900,12 +894,13 @@ template<__has_member_element_type T>
 struct indirectly_readable_traits<T>: _rmcv_for_obj<typename T::element_type> {};
 
 template<__has_member_value_type T>
-requires __has_member_element_type<T>
+    requires __has_member_element_type<T>
 struct indirectly_readable_traits<T> {};
 
 template<__has_member_value_type T>
-requires __has_member_element_type<T> &&
-    same_as<remove_cv_t<typename T::element_type>, remove_cv_t<typename T::value_type>>
+    requires __has_member_element_type<T> &&
+             same_as<remove_cv_t<typename T::element_type>,
+                     remove_cv_t<typename T::value_type>>
 struct indirectly_readable_traits<T>: _rmcv_for_obj<typename T::value_type> {};
 
 template<class Iter>
@@ -918,14 +913,13 @@ template<class T>
 using _lvalue_ref_t = T &;
 
 template<class T>
-concept __referenceable = requires {
-    typename _lvalue_ref_t<T>;
-};
+concept __referenceable = requires { typename _lvalue_ref_t<T>; };
 
 template<class T>
-concept __dereferenceable = requires(T &t) {
-    { *t } -> __referenceable; // not required to be equality-preserving
-};
+concept __dereferenceable =
+    requires(T &t) {
+        { *t } -> __referenceable; // not required to be equality-preserving
+    };
 
 template<__dereferenceable T>
 using iter_reference_t = decltype(*declval<T &>());
@@ -934,7 +928,7 @@ template<class>
 struct incrementable_traits {};
 
 template<class T>
-requires is_object_v<T>
+    requires is_object_v<T>
 struct incrementable_traits<T *> {
     using difference_type = ptrdiff_t;
 };
@@ -943,9 +937,7 @@ template<class I>
 struct incrementable_traits<const I>: incrementable_traits<I> {};
 
 template<class T>
-concept __has_member_difference_type = requires {
-    typename T::difference_type;
-};
+concept __has_member_difference_type = requires { typename T::difference_type; };
 
 template<__has_member_difference_type T>
 struct incrementable_traits<T> {
@@ -954,11 +946,12 @@ struct incrementable_traits<T> {
 
 template<class T>
 concept __has_integral_minus = requires(const T &x, const T &y) {
-    { x - y } -> integral;
-};
+                                   { x - y } -> integral;
+                               };
 
 template<__has_integral_minus T>
-requires(!__has_member_difference_type<T>) struct incrementable_traits<T> {
+    requires(!__has_member_difference_type<T>)
+struct incrementable_traits<T> {
     using difference_type = make_signed_t<decltype(declval<T>() - declval<T>())>;
 };
 
@@ -969,22 +962,22 @@ using iter_difference_t = typename conditional_t<
     iterator_traits<remove_cvref_t<T>>>::difference_type;
 
 template<__dereferenceable T>
-requires requires(T &t) {
-    { ranges::iter_move(t) } -> __referenceable;
-}
+    requires requires(T &t) {
+                 { ranges::iter_move(t) } -> __referenceable;
+             }
 using iter_rvalue_reference_t = decltype(ranges::iter_move(declval<T &>()));
 
 template<class T>
-concept __indirectly_readable_impl = requires(const T t) {
-    typename iter_value_t<T>;
-    typename iter_reference_t<T>;
-    typename iter_rvalue_reference_t<T>;
-    { *t } -> same_as<iter_reference_t<T>>;
-    { ranges::iter_move(t) } -> same_as<iter_rvalue_reference_t<T>>;
-}
-&&common_reference_with<iter_reference_t<T> &&, iter_value_t<T> &> &&
+concept __indirectly_readable_impl =
+    requires(const T t) {
+        typename iter_value_t<T>;
+        typename iter_reference_t<T>;
+        typename iter_rvalue_reference_t<T>;
+        { *t } -> same_as<iter_reference_t<T>>;
+        { ranges::iter_move(t) } -> same_as<iter_rvalue_reference_t<T>>;
+    } && common_reference_with<iter_reference_t<T> &&, iter_value_t<T> &> &&
     common_reference_with<iter_reference_t<T> &&, iter_rvalue_reference_t<T> &&> &&
-        common_reference_with<iter_rvalue_reference_t<T> &&, const iter_value_t<T> &>;
+    common_reference_with<iter_rvalue_reference_t<T> &&, const iter_value_t<T> &>;
 
 template<class T>
 concept indirectly_readable = __indirectly_readable_impl<remove_cvref_t<T>>;
@@ -995,13 +988,14 @@ using iter_common_reference_t =
 
 template<class Out, class T>
 concept indirectly_writable = requires(Out &&o, T &&t) {
-    *o = ala::forward<T>(t);
-    *ala::forward<Out>(o) = ala::forward<T>(t);
-    const_cast<const iter_reference_t<Out> &&>(*o) = ala::forward<T>(t);
-    const_cast<const iter_reference_t<Out> &&>(
-        *ala::forward<Out>(o)) = ala::forward<T>(t);
-    // not required to be equality-preserving
-};
+                                  *o = ala::forward<T>(t);
+                                  *ala::forward<Out>(o) = ala::forward<T>(t);
+                                  const_cast<const iter_reference_t<Out> &&>(
+                                      *o) = ala::forward<T>(t);
+                                  const_cast<const iter_reference_t<Out> &&>(
+                                      *ala::forward<Out>(o)) = ala::forward<T>(t);
+                                  // not required to be equality-preserving
+                              };
 
 template<class T>
 concept __signed_integer_like = signed_integral<T>;
@@ -1009,87 +1003,91 @@ concept __signed_integer_like = signed_integral<T>;
 template<class I>
 concept weakly_incrementable =
     // TODO: remove this once the clang bug is fixed (bugs.llvm.org/PR48173).
-    !same_as<I, bool> && // Currently, clang does not handle bool correctly.
-    movable<I> && requires(I i) {
-    typename iter_difference_t<I>;
-    requires __signed_integer_like<iter_difference_t<I>>;
-    { ++i } -> same_as<I &>;
-    i++; // not required to be equality-preserving
-};
+    !
+same_as<I, bool> && // Currently, clang does not handle bool correctly.
+    movable<I> &&requires(I i) {
+                     typename iter_difference_t<I>;
+                     requires __signed_integer_like<iter_difference_t<I>>;
+                     { ++i } -> same_as<I &>;
+                     i++; // not required to be equality-preserving
+                 };
 
 template<class I>
-concept incrementable = regular<I> && weakly_incrementable<I> && requires(I i) {
-    { i++ } -> same_as<I>;
-};
+concept incrementable = regular<I> && weakly_incrementable<I> &&
+                        requires(I i) {
+                            { i++ } -> same_as<I>;
+                        };
 
 template<class I>
 concept input_or_output_iterator = requires(I i) {
-    { *i } -> __referenceable;
-}
-&&weakly_incrementable<I>;
+                                       { *i } -> __referenceable;
+                                   } && weakly_incrementable<I>;
 
 template<class S, class I>
 concept sentinel_for = semiregular<S> && input_or_output_iterator<I> &&
-    __weakly_equality_comparable_with<S, I>;
+                       __weakly_equality_comparable_with<S, I>;
 
 template<class, class>
 ALA_INLINE_CONSTEXPR_V bool disable_sized_sentinel_for = false;
 
 template<class S, class I>
-concept sized_sentinel_for =
-    sentinel_for<S, I> &&
-    !disable_sized_sentinel_for<remove_cv_t<S>, remove_cv_t<I>> &&
-    requires(const I &i, const S &__s) {
-    { __s - i } -> same_as<iter_difference_t<I>>;
-    { i - __s } -> same_as<iter_difference_t<I>>;
-};
+concept sized_sentinel_for = sentinel_for<S, I> && !
+disable_sized_sentinel_for<remove_cv_t<S>, remove_cv_t<I>>
+    &&requires(const I &i, const S &__s) {
+          { __s - i } -> same_as<iter_difference_t<I>>;
+          { i - __s } -> same_as<iter_difference_t<I>>;
+      };
 
 template<class I>
-concept input_iterator = input_or_output_iterator<I> &&
-    indirectly_readable<I> && requires {
-    typename _iter_concept_t<I>;
-} && derived_from<_iter_concept_t<I>, input_iterator_tag>;
+concept input_iterator = input_or_output_iterator<I> && indirectly_readable<I> &&
+                         requires { typename _iter_concept_t<I>; } &&
+                         derived_from<_iter_concept_t<I>, input_iterator_tag>;
 
 template<class I, class T>
 concept output_iterator = input_or_output_iterator<I> &&
-    indirectly_writable<I, T> && requires(I i, T &&t) {
-    *i++ = ala::forward<T>(t); // not required to be equality-preserving
-};
+                          indirectly_writable<I, T> &&
+                          requires(I i, T &&t) {
+                              *i++ = ala::forward<T>(
+                                  t); // not required to be equality-preserving
+                          };
 
 template<class I>
 concept forward_iterator = input_iterator<I> &&
-    derived_from<_iter_concept_t<I>, forward_iterator_tag> &&
-    incrementable<I> && sentinel_for<I, I>;
+                           derived_from<_iter_concept_t<I>, forward_iterator_tag> &&
+                           incrementable<I> && sentinel_for<I, I>;
 
 template<class I>
-concept bidirectional_iterator = forward_iterator<I> &&
+concept bidirectional_iterator =
+    forward_iterator<I> &&
     derived_from<_iter_concept_t<I>, bidirectional_iterator_tag> &&
     requires(I i) {
-    { --i } -> same_as<I &>;
-    { i-- } -> same_as<I>;
-};
+        { --i } -> same_as<I &>;
+        { i-- } -> same_as<I>;
+    };
 
 template<class I>
-concept random_access_iterator = bidirectional_iterator<I> &&
+concept random_access_iterator =
+    bidirectional_iterator<I> &&
     derived_from<_iter_concept_t<I>, random_access_iterator_tag> &&
     totally_ordered<I> && sized_sentinel_for<I, I> &&
     requires(I i, const I j, const iter_difference_t<I> n) {
-    { i += n } -> same_as<I &>;
-    { j + n } -> same_as<I>;
-    { n + j } -> same_as<I>;
-    { i -= n } -> same_as<I &>;
-    { j - n } -> same_as<I>;
-    { j[n] } -> same_as<iter_reference_t<I>>;
-};
+        { i += n } -> same_as<I &>;
+        { j + n } -> same_as<I>;
+        { n + j } -> same_as<I>;
+        { i -= n } -> same_as<I &>;
+        { j - n } -> same_as<I>;
+        { j[n] } -> same_as<iter_reference_t<I>>;
+    };
 
 template<class I>
-concept contiguous_iterator = random_access_iterator<I> &&
+concept contiguous_iterator =
+    random_access_iterator<I> &&
     derived_from<_iter_concept_t<I>, contiguous_iterator_tag> &&
     is_lvalue_reference_v<iter_reference_t<I>> &&
     same_as<iter_value_t<I>, remove_cvref_t<iter_reference_t<I>>> &&
     requires(const I &i) {
-    { ala::to_address(i) } -> same_as<add_pointer_t<iter_reference_t<I>>>;
-};
+        { ala::to_address(i) } -> same_as<add_pointer_t<iter_reference_t<I>>>;
+    };
 
 // clang-format off
 template<class F, class It>
@@ -1186,37 +1184,37 @@ void iter_swap(I1, I2) = delete;
 
 template<class I1, class I2>
 concept __enable_adl = (__class_or_enum<remove_cvref_t<I1>> ||
-                        __class_or_enum<remove_cvref_t<I2>>)&&requires(I1 &&x,
-                                                                       I2 &&y) {
-    iter_swap(ala::forward<I1>(x), ala::forward<I2>(y));
-};
+                        __class_or_enum<remove_cvref_t<I2>>) &&
+                       requires(I1 &&x, I2 &&y) {
+                           iter_swap(ala::forward<I1>(x), ala::forward<I2>(y));
+                       };
 
 template<class I1, class I2>
-concept __readable_and_swappable = indirectly_readable<I1> &&
-    indirectly_readable<I2> &&
+concept __readable_and_swappable =
+    indirectly_readable<I1> && indirectly_readable<I2> &&
     swappable_with<iter_reference_t<I1>, iter_reference_t<I2>>;
 
 struct _cpo_fn {
     template<class I1, class I2>
-    requires __enable_adl<I1, I2>
+        requires __enable_adl<I1, I2>
     constexpr void operator()(I1 &&x, I2 &&y) const
         noexcept(noexcept(iter_swap(ala::forward<I1>(x), ala::forward<I2>(y)))) {
         (void)iter_swap(ala::forward<I1>(x), ala::forward<I2>(y));
     }
 
     template<class I1, class I2>
-    requires(!__enable_adl<I1, I2>) && __readable_and_swappable<I1, I2> constexpr void
-                                       operator()(I1 &&x, I2 &&y) const
+        requires(!__enable_adl<I1, I2>) && __readable_and_swappable<I1, I2>
+    constexpr void operator()(I1 &&x, I2 &&y) const
         noexcept(noexcept(ranges::swap(*ala::forward<I1>(x),
                                        *ala::forward<I2>(y)))) {
         ranges::swap(*ala::forward<I1>(x), *ala::forward<I2>(y));
     }
 
     template<class I1, class I2>
-    requires(!__enable_adl<I1, I2> && !__readable_and_swappable<I1, I2>) &&
-        indirectly_movable_storable<I1, I2>
-            &&indirectly_movable_storable<I2, I1> constexpr void
-            operator()(I1 &&x, I2 &&y) const
+        requires(!__enable_adl<I1, I2> && !__readable_and_swappable<I1, I2>) &&
+                indirectly_movable_storable<I1, I2> &&
+                indirectly_movable_storable<I2, I1>
+    constexpr void operator()(I1 &&x, I2 &&y) const
         noexcept(noexcept(iter_value_t<I2>(ranges::iter_move(y)))
                      &&noexcept(*y = ranges::iter_move(x)) &&noexcept(
                          *ala::forward<I1>(x) = declval<iter_value_t<I2>>())) {
@@ -1233,12 +1231,13 @@ ALA_INLINE_CONSTEXPR_V _iter_swap::_cpo_fn iter_swap;
 
 template<class I1, class I2 = I1>
 concept indirectly_swappable = indirectly_readable<I1> &&
-    indirectly_readable<I2> && requires(const I1 i1, const I2 i2) {
-    ranges::iter_swap(i1, i1);
-    ranges::iter_swap(i2, i2);
-    ranges::iter_swap(i1, i2);
-    ranges::iter_swap(i2, i1);
-};
+                               indirectly_readable<I2> &&
+                               requires(const I1 i1, const I2 i2) {
+                                   ranges::iter_swap(i1, i1);
+                                   ranges::iter_swap(i2, i2);
+                                   ranges::iter_swap(i1, i2);
+                                   ranges::iter_swap(i2, i1);
+                               };
 
 template<indirectly_readable I, indirectly_regular_unary_invocable<I> Proj>
 struct projected {
@@ -1269,8 +1268,12 @@ concept mergeable = input_iterator<It1> &&
                     indirectly_copyable<It1, Out> &&
                     indirectly_copyable<It2, Out> &&
                     indirect_strict_weak_order<R, projected<It1, P1>, projected<It2, P2>>;
+} // namespace ala
+
+#else
+
+#include <ala/compat/iterator.h>
 
 #endif // _ALA_ENABLE_CONCEPTS
-} // namespace ala
 
 #endif

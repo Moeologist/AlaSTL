@@ -2,7 +2,7 @@
 #define _ALA_INTRIN_CPUID_H
 
 #include <cstring>
-#include <ala/type_traits.h>
+#include <ala/config.h>
 
 #ifdef _ALA_MSVC
 
@@ -35,15 +35,15 @@ struct CPUIDInfo {
 
         bits32(uint_fast32_t _data): data(_data) {}
 
-        operator uint_fast32_t() {
+        operator uint_fast32_t() const {
             return data;
         }
 
-        bool operator[](size_t index) {
+        bool operator[](size_t index) const {
             return (data >> index) & 1;
         }
 
-        uint_fast32_t operator()(size_t start, size_t end) {
+        uint_fast32_t operator()(size_t start, size_t end) const {
             return (data >> start) & (0xffffffff >> (32 - end + start));
         }
     };
@@ -74,6 +74,21 @@ struct CPUIDInfo {
 
     CPUIDInfo(unsigned int leaf, unsigned int subleaf = 0) {
         (*this)(leaf, subleaf);
+    }
+
+    static const CPUIDInfo& GetInfo0() {
+        static CPUIDInfo info(0);
+        return info;
+    }
+
+    static const CPUIDInfo& GetInfo1() {
+        static CPUIDInfo info(1);
+        return info;
+    }
+
+    static const CPUIDInfo& GetInfo7() {
+        static CPUIDInfo info(7);
+        return info;
     }
 
     /*
@@ -111,7 +126,7 @@ struct CPUIDInfo {
     */
     static char *GetManufacturerId() {
         static char mf_id[13] = {};
-        CPUIDInfo info(0);
+        const CPUIDInfo& info = GetInfo0();
         ala::memcpy(mf_id + 0, &info.ebx, 4);
         ala::memcpy(mf_id + 4, &info.edx, 4);
         ala::memcpy(mf_id + 8, &info.ecx, 4);
@@ -132,28 +147,23 @@ struct CPUIDInfo {
     PBE | Reserved | TM | HTT | SS | SSE2 | SSE | FXSR | MMX | ACPI | DS | Reserved | CLFSH | PSN | PSE-36  | PAT | CMOV | MCA | PGE | MTRR | SEP | Reserved | APIC | CX8 | MCE | PAE | MSR | TSC | PSE | DE | VME | FPU
     */
     static unsigned int GetStepping() {
-        CPUIDInfo info(1);
-        return info.eax(0, 3);
+        return GetInfo1().eax(0, 3);
     }
 
     static unsigned int GetBaseModel() {
-        CPUIDInfo info(1);
-        return info.eax(4, 7);
+        return GetInfo1().eax(4, 7);
     }
 
     static unsigned int GetBaseFamily() {
-        CPUIDInfo info(1);
-        return info.eax(8, 11);
+        return GetInfo1().eax(8, 11);
     }
 
     static unsigned int GetExtModel() {
-        CPUIDInfo info(1);
-        return info.eax(16, 19);
+        return GetInfo1().eax(16, 19);
     }
 
     static unsigned int GetExtFamily() {
-        CPUIDInfo info(1);
-        return info.eax(20, 27);
+        return GetInfo1().eax(20, 27);
     }
 
     // static unsigned int Get8BitBrandId() {
@@ -177,140 +187,113 @@ struct CPUIDInfo {
     // }
 
     static bool GetSSE3() {
-        CPUIDInfo info(1);
-        return info.ecx[0];
+        return GetInfo1().ecx[0];
     }
 
     static bool GetSSSE3() {
-        CPUIDInfo info(1);
-        return info.ecx[9];
+        return GetInfo1().ecx[9];
     }
 
     static bool GetFMA() {
-        CPUIDInfo info(1);
-        return info.ecx[12];
+        return GetInfo1().ecx[12];
     }
 
     static bool GetSSE41() {
-        CPUIDInfo info(1);
-        return info.ecx[19];
+        return GetInfo1().ecx[19];
     }
 
     static bool GetSSE42() {
-        CPUIDInfo info(1);
-        return info.ecx[20];
+        return GetInfo1().ecx[20];
     }
 
     static bool GetAVX() {
-        CPUIDInfo info(1);
-        return info.ecx[28];
+        return GetInfo1().ecx[28];
     }
 
     static bool GetF16C() {
-        CPUIDInfo info(1);
-        return info.ecx[29];
+        return GetInfo1().ecx[29];
     }
 
     static bool GetRDRAND() {
-        CPUIDInfo info(1);
-        return info.ecx[30];
+        return GetInfo1().ecx[30];
     }
 
     // Others
 
     static bool GetHLE() {
-        CPUIDInfo info(7);
-        return info.ebx[4];
+        return GetInfo7().ebx[4];
     }
 
     static bool GetAVX2() {
-        CPUIDInfo info(7, 0);
-        return info.ebx[5];
+        return GetInfo7().ebx[5];
     }
 
     static bool GetAVX512F() {
-        CPUIDInfo info(7);
-        return info.ebx[16];
+        return GetInfo7().ebx[16];
     }
 
     static bool GetAVX512DQ() {
-        CPUIDInfo info(7);
-        return info.ebx[17];
+        return GetInfo7().ebx[17];
     }
 
     static bool GetRDSEED() {
-        CPUIDInfo info(7);
-        return info.ebx[18];
+        return GetInfo7().ebx[18];
     }
 
     static bool GetAVX512_IFMA() {
-        CPUIDInfo info(7);
-        return info.ebx[21];
+        return GetInfo7().ebx[21];
     }
 
     static bool GetAVX512PF() {
-        CPUIDInfo info(7);
-        return info.ebx[26];
+        return GetInfo7().ebx[26];
     }
 
     static bool GetAVX512ER() {
-        CPUIDInfo info(7);
-        return info.ebx[27];
+        return GetInfo7().ebx[27];
     }
 
     static bool GetAVX512CD() {
-        CPUIDInfo info(7);
-        return info.ebx[28];
+        return GetInfo7().ebx[28];
     }
 
     static bool GetSHA() {
-        CPUIDInfo info(7);
-        return info.ebx[29];
+        return GetInfo7().ebx[29];
     }
 
     static bool GetAVX512BW() {
-        CPUIDInfo info(7);
-        return info.ebx[30];
+        return GetInfo7().ebx[30];
     }
 
     static bool GetAVX512VL() {
-        CPUIDInfo info(7);
-        return info.ebx[31];
+        return GetInfo7().ebx[31];
     }
 
     static bool GetAVX512_VBMI() {
-        CPUIDInfo info(7);
-        return info.ecx[1];
+        return GetInfo7().ecx[1];
     }
 
     static bool GetAVX512_VBMI2() {
-        CPUIDInfo info(7);
-        return info.ecx[6];
+        return GetInfo7().ecx[6];
     }
 
     static bool GetAVX512_VNNI() {
-        CPUIDInfo info(7);
-        return info.ecx[11];
+        return GetInfo7().ecx[11];
     }
 
     static bool GetAVX512_BITALG() {
-        CPUIDInfo info(7);
-        return info.ecx[12];
+        return GetInfo7().ecx[12];
     }
 
     static bool GetAVX512_VPOPCNTDQ() {
-        CPUIDInfo info(7);
-        return info.ecx[14];
+        return GetInfo7().ecx[14];
     }
 
     static bool GetAVX512_4VNNIW() {
-        CPUIDInfo info(7);
-        return info.edx[2];
+        return GetInfo7().edx[2];
     }
 
     static bool GetAVX512_4FMAPS() {
-        CPUIDInfo info(7);
-        return info.edx[3];
+        return GetInfo7().edx[3];
     }
 
     // static unsigned int GetPhysicsProcessorCount() {
