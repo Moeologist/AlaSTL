@@ -15,14 +15,14 @@ constexpr void *_voidify(T &obj) noexcept {
 
 } // namespace ala
 
-namespace std {
+ALA_BEGIN_NAMESPACE_STD
 
 template<class T, class... Args>
 constexpr T *_ala_construct_at(T *p, Args &&...args) {
     return ::new (::ala::_voidify(*p)) T(::ala::forward<Args>(args)...);
 }
 
-} // namespace std
+ALA_END_NAMESPACE_STD
 
 namespace ala {
 

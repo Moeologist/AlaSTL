@@ -49,8 +49,8 @@ struct _cpo_fn {
         return t + 0;
     }
 
-    template<class T, size_t _Np>
-    ALA_NODISCARD constexpr auto operator()(T (&t)[_Np]) const noexcept
+    template<class T, size_t N>
+    ALA_NODISCARD constexpr auto operator()(T (&t)[N]) const noexcept
         requires(sizeof(T) != 0) // Disallow incomplete element types.
     {
         return t + 0;
@@ -106,11 +106,11 @@ __member_end<T> &&__can_borrow<T> &&__class_or_enum<remove_cvref_t<T>>
 
 class _cpo_fn {
 public:
-    template<class T, size_t _Np>
-    ALA_NODISCARD constexpr auto operator()(T (&t)[_Np]) const noexcept
+    template<class T, size_t N>
+    ALA_NODISCARD constexpr auto operator()(T (&t)[N]) const noexcept
         requires(sizeof(T) != 0) // Disallow incomplete element types.
     {
-        return t + _Np;
+        return t + N;
     }
 
     template<class T>

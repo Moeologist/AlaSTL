@@ -5,20 +5,12 @@
 #include <ala/detail/farmhash.h>
 #include <ala/detail/meow_hash_x64_aesni.h>
 
-namespace std {
-
-#if defined(_LIBCPP_ABI_NAMESPACE)
-inline namespace _LIBCPP_ABI_NAMESPACE {
-#endif
+ALA_BEGIN_NAMESPACE_STD
 
 template<class>
 struct hash;
 
-#if defined(_LIBCPP_ABI_NAMESPACE)
-}
-#endif
-
-}
+ALA_END_NAMESPACE_STD
 
 namespace ala {
 

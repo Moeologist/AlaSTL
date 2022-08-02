@@ -12,20 +12,16 @@
 
 #else
 
-namespace std {
-    #if defined(_LIBCPP_ABI_NAMESPACE)
-inline namespace _LIBCPP_ABI_NAMESPACE {
-    #endif
+ALA_BEGIN_NAMESPACE_STD
+
 class input_iterator_tag;
 class output_iterator_tag;
 class forward_iterator_tag;
 class bidirectional_iterator_tag;
 class random_access_iterator_tag;
 class contiguous_iterator_tag;
-    #if defined(_LIBCPP_ABI_NAMESPACE)
-}
-    #endif
-} // namespace std
+
+ALA_END_NAMESPACE_STD
 
 #endif
 
@@ -40,6 +36,8 @@ using ::std::bidirectional_iterator_tag;
 using ::std::random_access_iterator_tag;
     #if ALA_API_VER >= 20
 using ::std::contiguous_iterator_tag;
+    #else
+struct contiguous_iterator_tag: random_access_iterator_tag {};
     #endif
 
 #else
@@ -49,9 +47,7 @@ struct output_iterator_tag {};
 struct forward_iterator_tag: input_iterator_tag {};
 struct bidirectional_iterator_tag: forward_iterator_tag {};
 struct random_access_iterator_tag: bidirectional_iterator_tag {};
-    #if ALA_API_VER >= 20
 struct contiguous_iterator_tag: random_access_iterator_tag {};
-    #endif
 
 #endif
 
@@ -62,9 +58,7 @@ template<> struct _trans_iter_tag<::std::output_iterator_tag> { using type = out
 template<> struct _trans_iter_tag<::std::forward_iterator_tag> { using type = forward_iterator_tag; };
 template<> struct _trans_iter_tag<::std::bidirectional_iterator_tag> { using type = bidirectional_iterator_tag; };
 template<> struct _trans_iter_tag<::std::random_access_iterator_tag> { using type = random_access_iterator_tag; };
-#if ALA_API_VER >= 20
 template<> struct _trans_iter_tag<::std::contiguous_iterator_tag> { using type = contiguous_iterator_tag; };
-#endif
 // clang-format on
 
 template<class Tag>
@@ -1003,14 +997,13 @@ concept __signed_integer_like = signed_integral<T>;
 template<class I>
 concept weakly_incrementable =
     // TODO: remove this once the clang bug is fixed (bugs.llvm.org/PR48173).
-    !
-same_as<I, bool> && // Currently, clang does not handle bool correctly.
-    movable<I> &&requires(I i) {
-                     typename iter_difference_t<I>;
-                     requires __signed_integer_like<iter_difference_t<I>>;
-                     { ++i } -> same_as<I &>;
-                     i++; // not required to be equality-preserving
-                 };
+    (!same_as<I, bool>) && // Currently, clang does not handle bool correctly.
+    movable<I> && requires(I i) {
+                      typename iter_difference_t<I>;
+                      requires __signed_integer_like<iter_difference_t<I>>;
+                      { ++i } -> same_as<I &>;
+                      i++; // not required to be equality-preserving
+                  };
 
 template<class I>
 concept incrementable = regular<I> && weakly_incrementable<I> &&
@@ -1033,9 +1026,9 @@ ALA_INLINE_CONSTEXPR_V bool disable_sized_sentinel_for = false;
 template<class S, class I>
 concept sized_sentinel_for = sentinel_for<S, I> && !
 disable_sized_sentinel_for<remove_cv_t<S>, remove_cv_t<I>>
-    &&requires(const I &i, const S &__s) {
-          { __s - i } -> same_as<iter_difference_t<I>>;
-          { i - __s } -> same_as<iter_difference_t<I>>;
+    &&requires(const I &i, const S &s) {
+          { s - i } -> same_as<iter_difference_t<I>>;
+          { i - s } -> same_as<iter_difference_t<I>>;
       };
 
 template<class I>

@@ -127,11 +127,7 @@ get(const tuple<Ts...> &&tp) noexcept;
 } // namespace ala
 
 #if _ALA_ENABLE_STRUCT_BIND
-namespace std {
-
-    #if defined(_LIBCPP_ABI_NAMESPACE)
-inline namespace _LIBCPP_ABI_NAMESPACE {
-    #endif
+ALA_BEGIN_NAMESPACE_STD
 
 template<size_t, typename>
 struct tuple_element;
@@ -232,11 +228,8 @@ template<typename... Ts>
 struct tuple_size<const volatile ala::tuple<Ts...>>
     : ala::tuple_size<const volatile ala::tuple<Ts...>> {};
 
-    #if defined(_LIBCPP_ABI_NAMESPACE)
-}
-    #endif
+ALA_END_NAMESPACE_STD
 
-} // namespace std
 #endif
 
 #endif

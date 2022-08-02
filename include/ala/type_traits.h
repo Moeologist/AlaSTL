@@ -15,11 +15,7 @@
     #pragma clang diagnostic ignored "-Wdeprecated-volatile"
 #endif
 
-namespace std {
-
-#if defined(_LIBCPP_ABI_NAMESPACE)
-inline namespace _LIBCPP_ABI_NAMESPACE {
-#endif
+ALA_BEGIN_NAMESPACE_STD
 
 template<typename...>
 struct common_type;
@@ -27,10 +23,7 @@ struct common_type;
 template<typename, typename, template<typename> class, template<typename> class>
 struct basic_common_reference;
 
-#if defined(_LIBCPP_ABI_NAMESPACE)
-}
-#endif
-} // namespace std
+ALA_END_NAMESPACE_STD
 
 // clang-format off
 

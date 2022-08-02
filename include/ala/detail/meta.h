@@ -228,6 +228,16 @@ struct _log2_<1>: integral_constant<size_t, 0> {};
 template<class T, class...>
 using _sfinae_checker = T;
 
+template<typename, typename...>
+auto _requires_test(...) -> false_type;
+
+template<typename T, typename... Args,
+         typename = decltype(&T::template _requires<Args...>)>
+auto _requires_test(int) -> true_type;
+
+template<typename T, typename... Args>
+ALA_CONCEPT _requires = decltype(_requires_test<T, Args...>(0))::value;
+
 }; // namespace ala
 
 #endif
