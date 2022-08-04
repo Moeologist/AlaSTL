@@ -238,6 +238,12 @@ auto _requires_test(int) -> true_type;
 template<typename T, typename... Args>
 ALA_CONCEPT _requires = decltype(_requires_test<T, Args...>(0))::value;
 
+template<size_t I>
+struct priority_tag: priority_tag<I - 1> {};
+
+template<>
+struct priority_tag<0> {};
+
 }; // namespace ala
 
 #endif

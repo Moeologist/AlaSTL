@@ -3,7 +3,7 @@
 
 #include <ala/type_traits.h>
 
-#ifndef _ALA_ENABLE_CONCEPTS
+#if !ALA_USE_CONCEPTS
 
     #include <ala/compat/concepts.h>
 

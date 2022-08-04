@@ -1,6 +1,8 @@
 #ifndef _ALA_CONFIG_SUPPORT_H
 #define _ALA_CONFIG_SUPPORT_H
 
+#include <ciso646>
+
 #ifndef ALA_LANG
     #ifdef _MSVC_LANG
         #define ALA_LANG _MSVC_LANG
@@ -195,15 +197,35 @@
     #define ALA_USE_STD_ITER_TAG 0
 #endif
 
-#if defined(_LIBCPP_VERSION)
-#define ALA_BEGIN_NAMESPACE_STD _LIBCPP_BEGIN_NAMESPACE_STD
-#define ALA_END_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
-#elif defined(_MSVC_STL_VERSION)
-#define ALA_BEGIN_NAMESPACE_STD _STD_BEGIN
-#define ALA_END_NAMESPACE_STD _STD_END
+#ifndef ALA_USE_CONCEPTS
+    #ifdef _ALA_ENABLE_CONCEPTS
+        #define ALA_USE_CONCEPTS 1
+    #else
+        #define ALA_USE_CONCEPTS 0
+    #endif
 #else
-#define ALA_BEGIN_NAMESPACE_STD namespace std {
-#define ALA_END_NAMESPACE_STD }
+    #if ALA_USE_CONCEPTS && !defined(_ALA_ENABLE_CONCEPTS)
+        #warning your compiler or cflags not support concepts
+        #define ALA_USE_CONCEPTS 0
+    #endif
+#endif
+
+#if defined(_LIBCPP_VERSION)
+    #define ALA_BEGIN_NAMESPACE_STD _LIBCPP_BEGIN_NAMESPACE_STD
+    #define ALA_END_NAMESPACE_STD _LIBCPP_END_NAMESPACE_STD
+#elif defined(_LIBCPP_ABI_NAMESPACE)
+    #define ALA_BEGIN_NAMESPACE_STD \
+        namespace std { \
+        inline namespace _LIBCPP_ABI_NAMESPACE {
+    #define ALA_END_NAMESPACE_STD \
+        } \
+        }
+#elif defined(_MSVC_STL_VERSION)
+    #define ALA_BEGIN_NAMESPACE_STD _STD_BEGIN
+    #define ALA_END_NAMESPACE_STD _STD_END
+#else
+    #define ALA_BEGIN_NAMESPACE_STD namespace std {
+    #define ALA_END_NAMESPACE_STD }
 #endif
 
 #endif // HEAD

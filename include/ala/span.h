@@ -3,10 +3,7 @@
 
 #include <ala/detail/stddef.h>
 #include <ala/iterator.h>
-
-#if _ALA_ENABLE_CONCEPTS
-    #include <ala/ranges.h>
-#endif
+#include <ala/ranges.h>
 
 namespace ala {
 
@@ -36,7 +33,6 @@ public:
     template<size_t E = Extent, class = enable_if_t<E == dynamic_extent || E == 0>>
     constexpr span() noexcept: _data(nullptr), _size(0) {}
 
-#if _ALA_ENABLE_CONCEPTS
     template<class It,
              class = enable_if_t<
                  contiguous_iterator<It> &&
@@ -74,25 +70,6 @@ public:
              char = 0>
     constexpr explicit span(It first, End last)
         : _data(ala::to_address(first)), _size(last - first) {}
-#else
-    template<size_t Dummy = Extent, class = enable_if_t<Dummy == dynamic_extent>>
-    constexpr span(pointer first, size_type count)
-        : _data(first), _size(count) {}
-
-    template<size_t Dummy = Extent, class = enable_if_t<Dummy == dynamic_extent>>
-    constexpr span(pointer first, pointer last)
-        : _data(first), _size(last - first) {}
-
-    template<size_t Dummy = Extent, class = void,
-             class = enable_if_t<Dummy != dynamic_extent>>
-    constexpr explicit span(pointer first, size_type count)
-        : _data(first), _size(count) {}
-
-    template<size_t Dummy = Extent, class = void,
-             class = enable_if_t<Dummy == dynamic_extent>>
-    constexpr explicit span(pointer first, pointer last)
-        : _data(first), _size(last - first) {}
-#endif
 
     template<
         size_t N,
@@ -124,7 +101,6 @@ public:
     constexpr span(const array<T1, N> &arr) noexcept
         : _data(ala::data(arr)), _size(N) {}
 
-#if _ALA_ENABLE_CONCEPTS
     template<class T1>
     struct _array_or_span: false_type {};
 
@@ -134,6 +110,7 @@ public:
     template<class T1, size_t Size>
     struct _array_or_span<span<T1, Size>>: true_type {};
 
+#if ALA_USE_CONCEPTS
     template<class R>
         requires ranges::contiguous_range<R> && ranges::sized_range<R> &&
                  (ranges::borrowed_range<R> || is_const_v<element_type>) &&
@@ -144,6 +121,33 @@ public:
                      element_type (*)[]>
     constexpr explicit(extent != dynamic_extent) span(R &&r)
         : span(ranges::data(r), ranges::size(r)) {
+        (void)(extent != dynamic_extent || ranges::size(r) == Extent);
+    }
+#else
+    template<class R,
+             class = enable_if_t<
+                 ranges::contiguous_range<R> && ranges::sized_range<R> &&
+                 (ranges::borrowed_range<R> || is_const_v<element_type>)&&(
+                     !_array_or_span<remove_cvref_t<R>>::value) &&
+                 (!is_array_v<remove_cvref_t<R>>)&&is_convertible_v<
+                     remove_reference_t<ranges::range_reference_t<R>> (*)[],
+                     element_type (*)[]>>,
+             size_type Dummy = extent, class = enable_if_t<(Dummy != dynamic_extent)>>
+    constexpr explicit span(R &&r): span(ranges::data(r), ranges::size(r)) {
+        (void)(extent != dynamic_extent || ranges::size(r) == Extent);
+    }
+
+    template<class R,
+             class = enable_if_t<
+                 ranges::contiguous_range<R> && ranges::sized_range<R> &&
+                 (ranges::borrowed_range<R> || is_const_v<element_type>)&&(
+                     !_array_or_span<remove_cvref_t<R>>::value) &&
+                 (!is_array_v<remove_cvref_t<R>>)&&is_convertible_v<
+                     remove_reference_t<ranges::range_reference_t<R>> (*)[],
+                     element_type (*)[]>>,
+             size_type Dummy = extent,
+             class = enable_if_t<(Dummy == dynamic_extent)>, class = void>
+    constexpr span(R &&r): span(ranges::data(r), ranges::size(r)) {
         (void)(extent != dynamic_extent || ranges::size(r) == Extent);
     }
 #endif
@@ -271,10 +275,8 @@ private:
     size_type _size; // exposition only
 };
 
-#if _ALA_ENABLE_CONCEPTS
 template<class T, size_t Extent>
 ALA_INLINE_CONSTEXPR_V bool ranges::enable_borrowed_range<span<T, Extent>> = true;
-#endif
 
 // views of object representation
 template<class T, size_t Extent>
@@ -295,12 +297,10 @@ as_writable_bytes(span<T, Extent> s) noexcept {
 
 #if _ALA_ENABLE_DEDUCTION_GUIDES
 
-    #if _ALA_ENABLE_CONCEPTS
 template<class It, class EndOrSize>
 span(It, EndOrSize) -> span<remove_reference_t<iter_reference_t<It>>>;
 template<class R>
 span(R &&) -> span<remove_reference_t<ranges::range_reference_t<R>>>;
-    #endif
 
 template<class T, size_t N>
 span(T (&)[N]) -> span<T, N>;

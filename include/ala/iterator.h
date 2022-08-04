@@ -52,17 +52,22 @@ struct contiguous_iterator_tag: random_access_iterator_tag {};
 #endif
 
 // clang-format off
-template<class Tag> struct _trans_iter_tag { using type = Tag; };
-template<> struct _trans_iter_tag<::std::input_iterator_tag> { using type = input_iterator_tag; };
-template<> struct _trans_iter_tag<::std::output_iterator_tag> { using type = output_iterator_tag; };
-template<> struct _trans_iter_tag<::std::forward_iterator_tag> { using type = forward_iterator_tag; };
-template<> struct _trans_iter_tag<::std::bidirectional_iterator_tag> { using type = bidirectional_iterator_tag; };
-template<> struct _trans_iter_tag<::std::random_access_iterator_tag> { using type = random_access_iterator_tag; };
-template<> struct _trans_iter_tag<::std::contiguous_iterator_tag> { using type = contiguous_iterator_tag; };
+template<class Iter, class Tag> struct _trans_iter_tag { using type = Tag; };
+template<class Iter> struct _trans_iter_tag<Iter, ::std::input_iterator_tag> { using type = input_iterator_tag; };
+template<class Iter> struct _trans_iter_tag<Iter, ::std::output_iterator_tag> { using type = output_iterator_tag; };
+template<class Iter> struct _trans_iter_tag<Iter, ::std::forward_iterator_tag> { using type = forward_iterator_tag; };
+template<class Iter> struct _trans_iter_tag<Iter, ::std::bidirectional_iterator_tag> { using type = bidirectional_iterator_tag; };
+template<class Iter> struct _trans_iter_tag<Iter, ::std::random_access_iterator_tag> { using type = random_access_iterator_tag; };
+template<class Iter> struct _trans_iter_tag<Iter, ::std::contiguous_iterator_tag> { using type = contiguous_iterator_tag; };
+
+template<class Iter, class Tag> struct assign_iter_tag: _trans_iter_tag<Iter, Tag> {};
+// template<class Tag> struct assign_iter_tag<typename ::std::vector<int>::iterator, Tag> { using type = contiguous_iterator_tag; };
+// template<class Tag, class ...Ts> struct assign_iter_tag<::std::basic_string<char>, Tag> { using type = contiguous_iterator_tag; };
+// template<class Tag, class T, size_t N> struct assign_iter_tag<::std::array<int, 2>, Tag> { using type = contiguous_iterator_tag; };
 // clang-format on
 
-template<class Tag>
-using _trans_iter_tag_t = typename _trans_iter_tag<Tag>::type;
+template<class Iter, class Tag>
+using assign_iter_tag_t = typename assign_iter_tag<Iter, Tag>::type;
 
 template<typename Iter, typename Void = void>
 struct _iterator_traits_helper {};
@@ -87,29 +92,39 @@ struct iterator_traits: _iterator_traits_helper<Iter> {
 template<typename T>
 struct iterator_traits<T *> {
     using difference_type = ptrdiff_t;
-#if ALA_API_VER < 20
-    using value_type = T;
-#else
     using value_type = remove_cv_t<T>;
-#endif
     using pointer = T *;
     using reference = T &;
     using iterator_category = random_access_iterator_tag;
-#if ALA_API_VER >= 20
     using iterator_concept = contiguous_iterator_tag;
-#endif
 };
 
-#if ALA_API_VER < 20
-template<typename T>
-struct iterator_traits<const T *> {
-    using difference_type = ptrdiff_t;
-    using value_type = T;
-    using pointer = const T *;
-    using reference = const T &;
-    using iterator_category = random_access_iterator_tag;
-};
-#endif
+// template<typename T>
+// struct iterator_traits<T *> {
+//     using difference_type = ptrdiff_t;
+// #if ALA_API_VER < 20
+//     using value_type = T;
+// #else
+//     using value_type = remove_cv_t<T>;
+// #endif
+//     using pointer = T *;
+//     using reference = T &;
+//     using iterator_category = random_access_iterator_tag;
+// #if ALA_API_VER >= 20
+//     using iterator_concept = contiguous_iterator_tag;
+// #endif
+// };
+
+// #if ALA_API_VER < 20
+// template<typename T>
+// struct iterator_traits<const T *> {
+//     using difference_type = ptrdiff_t;
+//     using value_type = T;
+//     using pointer = const T *;
+//     using reference = const T &;
+//     using iterator_category = random_access_iterator_tag;
+// };
+// #endif
 
 ALA_HAS_MEM_TYPE(_iter_traits_no_spec)
 ALA_HAS_MEM_TYPE(iterator_category)
@@ -149,13 +164,13 @@ template<class Iter, class Traits = conditional_t<
                          _has__iter_traits_no_spec<iterator_traits<Iter>>::value,
                          Iter, iterator_traits<Iter>>>
 using _iter_concept_t =
-    _trans_iter_tag_t<typename _iter_concept_concept<true, Iter, Traits>::_tag_t>;
+    assign_iter_tag_t<Iter, typename _iter_concept_concept<true, Iter, Traits>::_tag_t>;
 
 template<class Iter, class Traits = conditional_t<
                          _has__iter_traits_no_spec<iterator_traits<Iter>>::value,
                          Iter, iterator_traits<Iter>>>
 using _iter_tag_t =
-    _trans_iter_tag_t<typename _iter_concept_concept<false, Iter, Traits>::_tag_t>;
+    assign_iter_tag_t<Iter, typename _iter_concept_concept<false, Iter, Traits>::_tag_t>;
 
 template<class Iter>
 struct reverse_iterator {
@@ -813,7 +828,11 @@ constexpr const E *data(initializer_list<E> il) noexcept {
 
 } // namespace ala
 
-#if _ALA_ENABLE_CONCEPTS
+#if !ALA_USE_CONCEPTS
+
+    #include <ala/compat/iterator.h>
+
+#else
 
 namespace ala {
 namespace ranges {
@@ -1263,10 +1282,6 @@ concept mergeable = input_iterator<It1> &&
                     indirect_strict_weak_order<R, projected<It1, P1>, projected<It2, P2>>;
 } // namespace ala
 
-#else
-
-#include <ala/compat/iterator.h>
-
-#endif // _ALA_ENABLE_CONCEPTS
+#endif
 
 #endif

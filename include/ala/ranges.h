@@ -4,6 +4,10 @@
 #include <ala/concepts.h>
 #include <ala/iterator.h>
 
+#if !ALA_USE_CONCEPTS
+    #include <ala/compat/ranges.h>
+#else
+
 namespace ala {
 
 namespace ranges {
@@ -265,11 +269,11 @@ struct _cpo_fn {
         requires requires(T &&t) { ranges::size(t); }
     ALA_NODISCARD constexpr integral auto operator()(T &&t) const
         noexcept(noexcept(ranges::size(t))) {
-        using _Signed = make_signed_t<decltype(ranges::size(t))>;
-        if constexpr (sizeof(ptrdiff_t) > sizeof(_Signed))
+        using Signed = make_signed_t<decltype(ranges::size(t))>;
+        if constexpr (sizeof(ptrdiff_t) > sizeof(Signed))
             return static_cast<ptrdiff_t>(ranges::size(t));
         else
-            return static_cast<_Signed>(ranges::size(t));
+            return static_cast<Signed>(ranges::size(t));
     }
 };
 } // namespace _ssize
@@ -405,5 +409,7 @@ concept contiguous_range =
 
 } // namespace ranges
 } // namespace ala
+
+#endif
 
 #endif

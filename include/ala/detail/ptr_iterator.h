@@ -7,9 +7,7 @@ namespace ala {
 
 template<class Value, class Ptr>
 struct ptr_iterator {
-#if ALA_API_VER >= 20
     using iterator_concept = contiguous_iterator_tag;
-#endif
     using iterator_category = random_access_iterator_tag;
     using value_type = Value;
     using difference_type = typename pointer_traits<Ptr>::difference_type;

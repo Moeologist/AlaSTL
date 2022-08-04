@@ -39,12 +39,12 @@ if False:
 else:
     compiler = 'clang++'
     cflags = [
-        '-DTEST_STD_VER=20',
+        '-DTEST_STD_VER=17',
         '-DALA_USE_ALLOC_REBIND=1',
         '-D_ALA_VERSION=0',
         '-O2',
         '-g0',
-        '-std=c++20',
+        '-std=c++17',
         '-fexceptions',
         '-stdlib=libc++',
         '-fuse-ld=lld',
@@ -73,10 +73,10 @@ srcs = [
     # 'std/containers/sequences/deque',
     # 'std/containers/sequences/list',
     # 'std/containers/sequences/forwardlist',
-    'std/containers/container.adaptors/stack',
-    'std/containers/container.adaptors/queue',
-    'std/containers/container.adaptors/priority.queue',
-    # 'std/containers/views',
+    # 'std/containers/container.adaptors/stack',
+    # 'std/containers/container.adaptors/queue',
+    # 'std/containers/container.adaptors/priority.queue',
+    'std/containers/views',
     # 'std/utilities/meta',
     # 'std/utilities/function.objects',
     # 'std/utilities/utility',
@@ -207,7 +207,7 @@ def output_src(fname):
     return out
 
 
-def preprocess_cmd(fname, output=None):
+def preprocess_cmd(fname):
     N = pn(fname)
     args = []
     args += cflags
@@ -217,7 +217,8 @@ def preprocess_cmd(fname, output=None):
     args.append(output_src(fname))
     if N.base.endswith('compile.pass'):
         args.append('-c')
-    if output is None:
+        args.remove('-fuse-ld=lld')
+    else:
         # if platform.system() == 'Windows':
         if False:
             args.append('/link')
