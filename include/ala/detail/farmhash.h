@@ -45,58 +45,75 @@
 
 #include <ala/detail/pair.h>
 
-#ifndef NAMESPACE_FOR_HASH_FUNCTIONS
-#define NAMESPACE_FOR_HASH_FUNCTIONS hash_util
-#endif
+namespace ala {
+namespace farmhash {
 
-namespace NAMESPACE_FOR_HASH_FUNCTIONS {
+#if _ALA_ENABLE_INT128T
+#if !defined(uint128_t)
+#define uint128_t __uint128_t
+#endif
+inline uint64_t Uint128Low64(const uint128_t x) {
+  return static_cast<uint64_t>(x);
+}
+inline uint64_t Uint128High64(const uint128_t x) {
+  return static_cast<uint64_t>(x >> 64);
+}
+inline uint128_t Uint128(uint64_t lo, uint64_t hi) {
+  return lo + (((uint128_t)hi) << 64);
+}
+#else
+using uint128_t = ala::pair<uint64_t, uint64_t>;
+inline uint64_t Uint128Low64(const uint128_t x) { return x.first; }
+inline uint64_t Uint128High64(const uint128_t x) { return x.second; }
+inline uint128_t Uint128(uint64_t lo, uint64_t hi) { return uint128_t(lo, hi); }
+#endif
 
 // BASIC STRING HASHING
 
 // Hash function for a byte array.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-size_t Hash(const char* s, size_t len);
+inline size_t Hash(const char* s, size_t len);
 
 // Hash function for a byte array.  Most useful in 32-bit binaries.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint32_t Hash32(const char* s, size_t len);
+inline uint32_t Hash32(const char* s, size_t len);
 
 // Hash function for a byte array.  For convenience, a 32-bit seed is also
 // hashed into the result.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint32_t Hash32WithSeed(const char* s, size_t len, uint32_t seed);
+inline uint32_t Hash32WithSeed(const char* s, size_t len, uint32_t seed);
 
 // Hash function for a byte array.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint64_t Hash64(const char* s, size_t len);
+inline uint64_t Hash64(const char* s, size_t len);
 
 // Hash function for a byte array.  For convenience, a 64-bit seed is also
 // hashed into the result.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint64_t Hash64WithSeed(const char* s, size_t len, uint64_t seed);
+inline uint64_t Hash64WithSeed(const char* s, size_t len, uint64_t seed);
 
 // Hash function for a byte array.  For convenience, two seeds are also
 // hashed into the result.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint64_t Hash64WithSeeds(const char* s, size_t len,
+inline uint64_t Hash64WithSeeds(const char* s, size_t len,
                        uint64_t seed0, uint64_t seed1);
 
 // Hash function for a byte array.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint128_t Hash128(const char* s, size_t len);
+inline uint128_t Hash128(const char* s, size_t len);
 
 // Hash function for a byte array.  For convenience, a 128-bit seed is also
 // hashed into the result.
 // May change from time to time, may differ on different platforms, may differ
 // depending on NDEBUG.
-uint128_t Hash128WithSeed(const char* s, size_t len, uint128_t seed);
+inline uint128_t Hash128WithSeed(const char* s, size_t len, uint128_t seed);
 
 // BASIC NON-STRING HASHING
 
@@ -118,13 +135,13 @@ inline uint64_t Hash128to64(uint128_t x) {
 // FINGERPRINTING (i.e., good, portable, forever-fixed hash functions)
 
 // Fingerprint function for a byte array.  Most useful in 32-bit binaries.
-uint32_t Fingerprint32(const char* s, size_t len);
+inline uint32_t Fingerprint32(const char* s, size_t len);
 
 // Fingerprint function for a byte array.
-uint64_t Fingerprint64(const char* s, size_t len);
+inline uint64_t Fingerprint64(const char* s, size_t len);
 
 // Fingerprint function for a byte array.
-uint128_t Fingerprint128(const char* s, size_t len);
+inline uint128_t Fingerprint128(const char* s, size_t len);
 
 // This is intended to be a good fingerprinting primitive.
 // See below for more overloads.
@@ -259,6 +276,7 @@ inline uint128_t Fingerprint128(const Str& s) {
   return Fingerprint128(s.data(), s.length());
 }
 
+}
 }
 
 /* gently define FARMHASH_BIG_ENDIAN when detected big-endian machine */

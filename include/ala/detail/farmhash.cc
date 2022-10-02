@@ -87,6 +87,9 @@
 #define uint64_in_expected_order(x) (x)
 #endif
 
+#define NAMESPACE_FOR_HASH_FUNCTIONS farmhash
+
+namespace ala {
 namespace NAMESPACE_FOR_HASH_FUNCTIONS {
 
 STATIC_INLINE uint64_t Fetch64(const char *p) {
@@ -268,7 +271,7 @@ template <typename T> STATIC_INLINE T DebugTweak(T x) {
   return x;
 }
 
-template <> uint128_t DebugTweak(uint128_t x) {
+template <> STATIC_INLINE uint128_t DebugTweak(uint128_t x) {
   if (FARMHASH_DEBUG) {
     uint64_t y = DebugTweak(Uint128Low64(x));
     uint64_t z = DebugTweak(Uint128High64(x));
@@ -283,7 +286,7 @@ template <> uint128_t DebugTweak(uint128_t x) {
 
 namespace farmhashna {
 using namespace NAMESPACE_FOR_HASH_FUNCTIONS;
-using namespace ala;
+
 #undef Fetch
 #define Fetch Fetch64
 
@@ -389,7 +392,7 @@ STATIC_INLINE uint64_t HashLen33to64(const char *s, size_t len) {
                    e + Rotate(f + a, 18) + g, mul);
 }
 
-uint64_t Hash64(const char *s, size_t len) {
+STATIC_INLINE uint64_t Hash64(const char *s, size_t len) {
   const uint64_t seed = 81;
   if (len <= 32) {
     if (len <= 16) {
@@ -444,19 +447,20 @@ uint64_t Hash64(const char *s, size_t len) {
                    mul);
 }
 
-uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1);
+STATIC_INLINE uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1);
 
-uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
+STATIC_INLINE uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
   return Hash64WithSeeds(s, len, k2, seed);
 }
 
-uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1) {
+STATIC_INLINE uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1) {
   return HashLen16(Hash64(s, len) - seed0, seed1);
 }
 }  // namespace farmhashna
+
 namespace farmhashuo {
 using namespace NAMESPACE_FOR_HASH_FUNCTIONS;
-using namespace ala;
+
 #undef Fetch
 #define Fetch Fetch64
 
@@ -470,7 +474,7 @@ STATIC_INLINE uint64_t H(uint64_t x, uint64_t y, uint64_t mul, int r) {
   return Rotate(b, r) * mul;
 }
 
-uint64_t Hash64WithSeeds(const char *s, size_t len,
+STATIC_INLINE uint64_t Hash64WithSeeds(const char *s, size_t len,
                          uint64_t seed0, uint64_t seed1) {
   if (len <= 64) {
     return farmhashna::Hash64WithSeeds(s, len, seed0, seed1);
@@ -561,19 +565,20 @@ uint64_t Hash64WithSeeds(const char *s, size_t len,
            31);
 }
 
-uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
+STATIC_INLINE uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
   return len <= 64 ? farmhashna::Hash64WithSeed(s, len, seed) :
       Hash64WithSeeds(s, len, 0, seed);
 }
 
-uint64_t Hash64(const char *s, size_t len) {
+STATIC_INLINE uint64_t Hash64(const char *s, size_t len) {
   return len <= 64 ? farmhashna::Hash64(s, len) :
       Hash64WithSeeds(s, len, 81, 0);
 }
 }  // namespace farmhashuo
+
 namespace farmhashxo {
 using namespace NAMESPACE_FOR_HASH_FUNCTIONS;
-using namespace ala;
+
 #undef Fetch
 #define Fetch Fetch64
 
@@ -612,7 +617,7 @@ STATIC_INLINE uint64_t HashLen65to96(const char *s, size_t len) {
   return (h2 * 9 + (h0 >> 17) + (h1 >> 21)) * mul1;
 }
 
-uint64_t Hash64(const char *s, size_t len) {
+STATIC_INLINE uint64_t Hash64(const char *s, size_t len) {
   if (len <= 32) {
     if (len <= 16) {
       return farmhashna::HashLen0to16(s, len);
@@ -630,30 +635,31 @@ uint64_t Hash64(const char *s, size_t len) {
   }
 }
 
-uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1) {
+STATIC_INLINE uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1) {
   return farmhashuo::Hash64WithSeeds(s, len, seed0, seed1);
 }
 
-uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
+STATIC_INLINE uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
   return farmhashuo::Hash64WithSeed(s, len, seed);
 }
 }  // namespace farmhashxo
+
 namespace farmhashte {
 using namespace NAMESPACE_FOR_HASH_FUNCTIONS;
-using namespace ala;
+
 #if !FARMHASH_CAN_USE_SSE41 || !FARMHASH_X86_64
 
-uint64_t Hash64(const char *s, size_t len) {
+STATIC_INLINE uint64_t Hash64(const char *s, size_t len) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return s == NULL ? 0 : len;
 }
 
-uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
+STATIC_INLINE uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return seed + Hash64(s, len);
 }
 
-uint64_t Hash64WithSeeds(const char *s, size_t len,
+STATIC_INLINE uint64_t Hash64WithSeeds(const char *s, size_t len,
                          uint64_t seed0, uint64_t seed1) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return seed0 + seed1 + Hash64(s, len);
@@ -855,53 +861,55 @@ STATIC_INLINE uint64_t Hash64Long(const char* s, size_t n,
   return farmhashxo::Hash64(reinterpret_cast<const char*>(t), sizeof(t));
 }
 
-uint64_t Hash64(const char *s, size_t len) {
+STATIC_INLINE uint64_t Hash64(const char *s, size_t len) {
   // Empirically, farmhashxo seems faster until length 512.
   return len >= 512 ? Hash64Long(s, len, k2, k1) : farmhashxo::Hash64(s, len);
 }
 
-uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
+STATIC_INLINE uint64_t Hash64WithSeed(const char *s, size_t len, uint64_t seed) {
   return len >= 512 ? Hash64Long(s, len, k1, seed) :
       farmhashxo::Hash64WithSeed(s, len, seed);
 }
 
-uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1) {
+STATIC_INLINE uint64_t Hash64WithSeeds(const char *s, size_t len, uint64_t seed0, uint64_t seed1) {
   return len >= 512 ? Hash64Long(s, len, seed0, seed1) :
       farmhashxo::Hash64WithSeeds(s, len, seed0, seed1);
 }
 
 #endif
 }  // namespace farmhashte
+
 namespace farmhashnt {
 using namespace NAMESPACE_FOR_HASH_FUNCTIONS;
-using namespace ala;
+
 #if !FARMHASH_CAN_USE_SSE41 || !FARMHASH_X86_64
 
-uint32_t Hash32(const char *s, size_t len) {
+STATIC_INLINE uint32_t Hash32(const char *s, size_t len) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return s == NULL ? 0 : len;
 }
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+STATIC_INLINE uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return seed + Hash32(s, len);
 }
 
 #else
 
-uint32_t Hash32(const char *s, size_t len) {
+STATIC_INLINE uint32_t Hash32(const char *s, size_t len) {
   return static_cast<uint32_t>(farmhashte::Hash64(s, len));
 }
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+STATIC_INLINE uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   return static_cast<uint32_t>(farmhashte::Hash64WithSeed(s, len, seed));
 }
 
 #endif
 }  // namespace farmhashnt
+
 namespace farmhashmk {
 using namespace NAMESPACE_FOR_HASH_FUNCTIONS;
-using namespace ala;
+
 #undef Fetch
 #define Fetch Fetch32
 
@@ -947,7 +955,7 @@ STATIC_INLINE uint32_t Hash32Len5to12(const char *s, size_t len, uint32_t seed =
   return fmix(seed ^ Mur(c, Mur(b, Mur(a, d))));
 }
 
-uint32_t Hash32(const char *s, size_t len) {
+STATIC_INLINE uint32_t Hash32(const char *s, size_t len) {
   if (len <= 24) {
     return len <= 12 ?
         (len <= 4 ? Hash32Len0to4(s, len) : Hash32Len5to12(s, len)) :
@@ -1005,7 +1013,7 @@ uint32_t Hash32(const char *s, size_t len) {
   return h;
 }
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+STATIC_INLINE uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   if (len <= 24) {
     if (len >= 13) return Hash32Len13to24(s, len, seed * c1);
     else if (len >= 5) return Hash32Len5to12(s, len, seed);
@@ -1015,17 +1023,18 @@ uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   return Mur(Hash32(s + 24, len - 24) + seed, h);
 }
 }  // namespace farmhashmk
+
 namespace farmhashsu {
 using namespace NAMESPACE_FOR_HASH_FUNCTIONS;
-using namespace ala;
+
 #if !FARMHASH_CAN_USE_SSE42 || !FARMHASH_CAN_USE_AESNI
 
-uint32_t Hash32(const char *s, size_t len) {
+STATIC_INLINE uint32_t Hash32(const char *s, size_t len) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return s == NULL ? 0 : len;
 }
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+STATIC_INLINE uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return seed + Hash32(s, len);
 }
@@ -1057,7 +1066,7 @@ STATIC_INLINE __m128i Shuffle0321(__m128i x) {
   return _mm_shuffle_epi32(x, (0 << 6) + (3 << 4) + (2 << 2) + (1 << 0));
 }
 
-uint32_t Hash32(const char *s, size_t len) {
+STATIC_INLINE uint32_t Hash32(const char *s, size_t len) {
   const uint32_t seed = 81;
   if (len <= 24) {
     return len <= 12 ?
@@ -1225,7 +1234,7 @@ uint32_t Hash32(const char *s, size_t len) {
 #undef Mulc2
 #undef Mulc1
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+STATIC_INLINE uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   if (len <= 24) {
     if (len >= 13) return farmhashmk::Hash32Len13to24(s, len, seed * c1);
     else if (len >= 5) return farmhashmk::Hash32Len5to12(s, len, seed);
@@ -1237,17 +1246,18 @@ uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
 
 #endif
 }  // namespace farmhashsu
+
 namespace farmhashsa {
 using namespace NAMESPACE_FOR_HASH_FUNCTIONS;
-using namespace ala;
+
 #if !FARMHASH_CAN_USE_SSE42
 
-uint32_t Hash32(const char *s, size_t len) {
+STATIC_INLINE uint32_t Hash32(const char *s, size_t len) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return s == NULL ? 0 : len;
 }
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+STATIC_INLINE uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   FARMHASH_DIE_IF_MISCONFIGURED;
   return seed + Hash32(s, len);
 }
@@ -1279,7 +1289,7 @@ STATIC_INLINE __m128i Shuffle0321(__m128i x) {
   return _mm_shuffle_epi32(x, (0 << 6) + (3 << 4) + (2 << 2) + (1 << 0));
 }
 
-uint32_t Hash32(const char *s, size_t len) {
+STATIC_INLINE uint32_t Hash32(const char *s, size_t len) {
   const uint32_t seed = 81;
   if (len <= 24) {
     return len <= 12 ?
@@ -1437,7 +1447,7 @@ uint32_t Hash32(const char *s, size_t len) {
 #undef Mulc2
 #undef Mulc1
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+STATIC_INLINE uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   if (len <= 24) {
     if (len >= 13) return farmhashmk::Hash32Len13to24(s, len, seed * c1);
     else if (len >= 5) return farmhashmk::Hash32Len5to12(s, len, seed);
@@ -1449,9 +1459,10 @@ uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
 
 #endif
 }  // namespace farmhashsa
+
 namespace farmhashcc {
 using namespace NAMESPACE_FOR_HASH_FUNCTIONS;
-using namespace ala;
+
 // This file provides a 32-bit hash equivalent to CityHash32 (v1.1.1)
 // and a 128-bit hash equivalent to CityHash128 (v1.1.1).  It also provides
 // a seeded 32-bit hash function similar to CityHash32.
@@ -1496,7 +1507,7 @@ STATIC_INLINE uint32_t Hash32Len5to12(const char *s, size_t len) {
   return fmix(Mur(c, Mur(b, Mur(a, d))));
 }
 
-uint32_t Hash32(const char *s, size_t len) {
+STATIC_INLINE uint32_t Hash32(const char *s, size_t len) {
   if (len <= 24) {
     return len <= 12 ?
         (len <= 4 ? Hash32Len0to4(s, len) : Hash32Len5to12(s, len)) :
@@ -1565,7 +1576,7 @@ uint32_t Hash32(const char *s, size_t len) {
   return h;
 }
 
-uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
+STATIC_INLINE uint32_t Hash32WithSeed(const char *s, size_t len, uint32_t seed) {
   if (len <= 24) {
     if (len >= 13) return farmhashmk::Hash32Len13to24(s, len, seed * c1);
     else if (len >= 5) return farmhashmk::Hash32Len5to12(s, len, seed);
@@ -1685,7 +1696,7 @@ STATIC_INLINE uint128_t CityMurmur(const char *s, size_t len, uint128_t seed) {
   return Uint128(a ^ b, HashLen16(b, a));
 }
 
-uint128_t CityHash128WithSeed(const char *s, size_t len, uint128_t seed) {
+STATIC_INLINE uint128_t CityHash128WithSeed(const char *s, size_t len, uint128_t seed) {
   if (len < 128) {
     return CityMurmur(s, len, seed);
   }
@@ -1755,10 +1766,11 @@ STATIC_INLINE uint128_t CityHash128(const char *s, size_t len) {
       CityHash128WithSeed(s, len, Uint128(k0, k1));
 }
 
-uint128_t Fingerprint128(const char* s, size_t len) {
+STATIC_INLINE uint128_t Fingerprint128(const char* s, size_t len) {
   return CityHash128(s, len);
 }
 }  // namespace farmhashcc
+
 namespace NAMESPACE_FOR_HASH_FUNCTIONS {
 
 // BASIC STRING HASHING
@@ -1858,3 +1870,4 @@ uint128_t Fingerprint128(const char* s, size_t len) {
 //   farmhashns::Hash32{,WithSeed}()
 
 }  // namespace NAMESPACE_FOR_HASH_FUNCTIONS
+}

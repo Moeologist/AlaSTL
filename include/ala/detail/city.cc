@@ -30,8 +30,8 @@
 #include <ala/detail/city.h>
 #include <ala/intrin/bit.h>
 
-namespace NAMESPACE_FOR_HASH_FUNCTIONS {
-using namespace ala;
+namespace ala {
+namespace cityhash {
 
 inline uint64_t UNALIGNED_LOAD64(const char *p) {
     uint64_t result;
@@ -53,6 +53,14 @@ inline uint32_t UNALIGNED_LOAD32(const char *p) {
     #define uint64_in_expected_order(x) (x)
 #endif
 
+#if !defined(LIKELY)
+    #if HAVE_BUILTIN_EXPECT
+        #define LIKELY(x) (__builtin_expect(!!(x), 1))
+    #else
+        #define LIKELY(x) (x)
+    #endif
+#endif
+
 inline uint64_t Fetch64(const char *p) {
     return uint64_in_expected_order(UNALIGNED_LOAD64(p));
 }
@@ -62,13 +70,13 @@ inline uint32_t Fetch32(const char *p) {
 }
 
 // Some primes between 2^63 and 2^64 for various uses.
-inline const uint64_t k0 = 0xc3a5c85c97cb3127ULL;
-inline const uint64_t k1 = 0xb492b66fbe98f273ULL;
-inline const uint64_t k2 = 0x9ae16a3b2f90404fULL;
+static const uint64_t k0 = 0xc3a5c85c97cb3127ULL;
+static const uint64_t k1 = 0xb492b66fbe98f273ULL;
+static const uint64_t k2 = 0x9ae16a3b2f90404fULL;
 
 // Magic numbers for 32-bit hashing.  Copied from Murmur3.
-inline const uint32_t c1 = 0xcc9e2d51;
-inline const uint32_t c2 = 0x1b873593;
+static const uint32_t c1 = 0xcc9e2d51;
+static const uint32_t c2 = 0x1b873593;
 
 // A 32-bit to 32-bit integer hash copied from Murmur3.
 inline uint32_t fmix(uint32_t h) {
@@ -84,6 +92,13 @@ inline uint32_t Rotate32(uint32_t val, int shift) {
     // Avoid shifting by 32: doing so yields an undefined result.
     return shift == 0 ? val : ((val >> shift) | (val << (32 - shift)));
 }
+
+#undef PERMUTE3
+#define PERMUTE3(a, b, c) \
+    do { \
+        std::swap(a, b); \
+        std::swap(a, c); \
+    } while (0)
 
 inline uint32_t Mur(uint32_t a, uint32_t h) {
     // Helper from Murmur3 for combining two 32-bit values.
@@ -180,8 +195,7 @@ uint32_t CityHash32(const char *s, size_t len) {
         h += a4 * 5;
         h = ala::intrin::bswap32(h);
         f += a0;
-        ala::swap(f, h);
-        ala::swap(f, g);
+        PERMUTE3(f, h, g);
         s += 20;
     } while (--iters != 0);
     g = Rotate32(g, 11) * c1;
@@ -452,7 +466,6 @@ uint128_t CityHash128(const char *s, size_t len) {
 }
 
 #ifdef __SSE4_2__
-    #include <citycrc.h>
     #include <nmmintrin.h>
 
 // Requires len >= 240.
@@ -573,7 +586,7 @@ uint128_t CityHashCrc128WithSeed(const char *s, size_t len, uint128_t seed) {
         CityHashCrc256(s, len, result);
         uint64_t u = Uint128High64(seed) + result[0];
         uint64_t v = Uint128Low64(seed) + result[1];
-        return uint128_t(HashLen16(u, v + result[2]),
+        return Uint128(HashLen16(u, v + result[2]),
                          HashLen16(Rotate(v, 32), u * k0 + result[3]));
     }
 }
@@ -584,7 +597,7 @@ uint128_t CityHashCrc128(const char *s, size_t len) {
     } else {
         uint64_t result[4];
         CityHashCrc256(s, len, result);
-        return uint128_t(result[2], result[3]);
+        return Uint128(result[2], result[3]);
     }
 }
 
@@ -593,4 +606,5 @@ uint128_t CityHashCrc128(const char *s, size_t len) {
 #undef uint32_in_expected_order
 #undef uint64_in_expected_order
 
-}
+} // namespace cityhash
+} // namespace ala

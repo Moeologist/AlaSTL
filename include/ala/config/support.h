@@ -1,8 +1,6 @@
 #ifndef _ALA_CONFIG_SUPPORT_H
 #define _ALA_CONFIG_SUPPORT_H
 
-#include <ciso646>
-
 #ifndef ALA_LANG
     #ifdef _MSVC_LANG
         #define ALA_LANG _MSVC_LANG
@@ -208,6 +206,10 @@
         #warning your compiler or cflags not support concepts
         #define ALA_USE_CONCEPTS 0
     #endif
+#endif
+
+#ifndef ALA_USE_IDENTITY_FOR_INTEGRAL
+    #define ALA_USE_IDENTITY_FOR_INTEGRAL 0
 #endif
 
 #if defined(_LIBCPP_VERSION)

@@ -64,7 +64,28 @@
 
 #include <ala/detail/pair.h>
 
-namespace NAMESPACE_FOR_HASH_FUNCTIONS {
+namespace ala {
+namespace cityhash {
+
+#if _ALA_ENABLE_INT128T
+#if !defined(uint128_t)
+#define uint128_t __uint128_t
+#endif
+inline uint64_t Uint128Low64(const uint128_t x) {
+  return static_cast<uint64_t>(x);
+}
+inline uint64_t Uint128High64(const uint128_t x) {
+  return static_cast<uint64_t>(x >> 64);
+}
+inline uint128_t Uint128(uint64_t lo, uint64_t hi) {
+  return lo + (((uint128_t)hi) << 64);
+}
+#else
+using uint128_t = ala::pair<uint64_t, uint64_t>;
+inline uint64_t Uint128Low64(const uint128_t x) { return x.first; }
+inline uint64_t Uint128High64(const uint128_t x) { return x.second; }
+inline uint128_t Uint128(uint64_t lo, uint64_t hi) { return uint128_t(lo, hi); }
+#endif
 
 // Hash function for a byte array.
 inline uint64_t CityHash64(const char *buf, size_t len);
@@ -102,6 +123,7 @@ inline uint64_t Hash128to64(const uint128_t &x) {
 }
 
 #ifdef __SSE4_2__
+// Hash function for a byte array.
 inline uint128_t CityHashCrc128(const char *s, size_t len);
 
 // Hash function for a byte array.  For convenience, a 128-bit seed is also
@@ -113,6 +135,7 @@ inline uint128_t CityHashCrc128WithSeed(const char *s, size_t len,
 inline void CityHashCrc256(const char *s, size_t len, uint64_t *result);
 #endif
 
+}
 }
 
 #include "city.cc"

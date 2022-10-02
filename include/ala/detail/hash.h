@@ -3,7 +3,7 @@
 
 #include <ala/detail/memory_base.h>
 #include <ala/detail/farmhash.h>
-#include <ala/detail/meow_hash_x64_aesni.h>
+#include <ala/detail/city.h>
 
 ALA_BEGIN_NAMESPACE_STD
 
@@ -13,6 +13,9 @@ struct hash;
 ALA_END_NAMESPACE_STD
 
 namespace ala {
+
+template<class T>
+struct hash;
 
 struct _disabled_hash {
     constexpr _disabled_hash() = delete;
@@ -33,7 +36,7 @@ struct _enum_hash {
     using argument_type = T;
     using result_type = size_t;
     constexpr size_t operator()(T v) const noexcept {
-        return static_cast<size_t>(static_cast<underlying_type_t<T>>(v));
+        return hash<underlying_type_t<T>>{}(v);
     }
 };
 
@@ -46,11 +49,11 @@ struct _farm_hash {
     using result_type = size_t;
 
     size_t _call(true_type, const char *p) const noexcept {
-        return ::hash_util::Hash64(p, sizeof(T));
+        return farmhash::Hash64(p, sizeof(T));
     }
 
     size_t _call(false_type, const char *p) const noexcept {
-        return ::hash_util::Hash32(p, sizeof(T));
+        return farmhash::Hash32(p, sizeof(T));
     }
 
     size_t operator()(T v) const noexcept {
@@ -60,25 +63,21 @@ struct _farm_hash {
 };
 
 template<class T>
-struct _meow_hash {
+struct _city_hash {
     using argument_type = T;
     using result_type = size_t;
 
     size_t _call(true_type, const char *p) const noexcept {
-#ifdef _ALA_X64
-        return _mm_extract_epi64(
-            ::hash_util::MeowHash(::hash_util::MeowDefaultSeed, sizeof(T), p), 0);
-#endif
+        return cityhash::CityHash64(p, sizeof(T));
     }
 
     size_t _call(false_type, const char *p) const noexcept {
-        return _mm_extract_epi32(
-            ::hash_util::MeowHash(::hash_util::MeowDefaultSeed, sizeof(T), p), 0);
+        return cityhash::CityHash32(p, sizeof(T));
     }
 
     size_t operator()(T v) const noexcept {
         const char *p = reinterpret_cast<const char *>(ala::addressof(v));
-        return _meow_hash::_call(bool_constant<sizeof(size_t) == 8>{}, p);
+        return _city_hash::_call(bool_constant<sizeof(size_t) == 8>{}, p);
     }
 };
 
@@ -109,30 +108,38 @@ struct _float_hash {
 
 template<class T> struct hash: _enum_hash<T> {};
 
-template<> struct hash<bool>:           _identity_hash<bool> {};
-template<> struct hash<char>:           _identity_hash<char> {};
-template<> struct hash<signed char>:    _identity_hash<signed char> {};
-template<> struct hash<unsigned char>:  _identity_hash<unsigned char> {};
-template<> struct hash<char16_t>:       _identity_hash<char16_t> {};
-template<> struct hash<char32_t>:       _identity_hash<char32_t> {};
-template<> struct hash<wchar_t>:        _identity_hash<wchar_t> {};
-template<> struct hash<short>:          _identity_hash<short> {};
-template<> struct hash<unsigned short>: _identity_hash<unsigned short> {};
-template<> struct hash<int>:            _identity_hash<int> {};
-template<> struct hash<unsigned int>:   _identity_hash<unsigned int> {};
-template<> struct hash<long>:           _identity_hash<long> {};
-template<> struct hash<unsigned long>:  _identity_hash<unsigned long> {};
+#if ALA_USE_IDENTITY_FOR_INTEGRAL
+template<class T> using _integral_hash = _identity_hash<T>;
+#else
+template<class T> using _integral_hash = _farm_hash<T>;
+#endif
 
-template<> struct hash<long long> :         _identity_hash<long long> {};
-template<> struct hash<unsigned long long>: _identity_hash<unsigned long long> {};
+template<> struct hash<bool>:           _integral_hash<bool> {};
+template<> struct hash<char>:           _integral_hash<char> {};
+template<> struct hash<signed char>:    _integral_hash<signed char> {};
+template<> struct hash<unsigned char>:  _integral_hash<unsigned char> {};
+template<> struct hash<char16_t>:       _integral_hash<char16_t> {};
+template<> struct hash<char32_t>:       _integral_hash<char32_t> {};
+template<> struct hash<wchar_t>:        _integral_hash<wchar_t> {};
+template<> struct hash<short>:          _integral_hash<short> {};
+template<> struct hash<unsigned short>: _integral_hash<unsigned short> {};
+template<> struct hash<int>:            _integral_hash<int> {};
+template<> struct hash<unsigned int>:   _integral_hash<unsigned int> {};
+template<> struct hash<long>:           _integral_hash<long> {};
+template<> struct hash<unsigned long>:  _integral_hash<unsigned long> {};
+
+template<> struct hash<long long> :         _integral_hash<long long> {};
+template<> struct hash<unsigned long long>: _integral_hash<unsigned long long> {};
+
+
+
+#if _ALA_ENABLE_CHAR8T
+template<> struct hash<char8_t>: _identity_hash<char8_t> {};
+#endif
 
 #if _ALA_ENABLE_INT128T
 template<> struct hash<__int128_t>:  _farm_hash<__int128_t> {};
 template<> struct hash<__uint128_t>: _farm_hash<__uint128_t> {};
-#endif
-
-#if _ALA_ENABLE_CHAR8T
-template<> struct hash<char8_t>: _identity_hash<char8_t> {};
 #endif
 
 template<> struct hash<float>:       _float_hash<float> {};
@@ -147,7 +154,7 @@ struct hash<T *> {
     using result_type = size_t;
 
     constexpr size_t operator()(T *v) const noexcept {
-        return reinterpret_cast<size_t>(v);
+        return hash<size_t>{}(v);
     }
 };
 
