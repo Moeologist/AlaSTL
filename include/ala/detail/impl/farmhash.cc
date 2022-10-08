@@ -20,8 +20,9 @@
 //
 // FarmHash, by Geoff Pike
 
-#include <ala/intrin/bit.h>
-#include <ala/detail/farmhash.h>
+#include <ala/detail/impl/farmhash.h>
+#include <ala/detail/intrin/bit.h>
+
 // FARMHASH ASSUMPTIONS: Modify as needed, or use -DFARMHASH_ASSUME_SSE42 etc.
 // Note that if you use -DFARMHASH_ASSUME_SSE42 you likely need -msse42
 // (or its equivalent for your compiler); if you use -DFARMHASH_ASSUME_AESNI

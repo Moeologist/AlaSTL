@@ -2,7 +2,7 @@
 #define _ALA_BIT_H
 
 #include <ala/type_traits.h>
-#include <ala/intrin/bit.h>
+#include <ala/detail/intrin/bit.h>
 
 #include <limits>
 

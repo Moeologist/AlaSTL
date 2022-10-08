@@ -5,7 +5,7 @@
 
 #if !ALA_USE_CONCEPTS
 
-    #include <ala/compat/concepts.h>
+    #include <ala/detail/compat/concepts.h>
 
 #else
 namespace ala {

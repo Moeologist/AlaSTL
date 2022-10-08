@@ -27,8 +27,8 @@
 // possible hash functions, by using SIMD instructions, or by
 // compromising on hash quality.
 
-#include <ala/detail/city.h>
-#include <ala/intrin/bit.h>
+#include <ala/detail/impl/city.h>
+#include <ala/detail/intrin/bit.h>
 
 namespace ala {
 namespace cityhash {
@@ -587,7 +587,7 @@ uint128_t CityHashCrc128WithSeed(const char *s, size_t len, uint128_t seed) {
         uint64_t u = Uint128High64(seed) + result[0];
         uint64_t v = Uint128Low64(seed) + result[1];
         return Uint128(HashLen16(u, v + result[2]),
-                         HashLen16(Rotate(v, 32), u * k0 + result[3]));
+                       HashLen16(Rotate(v, 32), u * k0 + result[3]));
     }
 }
 

@@ -3,10 +3,10 @@
 
 #include <ala/config.h>
 
-#include <ala/intrin/bit.h>
+#include <ala/detail/intrin/bit.h>
 
-#include <ala/intrin/rdrand.h>
-#include <ala/intrin/rdseed.h>
+#include <ala/detail/intrin/rdrand.h>
+#include <ala/detail/intrin/rdseed.h>
 #include <ala/type_traits.h>
 
 #include <limits>

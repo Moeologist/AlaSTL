@@ -830,7 +830,7 @@ constexpr const E *data(initializer_list<E> il) noexcept {
 
 #if !ALA_USE_CONCEPTS
 
-    #include <ala/compat/iterator.h>
+    #include <ala/detail/compat/iterator.h>
 
 #else
 

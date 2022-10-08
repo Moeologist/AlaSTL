@@ -5,7 +5,7 @@
 #include <ala/iterator.h>
 
 #if !ALA_USE_CONCEPTS
-    #include <ala/compat/ranges.h>
+    #include <ala/detail/compat/ranges.h>
 #else
 
 namespace ala {

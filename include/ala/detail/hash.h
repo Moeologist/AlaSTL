@@ -2,8 +2,8 @@
 #define _ALA_DETAIL_HASH_H
 
 #include <ala/detail/memory_base.h>
-#include <ala/detail/farmhash.h>
-#include <ala/detail/city.h>
+#include <ala/detail/impl/farmhash.h>
+#include <ala/detail/impl/city.h>
 
 ALA_BEGIN_NAMESPACE_STD
 
