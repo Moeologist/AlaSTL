@@ -3,6 +3,8 @@
 
 #include <ala/type_traits.h>
 
+#include <string>
+
 #ifdef _ALA_WIN32
     #ifndef NOMINMAX
         #define NOMINMAX
@@ -21,7 +23,7 @@ namespace util {
 #ifdef _ALA_WIN32
 
 template<class Fn, class... Args>
-long long timer(Fn &&fn, Args &&... args) {
+long long timer(Fn &&fn, Args &&...args) {
     LARGE_INTEGER before, after, frequency;
     QueryPerformanceFrequency(&frequency);
     QueryPerformanceCounter(&before);
@@ -35,7 +37,7 @@ long long timer(Fn &&fn, Args &&... args) {
 #elif defined _ALA_LINUX
 
 template<class Fn, class... Args>
-long long timer(Fn &&fn, Args &&... args) {
+long long timer(Fn &&fn, Args &&...args) {
     struct timespec before, after;
     clock_gettime(CLOCK_MONOTONIC, &before);
     ala::invoke(ala::forward<Fn>(fn), ala::forward<Args>(args)...);
@@ -48,7 +50,7 @@ long long timer(Fn &&fn, Args &&... args) {
 #elif defined _ALA_APPLE
 
 template<class Fn, class... Args>
-long long timer(Fn &&fn, Args &&... args) {
+long long timer(Fn &&fn, Args &&...args) {
     uint_fast64_t before, after;
     mach_timebase_info_data_t info;
     mach_timebase_info(&info);
@@ -60,6 +62,16 @@ long long timer(Fn &&fn, Args &&... args) {
 }
 
 #endif
+
+inline std::string ns2str(long long ns_time) {
+    std::string units[] = {"ns", "us", "ms", "s"};
+    int unit_index = 0;
+    while (ns_time > 10000 && unit_index < 4) {
+        ++unit_index;
+        ns_time /= 1000;
+    }
+    return std::to_string(ns_time) + "" + units[unit_index];
+}
 
 } // namespace util
 

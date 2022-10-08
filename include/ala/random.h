@@ -9,7 +9,11 @@
 #include <ala/intrin/rdseed.h>
 #include <ala/type_traits.h>
 
+#include <limits>
+
 namespace ala {
+
+using ::std::numeric_limits;
 
 struct bad_random_device: exception {
     explicit bad_random_device() {}

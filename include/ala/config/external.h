@@ -3,7 +3,6 @@
 
 #include <stdexcept>
 #include <initializer_list>
-#include <limits>
 
 #include <cassert>
 #include <cstdint>
@@ -14,19 +13,12 @@
 
 namespace ala {
 using ::std::exception;
-using ::std::length_error;
 using ::std::out_of_range;
-using ::std::logic_error;
-using ::std::runtime_error;
-using ::std::overflow_error;
 
 using ::std::initializer_list;
 
-using ::std::numeric_limits;
-
 using ::std::memmove;
 using ::std::memcpy;
-using ::std::strcmp;
 
 using ::std::nullptr_t;
 

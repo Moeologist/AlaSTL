@@ -3,6 +3,9 @@
 
 #include <ala/detail/memory_base.h>
 
+#include <new>
+#include <limits>
+
 #ifdef _ALA_MSVC
     #pragma warning(push)
     #pragma warning(disable : 4348)
@@ -16,6 +19,8 @@ using ::std::align_val_t;
 
 using ::std::bad_array_new_length;
 using ::std::bad_alloc;
+
+using ::std::numeric_limits;
 
 template<class T>
 struct allocator {

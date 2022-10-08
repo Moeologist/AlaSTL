@@ -83,8 +83,8 @@ struct _cpo_fn {
 
     template<typename T>
     constexpr auto operator()(T &&t) const noexcept(
-        noexcept(_cpo_fn::_dispatch(std::forward<T>(t), priority_tag<2>{})))
-        -> decltype(_cpo_fn::_dispatch(std::forward<T>(t), priority_tag<2>{})) {
+        noexcept(_cpo_fn::_dispatch(ala::forward<T>(t), priority_tag<2>{})))
+        -> decltype(_cpo_fn::_dispatch(ala::forward<T>(t), priority_tag<2>{})) {
         return _cpo_fn::_dispatch(ala::forward<T>(t), priority_tag<2>{});
     }
 };
@@ -154,8 +154,8 @@ public:
 
     template<typename T>
     constexpr auto operator()(T &&t) const noexcept(
-        noexcept(_cpo_fn::_dispatch(std::forward<T>(t), priority_tag<2>{})))
-        -> decltype(_cpo_fn::_dispatch(std::forward<T>(t), priority_tag<2>{})) {
+        noexcept(_cpo_fn::_dispatch(ala::forward<T>(t), priority_tag<2>{})))
+        -> decltype(_cpo_fn::_dispatch(ala::forward<T>(t), priority_tag<2>{})) {
         return _cpo_fn::_dispatch(ala::forward<T>(t), priority_tag<2>{});
     }
 };

@@ -36,7 +36,7 @@ struct _enum_hash {
     using argument_type = T;
     using result_type = size_t;
     constexpr size_t operator()(T v) const noexcept {
-        return hash<underlying_type_t<T>>{}(v);
+        return hash<underlying_type_t<T>>{}(static_cast<underlying_type_t<T>>(v));
     }
 };
 
@@ -154,7 +154,8 @@ struct hash<T *> {
     using result_type = size_t;
 
     constexpr size_t operator()(T *v) const noexcept {
-        return hash<size_t>{}(v);
+        static_assert(!(sizeof(size_t) < sizeof(T *)), "Unsupported platform");
+        return hash<size_t>{}(reinterpret_cast<size_t>(v));
     }
 };
 

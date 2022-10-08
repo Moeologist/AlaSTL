@@ -7,6 +7,8 @@
 #include <ala/detail/hash.h>
 #include <ala/algorithm.h>
 
+#include <new>
+
 #if ALA_USE_RTTI
     #include <typeinfo>
 #endif
@@ -239,7 +241,7 @@ struct _bind_t: _function_base<R> {
     }
 };
 
-enum class FunctionOP { Copy, Move, Destroy, TypeInfo, Invoke, Local };
+enum class FunctionOP { Copy, Move, Destroy, Local, Invoke, TypeInfo };
 
 template<class Function, class Functor>
 struct _function_handle;
@@ -274,23 +276,38 @@ struct _function_handle<R(Args...), Functor> {
                is_nothrow_move_constructible<Functor>::value;
     }
 
-    static void *operate(FunctionOP op) {
-        switch (op) {
-            case FunctionOP::Copy:
-                return reinterpret_cast<void *>(&_function_handle::copy);
-            case FunctionOP::Move:
-                return reinterpret_cast<void *>(&_function_handle::move);
-            case FunctionOP::Destroy:
-                return reinterpret_cast<void *>(&_function_handle::destroy);
-            case FunctionOP::TypeInfo:
-                return reinterpret_cast<void *>(&_function_handle::typeinfo);
-            case FunctionOP::Invoke:
-                return reinterpret_cast<void *>(&_function_handle::invoke);
-            case FunctionOP::Local:
-                return reinterpret_cast<void *>(&_function_handle::local);
-        }
-        return nullptr;
+    static void **get_vtable() {
+        static void *vtable[] = {
+            reinterpret_cast<void *>(&_function_handle::copy),
+            reinterpret_cast<void *>(&_function_handle::move),
+            reinterpret_cast<void *>(&_function_handle::destroy),
+            reinterpret_cast<void *>(&_function_handle::local),
+            reinterpret_cast<void *>(&_function_handle::invoke),
+#if ALA_USE_RTTI
+            reinterpret_cast<void *>(&_function_handle::typeinfo),
+#else
+            nullptr,
+#endif
+        };
+        return vtable;
     };
+
+    // clang-format off
+    template<FunctionOP op>
+    using _ft_table = type_pack_element_t<
+        size_t(op),
+        decltype(&_function_handle::copy),
+        decltype(&_function_handle::move),
+        decltype(&_function_handle::destroy),
+        decltype(&_function_handle::local),
+        decltype(&_function_handle::invoke),
+#if ALA_USE_RTTI
+        decltype(&_function_handle::typeinfo)
+#else
+        nullptr_t
+#endif
+        >;
+    // clang-format on
 };
 
 struct bad_function_call: exception {
@@ -305,16 +322,7 @@ struct function<R(Args...)>: _function_base<R> {
 private:
     static_assert(sizeof(void *) == sizeof(size_t), "Unsupported platform");
 
-    using op_invoke_t = R (*)(void *, Args &&...);
-    using op_copy_t = void (*)(void *, const void *);
-    using op_move_t = void (*)(void *, void *);
-    using op_destroy_t = void (*)(void *);
-#if ALA_USE_RTTI
-    using op_typeinfo_t = const type_info &(*)();
-#endif
-    using op_local_t = bool (*)();
-
-    void *(*_op_handle)(FunctionOP) = nullptr;
+    void **_vptr = nullptr;
     size_t _placehold[2] = {};
 
     const void *_address() const noexcept {
@@ -344,34 +352,18 @@ private:
         return *reinterpret_cast<void **>(_placehold);
     }
 
-    op_invoke_t _op_invoke() const noexcept {
-        return reinterpret_cast<op_invoke_t>(_op_handle(FunctionOP::Invoke));
-    }
-
-    op_copy_t _op_copy() const noexcept {
-        return reinterpret_cast<op_copy_t>(_op_handle(FunctionOP::Copy));
-    }
-
-    op_move_t _op_move() const noexcept {
-        return reinterpret_cast<op_move_t>(_op_handle(FunctionOP::Move));
-    }
-
-    op_destroy_t _op_destroy() const noexcept {
-        return reinterpret_cast<op_destroy_t>(_op_handle(FunctionOP::Destroy));
-    }
-
-    op_typeinfo_t _op_typeinfo() const noexcept {
-        return reinterpret_cast<op_typeinfo_t>(_op_handle(FunctionOP::TypeInfo));
-    }
-
-    op_local_t _op_local() const noexcept {
-        return reinterpret_cast<op_local_t>(_op_handle(FunctionOP::Local));
+    template<FunctionOP op>
+    typename _function_handle<R(Args...), int>::template _ft_table<op>
+    _any_op() const noexcept {
+        return reinterpret_cast<
+            typename _function_handle<R(Args...), int>::template _ft_table<op>>(
+            _vptr[static_cast<size_t>(op)]);
     }
 
     bool is_local() const noexcept {
-        if (_op_handle == nullptr)
+        if (_vptr == nullptr)
             return true;
-        return _op_local()();
+        return _any_op<FunctionOP::Local>()();
     }
 
     void *_alloc(size_t sz) {
@@ -381,38 +373,31 @@ private:
         return p;
     }
 
-    void _dealloc() {
-        if (!is_local()) {
-            void *p = this->_address();
-            ::operator delete(p);
-        }
-    }
-
     void _copy(const function &other) {
         if (other) {
-            _op_handle = other._op_handle;
+            _vptr = other._vptr;
             if (other.is_local()) {
-                _op_copy()(this->_address(), other._address());
+                _any_op<FunctionOP::Copy>()(this->_address(), other._address());
             } else {
                 this->_alloc(other._size());
-                _op_copy()(this->_address(), other._address());
+                _any_op<FunctionOP::Copy>()(this->_address(), other._address());
             }
         }
     }
 
     void _move(function &&other) {
         if (other) {
-            _op_handle = other._op_handle;
+            _vptr = other._vptr;
             if (other.is_local()) {
-                _op_move()(this->_address(), other._address());
-                other.reset();
+                _any_op<FunctionOP::Move>()(this->_address(), other._address());
+                // other.reset();
             } else {
                 _addref() = other._addref();
                 _size() = other._size();
                 other._addref() = nullptr;
                 other._size() = 0;
+                other._vptr = nullptr;
             }
-            other._op_handle = nullptr;
         }
     }
 
@@ -475,12 +460,12 @@ public:
         if (this->template is_empty_fn<Fn>(fn))
             return;
         using handle_t = _function_handle<R(Args...), Fn>;
-        _op_handle = &handle_t::operate;
+        _vptr = handle_t::get_vtable();
         if (sizeof(fn) > sizeof(_placehold) ||
             !is_nothrow_move_constructible<Fn>::value)
             this->_alloc(sizeof(Fn));
         void *src = reinterpret_cast<void *>(ala::addressof(fn));
-        _op_move()(this->_address(), src);
+        _any_op<FunctionOP::Move>()(this->_address(), src);
     }
 
     function &operator=(const function &other) {
@@ -496,7 +481,7 @@ public:
     }
 
     function &operator=(nullptr_t) noexcept {
-        function(ala::move(*this));
+        reset();
         return *this;
     }
 
@@ -523,20 +508,25 @@ public:
     }
 
     explicit operator bool() const noexcept {
-        return _op_handle != nullptr;
+        return _vptr != nullptr;
     }
 
     R operator()(Args... args) const {
         if (!(bool)*this)
             throw bad_function_call();
-        return _op_invoke()(const_cast<function *>(this)->_address(),
-                            ala::forward<Args>(args)...);
+        return _any_op<FunctionOP::Invoke>()(
+            const_cast<function *>(this)->_address(),
+            ala::forward<Args>(args)...);
     }
 
     void reset() {
         if (*this)
-            _op_destroy()(this->_address());
-        _dealloc();
+            _any_op<FunctionOP::Destroy>()(this->_address());
+        if (!is_local()) {
+            void *p = this->_address();
+            ::operator delete(p);
+        }
+        _vptr = nullptr;
     }
 
 #if ALA_USE_RTTI
@@ -554,7 +544,7 @@ public:
 
     const type_info &target_type() const noexcept {
         if (*this)
-            return _op_typeinfo()();
+            return _any_op<FunctionOP::TypeInfo>()();
         return typeid(void);
     }
 #endif
@@ -564,6 +554,7 @@ template<class R, class... Args>
 void swap(function<R(Args...)> &lhs, function<R(Args...)> &rhs) noexcept {
     lhs.swap(rhs);
 }
+
 template<class R, class... Args>
 bool operator==(const function<R(Args...)> &f, nullptr_t) noexcept {
     return !f;

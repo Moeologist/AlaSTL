@@ -324,11 +324,7 @@ struct _variant_base
 
     void *_address() {
         return _union_op_t::fmap(
-            this->_index,
-            [](auto &&v) {
-                return ala::_voidify(v);
-            },
-            _union);
+            this->_index, [](auto &&v) { return ala::_voidify(v); }, _union);
     }
 
     template<size_t I, class... Args>
@@ -373,9 +369,7 @@ struct _variant_base
             try {
                 using T = type_pack_element_t<I, Ts...>;
                 *reinterpret_cast<T *>(_address()) = ala::forward<Arg>(arg);
-            } catch (...) {
-                throw;
-            }
+            } catch (...) { throw; }
         } else if (is_nothrow_constructible<type_pack_element_t<I, Ts...>, Arg>::value ||
                    !is_nothrow_move_constructible<type_pack_element_t<I, Ts...>>::value) {
             this->_reset();
@@ -403,9 +397,7 @@ struct _variant_base
                         *reinterpret_cast<T *>(addr) = v;
                     },
                     other._union);
-            } catch (...) {
-                throw;
-            }
+            } catch (...) { throw; }
         } else if (a[other._index]) {
             this->_reset();
             this->_ctor(other);
@@ -432,9 +424,7 @@ struct _variant_base
                         *reinterpret_cast<T *>(addr) = ala::move(v);
                     },
                     ala::move(other)._union);
-            } catch (...) {
-                throw;
-            }
+            } catch (...) { throw; }
         } else {
             this->_reset();
             this->_ctor(ala::move(other));
@@ -444,14 +434,39 @@ struct _variant_base
     void _swap_move(true_type, _variant_base &other) noexcept(
         _and_<is_nothrow_move_constructible<Ts>...,
               is_nothrow_move_assignable<Ts>...>::value) {
+        bool a[] = {(is_nothrow_move_constructible<Ts>::value)...};
+        if (a[this->_index] && !a[other._index])
+            return other._swap_move(true_type{}, *this);
+        bool unwind = !a[this->_index] && a[other._index];
         _variant_base tmp(in_place_index_t<variant_npos>{});
         tmp._ctor(ala::move(other));
-        other._asgn(ala::move(*this));
+        try {
+            other._asgn(ala::move(*this));
+        } catch (...) {
+            if (unwind)
+                other._ctor(ala::move(tmp));
+            throw;
+        }
         this->_asgn(ala::move(tmp));
     }
 
     void _swap_move(false_type, _variant_base &other) noexcept {
-        abort();
+        assert(false); // _and_<is_move_constructible<Ts>..., is_move_assignable<Ts>...> is false
+    }
+
+    void _swap_adl(true_type, _variant_base &other) noexcept(
+        _and_<is_nothrow_swappable<Ts>...>::value) {
+        _union_op_t::fmap(
+            other._index,
+            [addr = _address()](auto &&v) {
+                using T = remove_cvref_t<decltype(v)>;
+                ala::_swap_adl(*reinterpret_cast<T *>(addr), v);
+            },
+            other._union);
+    }
+
+    void _swap_adl(false_type, _variant_base &other) noexcept {
+        assert(false); // _and_<is_swappable<Ts>...> is false
     }
 
     void _swap(_variant_base &other) noexcept(
@@ -459,17 +474,8 @@ struct _variant_base
         if (this->_index == variant_npos && other._index == variant_npos) {
             return;
         } else if (this->_index == other._index) {
-            try {
-                _union_op_t::fmap(
-                    other._index,
-                    [addr = _address()](auto &&v) {
-                        using T = remove_cvref_t<decltype(v)>;
-                        ala::_swap_adl(*reinterpret_cast<T *>(addr), v);
-                    },
-                    other._union);
-            } catch (...) {
-                throw;
-            }
+            using tag_t = bool_constant<_and_<is_swappable<Ts>...>::value>;
+            this->_swap_adl(tag_t{}, other);
         } else {
             using tag_t = bool_constant<_and_<is_move_constructible<Ts>...,
                                               is_move_assignable<Ts>...>::value>;
@@ -514,7 +520,7 @@ template<class R, class Fn, class Variant0, class... Variants>
 constexpr decltype(auto) _visit_closure(Fn &&fn, Variant0 &&v, Variants &&...vs);
 
 template<class Dst>
-constexpr Dst _no_narrow_convert(Dst (&&)[1]);
+constexpr Dst _no_narrow_convert(Dst(&&)[1]);
 
 template<class Ti, class T, class = void>
 struct _is_no_narrow: false_type {};

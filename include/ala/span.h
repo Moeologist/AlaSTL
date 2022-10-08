@@ -5,7 +5,11 @@
 #include <ala/iterator.h>
 #include <ala/ranges.h>
 
+#include <limits>
+
 namespace ala {
+
+using ::std::numeric_limits;
 
 template<class T, size_t N>
 struct array;

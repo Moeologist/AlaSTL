@@ -4,7 +4,11 @@
 #include <ala/type_traits.h>
 #include <ala/intrin/bit.h>
 
+#include <limits>
+
 namespace ala {
+
+using ::std::numeric_limits;
 
 // bit_cast
 template<class To, class From>
