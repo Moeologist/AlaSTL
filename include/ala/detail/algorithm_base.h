@@ -289,9 +289,7 @@ constexpr bool _equal_dispatch(Iter1 first1, Iter1 last1, Iter2 first2,
     for (; first1 != last1 && first2 != last2; ++first1, (void)++first2)
         if (!pred(*first1, *first2))
             return false;
-    if (first1 == last1 && first2 == last2)
-        return true;
-    return false;
+    return first1 == last1 && first2 == last2;
 }
 
 template<class Iter1, class Iter2, class BinPred>

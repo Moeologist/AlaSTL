@@ -67,10 +67,10 @@ template<typename... Bools>
 struct _and_helper_<true, Bools...>: _and_lazy_<Bools...> {};
 
 template<typename... Bools>
-struct _or_: _or_helper_<(sizeof...(Bools)<ALA_TEMPLATE_RECURSIVE_DEPTH), Bools...> {};
+struct _or_: _or_helper_<(sizeof...(Bools) < ALA_TEMPLATE_RECURSIVE_DEPTH), Bools...> {};
 
 template<typename... Bools>
-struct _and_: _and_helper_<(sizeof...(Bools)<ALA_TEMPLATE_RECURSIVE_DEPTH), Bools...> {};
+struct _and_: _and_helper_<(sizeof...(Bools) < ALA_TEMPLATE_RECURSIVE_DEPTH), Bools...> {};
 
 // template<typename... Bools>
 // struct _or_: _or_lazy_<Bools...> {};

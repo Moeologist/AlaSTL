@@ -89,10 +89,9 @@ constexpr ForwardIter1 find_end(ForwardIter1 first1, ForwardIter1 last1,
         ForwardIter1 pos = ala::search(first1, last1, first2, last2, pred);
         if (pos == last1) {
             break;
-        } else {
-            tmp = first1 = pos;
-            ++first1;
         }
+        tmp = first1 = pos;
+        ++first1;
     }
     return tmp;
 }
@@ -777,18 +776,17 @@ minmax_element(ForwardIter first, ForwardIter last, Comp comp) {
             else if (!(comp(*prev, *max)))
                 max = prev;
             break;
+        }
+        if (comp(*first, *prev)) {
+            if (comp(*first, *min))
+                min = first;
+            if (!(comp(*prev, *max)))
+                max = prev;
         } else {
-            if (comp(*first, *prev)) {
-                if (comp(*first, *min))
-                    min = first;
-                if (!(comp(*prev, *max)))
-                    max = prev;
-            } else {
-                if (comp(*prev, *min))
-                    min = prev;
-                if (!(comp(*first, *max)))
-                    max = first;
-            }
+            if (comp(*prev, *min))
+                min = prev;
+            if (!(comp(*first, *max)))
+                max = first;
         }
     }
     return ala::make_pair(min, max);
@@ -915,9 +913,7 @@ constexpr bool _is_permutation_dispatch(ForwardIter1 first1, ForwardIter1 last1,
         if (c == 0 || c != ala::count_if(first1, last1, unary))
             return false;
     }
-    if (i == last1 && j == last2)
-        return true;
-    return false;
+    return i == last1 && j == last2;
 }
 
 template<class ForwardIter1, class ForwardIter2, class BinPred>
@@ -947,9 +943,7 @@ constexpr bool _is_permutation_dispatch(ForwardIter1 first1, ForwardIter1 last1,
         if (c == 0 || c != ala::count(first1, last1, *i))
             return false;
     }
-    if (i == last1 && j == last2)
-        return true;
-    return false;
+    return i == last1 && j == last2;
 }
 
 template<class ForwardIter1, class ForwardIter2>
