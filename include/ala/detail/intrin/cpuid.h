@@ -10,7 +10,6 @@
 extern "C" {
 #endif
 
-// #include <intrin.h>
 extern void __cpuid(int[4], int);
 extern void __cpuidex(int[4], int, int);
 

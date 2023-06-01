@@ -71,10 +71,11 @@ A        state xor-lshift
 B        state rotate left
 Scramber Scramber type
 */
+struct ScramberPlus {};
+struct ScramberStarStar {};
+struct ScramberPlusPlus {};
 
-enum xoshiro_scramber { ScramberPlus, ScramberStarStar, ScramberPlusPlus };
-
-template<typename UInt, xoshiro_scramber Scramber>
+template<typename UInt, typename Scramber>
 struct xoshiro {
     static_assert(is_unsigned<UInt>::value,
                   "xoshiro only support unsigned integral");
@@ -89,38 +90,44 @@ struct xoshiro {
         return (x << k) | (x >> (sizeof(UInt) * 8 - k));
     }
 
-    template<xoshiro_scramber Dummy = Scramber>
-    constexpr enable_if_t<sizeof(UInt) == 8 && Dummy == ScramberPlus, result_type>
+    template<typename Dummy = Scramber>
+    constexpr enable_if_t<sizeof(UInt) == 8 && is_same<Dummy, ScramberPlus>::value,
+                          result_type>
     scramber() {
         return s[0] + s[3];
     }
 
-    template<xoshiro_scramber Dummy = Scramber>
-    constexpr enable_if_t<sizeof(UInt) == 8 && Dummy == ScramberStarStar, result_type>
+    template<typename Dummy = Scramber>
+    constexpr enable_if_t<
+        sizeof(UInt) == 8 && is_same<Dummy, ScramberStarStar>::value, result_type>
     scramber() {
         return rotl(s[1] * 5, 7) * 9;
     }
 
-    template<xoshiro_scramber Dummy = Scramber>
-    constexpr enable_if_t<sizeof(UInt) == 8 && Dummy == ScramberPlusPlus, result_type>
+    template<typename Dummy = Scramber>
+    constexpr enable_if_t<
+        sizeof(UInt) == 8 && is_same<Dummy, ScramberPlusPlus>::value, result_type>
     scramber() {
         return rotl(s[0] + s[3], 23) + s[0];
     }
 
-    template<xoshiro_scramber Dummy = Scramber>
-    constexpr enable_if_t<sizeof(UInt) == 4 && Dummy == ScramberPlus, result_type>
+    template<typename Dummy = Scramber>
+    constexpr enable_if_t<sizeof(UInt) == 4 && is_same<Dummy, ScramberPlus>::value,
+                          result_type>
     scramber() {
         return s[0] + s[3];
     }
 
-    template<xoshiro_scramber Dummy = Scramber>
-    constexpr enable_if_t<sizeof(UInt) == 4 && Dummy == ScramberStarStar, result_type>
+    template<typename Dummy = Scramber>
+    constexpr enable_if_t<
+        sizeof(UInt) == 4 && is_same<Dummy, ScramberStarStar>::value, result_type>
     scramber() {
         return rotl(s[0] * 5, 7) * 9;
     }
 
-    template<xoshiro_scramber Dummy = Scramber>
-    constexpr enable_if_t<sizeof(UInt) == 4 && Dummy == ScramberPlusPlus, result_type>
+    template<typename Dummy = Scramber>
+    constexpr enable_if_t<
+        sizeof(UInt) == 4 && is_same<Dummy, ScramberPlusPlus>::value, result_type>
     scramber() {
         return rotl(s[0] + s[3], 7) + s[0];
     }
@@ -164,31 +171,31 @@ struct xoshiro {
     }
 
     constexpr void _jump(true_type) {
-        constexpr uint_fast64_t jmp64[4] = {0x180ec6d33cfd0abaU,
+        constexpr uint_fast64_t table[4] = {0x180ec6d33cfd0abaU,
                                             0xd5a61266f0c9392cU,
                                             0xa9582618e03fc9aaU,
                                             0x39abdc4529b1661cU};
-        do_jump(jmp64);
+        do_jump(table);
     }
 
     constexpr void _long_jump(true_type) {
-        constexpr uint_fast64_t jmp64[4] = {0x76e15d3efefdcbbfU,
+        constexpr uint_fast64_t table[4] = {0x76e15d3efefdcbbfU,
                                             0xc5004e441c522fb3U,
                                             0x77710069854ee241U,
                                             0x39109bb02acbe635U};
-        do_jump(jmp64);
+        do_jump(table);
     }
 
     constexpr void _jump(false_type) {
-        constexpr uint_fast32_t jmp32[4] = {0x8764000bU, 0xf542d2d3U,
+        constexpr uint_fast32_t table[4] = {0x8764000bU, 0xf542d2d3U,
                                             0x6fa035c3U, 0x77f2db5bU};
-        do_jump(jmp32);
+        do_jump(table);
     }
 
     constexpr void _long_jump(false_type) {
-        constexpr uint_fast32_t jmp32[4] = {0xb523952eU, 0x0b6f099fU,
+        constexpr uint_fast32_t table[4] = {0xb523952eU, 0x0b6f099fU,
                                             0xccf5a0efU, 0x1c580662U};
-        do_jump(jmp32);
+        do_jump(table);
     }
 
     // 32bit: It is equivalent to 2^64 calls to next()
