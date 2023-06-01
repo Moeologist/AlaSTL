@@ -162,7 +162,15 @@
 
 // configurable
 #ifndef ALA_INSERTION_THRESHOLD
-    #define ALA_INSERTION_THRESHOLD 28
+    #define ALA_INSERTION_THRESHOLD 20
+#endif
+
+#ifndef ALA_NINTHER_THRESHOLD
+    #define ALA_NINTHER_THRESHOLD 128
+#endif
+
+#ifndef ALA_INSERTION_LIMIT
+    #define ALA_INSERTION_LIMIT 8
 #endif
 
 #ifndef ALA_USE_ALLOC_REBIND
