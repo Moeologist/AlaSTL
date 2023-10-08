@@ -62,7 +62,7 @@ struct variant_alternative<I, const volatile T> {
 template<bool, class...>
 union _variant_union;
 
-template<bool, class... Ts>
+template<class... Ts>
 struct _union_op;
 
 template<class IntSeq, bool Trivial, class... Ts>
@@ -71,14 +71,14 @@ struct _make_union_helper {};
 template<bool Trivial, class... Ts, size_t... Is>
 struct _make_union_helper<index_sequence<Is...>, Trivial, Ts...> {
     using type = _variant_union<Trivial, type_pack_element_t<Is, Ts...>...>;
-    using op = _union_op<Trivial, type_pack_element_t<Is, Ts...>...>;
+    using op = _union_op<type_pack_element_t<Is, Ts...>...>;
 };
 
 template<class IntSeq, bool Trivial, class... Ts>
 using _make_union_t = typename _make_union_helper<IntSeq, Trivial, Ts...>::type;
 
-template<class IntSeq, bool Trivial, class... Ts>
-using _make_union_op_t = typename _make_union_helper<IntSeq, Trivial, Ts...>::op;
+template<class IntSeq, class... Ts>
+using _make_union_op_t = typename _make_union_helper<IntSeq, true, Ts...>::op;
 
 template<bool Trivial, class... Ts>
 union _variant_union {
@@ -175,15 +175,15 @@ union _variant_union<false, T> {
     constexpr _variant_union(in_place_index_t<variant_npos>): _placehold{} {}
 };
 
-template<bool Trivial, class... Ts>
+template<class... Ts>
 struct _union_op {
     static constexpr size_t Size = sizeof...(Ts);
     static_assert(1 < Size, "Internal error");
 
     using left_t =
-        _make_union_op_t<make_integer_range<size_t, 0, (Size >> 1)>, Trivial, Ts...>;
-    using rght_t = _make_union_op_t<make_integer_range<size_t, (Size >> 1), Size>,
-                                    Trivial, Ts...>;
+        _make_union_op_t<make_integer_range<size_t, 0, (Size >> 1)>, Ts...>;
+    using rght_t =
+        _make_union_op_t<make_integer_range<size_t, (Size >> 1), Size>, Ts...>;
 
     template<class Fn, class Union>
     static constexpr auto fmap(size_t I, Fn &&fn, Union &&un)
@@ -222,13 +222,11 @@ struct _union_op {
     }
 };
 
-template<bool Trivial, class T>
-struct _union_op<Trivial, T> {
+template<class T>
+struct _union_op<T> {
     template<class Fn, class Union>
     static constexpr auto fmap(size_t I, Fn &&fn, Union &&un)
         -> decltype(ala::forward<Fn>(fn)(ala::forward<Union>(un)._value)) {
-        // ALA_TYPE(_union_op<Trivial, T>,
-        //          decltype(ala::forward<Fn>(fn)(ala::forward<Union>(un)._value)));
         assert(I == 0); // Internal error
         return ala::forward<Fn>(fn)(ala::forward<Union>(un)._value);
     }
@@ -245,7 +243,7 @@ template<bool Trivial, class... Ts>
 struct _variant_destroy {
     static_assert(Trivial, "Internal error");
     _make_union_t<index_sequence_for<Ts...>, true, Ts...> _union;
-    using _union_op_t = _make_union_op_t<index_sequence_for<Ts...>, true, Ts...>;
+    using _union_op_t = _make_union_op_t<index_sequence_for<Ts...>, Ts...>;
     size_t _index = variant_npos;
     ~_variant_destroy() = default;
     constexpr void _reset() {
@@ -265,7 +263,7 @@ struct _variant_destroy {
 template<class... Ts>
 struct _variant_destroy<false, Ts...> {
     _make_union_t<index_sequence_for<Ts...>, false, Ts...> _union;
-    using _union_op_t = _make_union_op_t<index_sequence_for<Ts...>, false, Ts...>;
+    using _union_op_t = _make_union_op_t<index_sequence_for<Ts...>, Ts...>;
     size_t _index = variant_npos;
     ~_variant_destroy() {
         this->_reset();

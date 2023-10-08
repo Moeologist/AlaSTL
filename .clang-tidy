@@ -8,6 +8,7 @@ Checks: '
   -readability-isolate-declaration,
   -readability-magic-numbers,
   -readability-braces-around-statements,
+  -readability-identifier-length,
   -readability-identifier-naming,
   -readability-function-cognitive-complexity,
   clang-analyzer-unix.*,
