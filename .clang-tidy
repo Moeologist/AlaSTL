@@ -1,6 +1,8 @@
 Checks: '
   bugprone-*,
   readability-*,
+  -bugprone-forwarding-reference-overload,
+  -bugprone-reserved-identifier,
   -bugprone-easily-swappable-parameters,
   -bugprone-reserved-identifier，
   -readability-convert-member-functions-to-static,

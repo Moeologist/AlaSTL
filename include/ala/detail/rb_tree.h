@@ -57,31 +57,27 @@ constexpr rb_node *rght_leaf(rb_node *node) {
 constexpr rb_node *next_node(rb_node *_ptr) {
     if (_ptr->_rght != nullptr)
         return left_leaf(_ptr->_rght);
-    else {
-        while (true) {
-            if (_ptr->_parent->_left == _ptr) {
-                _ptr = _ptr->_parent;
-                break;
-            }
+    while (true) {
+        if (_ptr->_parent->_left == _ptr) {
             _ptr = _ptr->_parent;
+            break;
         }
-        return _ptr;
+        _ptr = _ptr->_parent;
     }
+    return _ptr;
 }
 
 constexpr rb_node *prev_node(rb_node *_ptr) {
     if (_ptr->_left != nullptr)
         return rght_leaf(_ptr->_left);
-    else {
-        while (true) {
-            if (_ptr->_parent->_rght == _ptr) {
-                _ptr = _ptr->_parent;
-                break;
-            }
+    while (true) {
+        if (_ptr->_parent->_rght == _ptr) {
             _ptr = _ptr->_parent;
+            break;
         }
-        return _ptr;
+        _ptr = _ptr->_parent;
     }
+    return _ptr;
 }
 
 template<class Value, class Ptr>
@@ -795,16 +791,15 @@ public:
             return this->traverse(k, root, [&](bool exist, _hdle_t cur) {
                 return exist ? cur : end();
             });
-        else
-            return this->traverse(k, root, [&](bool exist, _hdle_t cur) {
-                if (exist) {
-                    _hdle_t l = this->find_helper(k, cur->_left);
-                    if (l != end())
-                        return l;
-                    return cur;
-                }
-                return end();
-            });
+        return this->traverse(k, root, [&](bool exist, _hdle_t cur) {
+            if (exist) {
+                _hdle_t l = this->find_helper(k, cur->_left);
+                if (l != end())
+                    return l;
+                return cur;
+            }
+            return end();
+        });
     }
 
     template<class K>
@@ -814,9 +809,8 @@ public:
 
     template<class K>
     bool contains(const K &k) const {
-        return this->traverse(k, _root, [](bool exist, _hdle_t cur) {
-            return exist ? true : false;
-        });
+        return this->traverse(k, _root,
+                              [](bool exist, _hdle_t cur) { return exist; });
     }
 
     template<class K>
@@ -839,10 +833,9 @@ public:
         locate_states ls = locate(hint, this->_key(p));
         if (IsUniq && ls.found) {
             return pair<_hdle_t, bool>(ls.postion, false);
-        } else {
-            attach(ls, p);
-            return pair<_hdle_t, bool>(p, true);
         }
+        attach(ls, p);
+        return pair<_hdle_t, bool>(p, true);
     }
 
     template<bool, class K, class M>
@@ -875,11 +868,10 @@ public:
             static_cast<rb_vnode<value_type> *>(ls.postion)->_data.second =
                 ala::move(m);
             return pair<_hdle_t, bool>(ls.postion, false);
-        } else {
-            _hdle_t node = construct_node(ala::forward<K>(k), ala::forward<M>(m));
-            attach(ls, node);
-            return pair<_hdle_t, bool>(node, true);
         }
+        _hdle_t node = construct_node(ala::forward<K>(k), ala::forward<M>(m));
+        attach(ls, node);
+        return pair<_hdle_t, bool>(node, true);
     }
 
     template<class... Args>
@@ -891,10 +883,9 @@ public:
         if (IsUniq && ls.found) {
             destruct_node(node);
             return pair<_hdle_t, bool>(ls.postion, false);
-        } else {
-            attach(ls, node);
-            return pair<_hdle_t, bool>(node, true);
         }
+        attach(ls, node);
+        return pair<_hdle_t, bool>(node, true);
     }
 
     template<class V>
@@ -919,11 +910,10 @@ public:
         locate_states ls = locate(hint, k);
         if (IsUniq && ls.found) {
             return pair<_hdle_t, bool>(ls.postion, false);
-        } else {
-            _hdle_t node = construct_node(ala::forward<Args>(args)...);
-            attach(ls, node);
-            return pair<_hdle_t, bool>(node, true);
         }
+        _hdle_t node = construct_node(ala::forward<Args>(args)...);
+        attach(ls, node);
+        return pair<_hdle_t, bool>(node, true);
     }
 
     template<class K>
@@ -944,9 +934,9 @@ public:
             kp = this->kcmp(k, this->_key(prev));
             if (h && pk && kh)
                 return locate_states{hint, false, Dir::Left};
-            else if (!h && !pk && !kp)
+            if (!h && !pk && !kp)
                 return locate_states{prev, true, Dir::Right};
-            else if (!h && !kp)
+            if (!h && !kp)
                 return locate_states{prev, false, Dir::Right};
         } else if (kh)
             return locate_states{hint, false, Dir::Left};

@@ -280,7 +280,7 @@ public:
                       "and swappable");
         if (!*this && !other)
             return;
-        else if (!*this && other) {
+        if (!*this && other) {
             this->_ctor_v(ala::move(*other));
             other.reset();
         } else if (*this && !other)
@@ -349,16 +349,14 @@ public:
     constexpr T value_or(U &&def_value) const & {
         if (bool(*this))
             return **this;
-        else
-            return static_cast<T>(ala::forward<U>(def_value));
+        return static_cast<T>(ala::forward<U>(def_value));
     }
 
     template<class U>
     constexpr T value_or(U &&def_value) && {
         if (bool(*this))
             return ala::move(**this);
-        else
-            return static_cast<T>(ala::forward<U>(def_value));
+        return static_cast<T>(ala::forward<U>(def_value));
     }
     // modifiers
     constexpr void reset() noexcept {

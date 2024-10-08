@@ -349,7 +349,9 @@ struct _variant_base
             try {
                 using T = type_pack_element_t<I, Ts...>;
                 *reinterpret_cast<T *>(_address()) = ala::forward<Arg>(arg);
-            } catch (...) { throw; }
+            } catch (...) {
+                throw;
+            }
         } else if (is_nothrow_constructible<type_pack_element_t<I, Ts...>, Arg>::value ||
                    !is_nothrow_move_constructible<type_pack_element_t<I, Ts...>>::value) {
             this->_reset();
@@ -366,7 +368,8 @@ struct _variant_base
                      !is_nothrow_move_constructible<Ts>::value)...};
         if (this->_index == variant_npos && other._index == variant_npos) {
             return;
-        } else if (other._index == variant_npos) {
+        }
+        if (other._index == variant_npos) {
             this->_reset();
         } else if (this->_index == other._index) {
             try {
@@ -377,7 +380,9 @@ struct _variant_base
                         *reinterpret_cast<T *>(addr) = v;
                     },
                     other._union);
-            } catch (...) { throw; }
+            } catch (...) {
+                throw;
+            }
         } else if (a[other._index]) {
             this->_reset();
             this->_ctor(other);
@@ -393,7 +398,8 @@ struct _variant_base
               is_nothrow_move_assignable<Ts>...>::value) {
         if (this->_index == variant_npos && other._index == variant_npos) {
             return;
-        } else if (other._index == variant_npos) {
+        }
+        if (other._index == variant_npos) {
             this->_reset();
         } else if (this->_index == other._index) {
             try {
@@ -404,7 +410,9 @@ struct _variant_base
                         *reinterpret_cast<T *>(addr) = ala::move(v);
                     },
                     ala::move(other)._union);
-            } catch (...) { throw; }
+            } catch (...) {
+                throw;
+            }
         } else {
             this->_reset();
             this->_ctor(ala::move(other));
@@ -453,7 +461,8 @@ struct _variant_base
         _and_<is_nothrow_move_constructible<Ts>..., is_nothrow_swappable<Ts>...>::value) {
         if (this->_index == variant_npos && other._index == variant_npos) {
             return;
-        } else if (this->_index == other._index) {
+        }
+        if (this->_index == other._index) {
             using tag_t = bool_constant<_and_<is_swappable<Ts>...>::value>;
             this->_swap_adl(tag_t{}, other);
         } else {
@@ -497,7 +506,7 @@ template<class R, class Fn, class Variant0, class... Variants>
 constexpr decltype(auto) _visit_closure(Fn &&fn, Variant0 &&v, Variants &&...vs);
 
 template<class Dst>
-constexpr Dst _no_narrow_convert(Dst(&&)[1]);
+constexpr Dst _no_narrow_convert(Dst (&&)[1]);
 
 template<class Ti, class T, class = void>
 struct _is_no_narrow: false_type {};
@@ -570,8 +579,8 @@ class variant: _make_controller_t<_variant_base<Ts...>, Ts...> {
     };
 
     template<class T>
-    using _fuzzy_i =
-        decltype(_overload_set<T, index_sequence_for<Ts...>>{}(declval<T>()));
+    using _fuzzy_i = decltype(_overload_set<T, index_sequence_for<Ts...>>{}(
+        declval<T>()));
     // using _fuzzy_i = decltype(_overload_set<T, index_sequence_for<Ts...>>::_test(
     //     declval<T>()));
 
@@ -1080,11 +1089,9 @@ struct hash<_sfinae_checker<
         using _union_op_t = typename _variant_base<Ts...>::_union_op_t;
         if (var.valueless_by_exception())
             return 0;
-        else {
-            size_t index_hash = hash<size_t>{}(var.index());
-            size_t value_hash = var._hash();
-            return index_hash ^ value_hash;
-        }
+        size_t index_hash = hash<size_t>{}(var.index());
+        size_t value_hash = var._hash();
+        return index_hash ^ value_hash;
     }
 };
 

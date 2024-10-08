@@ -683,7 +683,7 @@ template<class Fn>
 struct _functor_helper<Fn, void_t<decltype(&Fn::operator())>> {
     using _mem_t = typename _memptr_traits<decltype(&Fn::operator())>::_mem_t;
     static constexpr unsigned _qualify = _function_traits<_mem_t>::qualify;
-    static_assert((_qualify & 0b1000u) == 0,
+    static_assert((_qualify & 0b1000U) == 0,
                   "ala::function can not bind to &&-qualify function object");
     using type = typename _function_helper<_mem_t>::type;
     using result_type = typename _function_helper<type>::result_type;

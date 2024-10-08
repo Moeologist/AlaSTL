@@ -1225,8 +1225,7 @@ template<class T, class U>
 shared_ptr<T> dynamic_pointer_cast(const shared_ptr<U> &r) noexcept {
     if (auto p = dynamic_cast<typename shared_ptr<T>::element_type *>(r.get()))
         return ala::shared_ptr<T>(r, p);
-    else
-        return ala::shared_ptr<T>();
+    return ala::shared_ptr<T>();
 }
 template<class T, class U>
 shared_ptr<T> dynamic_pointer_cast(shared_ptr<U> &&r) noexcept {
