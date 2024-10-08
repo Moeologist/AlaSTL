@@ -91,10 +91,7 @@ union _variant_union {
 
     ~_variant_union() = default;
     constexpr _variant_union(): _placehold{} {}
-    constexpr _variant_union(_variant_union &&) = default;
-    constexpr _variant_union(const _variant_union &) = default;
-    constexpr _variant_union &operator=(const _variant_union &) = default;
-    constexpr _variant_union &operator=(_variant_union &&) = default;
+    ALA_F4_EQ_DEFAULT(_variant_union)
 
     template<size_t I, class... Args, class = enable_if_t<(I < (Size >> 1))>>
     constexpr _variant_union(in_place_index_t<I>, Args &&...args)
@@ -119,10 +116,7 @@ union _variant_union<false, Ts...> {
 
     ~_variant_union(){};
     constexpr _variant_union(): _placehold{} {}
-    constexpr _variant_union(_variant_union &&) = default;
-    constexpr _variant_union(const _variant_union &) = default;
-    constexpr _variant_union &operator=(const _variant_union &) = default;
-    constexpr _variant_union &operator=(_variant_union &&) = default;
+    ALA_F4_EQ_DEFAULT(_variant_union)
 
     template<size_t I, class... Args, class = enable_if_t<(I < (Size >> 1))>>
     constexpr _variant_union(in_place_index_t<I>, Args &&...args)
@@ -144,10 +138,7 @@ union _variant_union<true, T> {
 
     ~_variant_union() = default;
     constexpr _variant_union(): _placehold{} {}
-    constexpr _variant_union(_variant_union &&) = default;
-    constexpr _variant_union(const _variant_union &) = default;
-    constexpr _variant_union &operator=(const _variant_union &) = default;
-    constexpr _variant_union &operator=(_variant_union &&) = default;
+    ALA_F4_EQ_DEFAULT(_variant_union)
 
     template<class... Args>
     constexpr _variant_union(in_place_index_t<0>, Args &&...args)
@@ -163,10 +154,7 @@ union _variant_union<false, T> {
 
     ~_variant_union(){};
     constexpr _variant_union(): _placehold{} {}
-    constexpr _variant_union(_variant_union &&) = default;
-    constexpr _variant_union(const _variant_union &) = default;
-    constexpr _variant_union &operator=(const _variant_union &) = default;
-    constexpr _variant_union &operator=(_variant_union &&) = default;
+    ALA_F4_EQ_DEFAULT(_variant_union)
 
     template<class... Args>
     constexpr _variant_union(in_place_index_t<0>, Args &&...args)
@@ -254,10 +242,7 @@ struct _variant_destroy {
         : _union(in_place_index_t<I>{}, ala::forward<Args>(args)...),
           _index(I) {}
     constexpr _variant_destroy() = default;
-    constexpr _variant_destroy(_variant_destroy &&) = default;
-    constexpr _variant_destroy(const _variant_destroy &) = default;
-    constexpr _variant_destroy &operator=(const _variant_destroy &) = default;
-    constexpr _variant_destroy &operator=(_variant_destroy &&other) = default;
+    ALA_F4_EQ_DEFAULT(_variant_destroy)
 };
 
 template<class... Ts>
@@ -286,10 +271,7 @@ struct _variant_destroy<false, Ts...> {
           _index(I) {}
 
     constexpr _variant_destroy() = default;
-    constexpr _variant_destroy(_variant_destroy &&) = default;
-    constexpr _variant_destroy(const _variant_destroy &) = default;
-    constexpr _variant_destroy &operator=(const _variant_destroy &) = default;
-    constexpr _variant_destroy &operator=(_variant_destroy &&other) = default;
+    ALA_F4_EQ_DEFAULT(_variant_destroy)
 };
 
 template<class... Ts>
@@ -483,10 +465,7 @@ struct _variant_base
 
     ~_variant_base() = default;
     constexpr _variant_base() = default;
-    constexpr _variant_base(_variant_base &&) = default;
-    constexpr _variant_base(const _variant_base &) = default;
-    constexpr _variant_base &operator=(const _variant_base &) = default;
-    constexpr _variant_base &operator=(_variant_base &&other) = default;
+    ALA_F4_EQ_DEFAULT(_variant_base)
 };
 
 struct bad_variant_access: exception {

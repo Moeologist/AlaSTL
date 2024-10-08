@@ -41,10 +41,7 @@ struct _optional_destroy {
     constexpr _optional_destroy(in_place_t, Args &&...args)
         : _value(ala::forward<Args>(args)...), _valid{true} {}
     constexpr _optional_destroy(): _placehold{} {}
-    constexpr _optional_destroy(_optional_destroy &&) = default;
-    constexpr _optional_destroy(const _optional_destroy &) = default;
-    constexpr _optional_destroy &operator=(const _optional_destroy &) = default;
-    constexpr _optional_destroy &operator=(_optional_destroy &&other) = default;
+    ALA_F4_EQ_DEFAULT(_optional_destroy)
 };
 
 template<class T>
@@ -70,10 +67,7 @@ struct _optional_destroy<T, false> {
     constexpr _optional_destroy(in_place_t, Args &&...args)
         : _value(ala::forward<Args>(args)...), _valid{true} {}
     constexpr _optional_destroy(): _placehold{} {}
-    constexpr _optional_destroy(_optional_destroy &&) = default;
-    constexpr _optional_destroy(const _optional_destroy &) = default;
-    constexpr _optional_destroy &operator=(const _optional_destroy &) = default;
-    constexpr _optional_destroy &operator=(_optional_destroy &&other) = default;
+    ALA_F4_EQ_DEFAULT(_optional_destroy)
 };
 
 template<class T>
@@ -120,10 +114,7 @@ struct _optional_base: _optional_destroy<T> {
 
     ~_optional_base() = default;
     constexpr _optional_base(): _base_t{} {}
-    constexpr _optional_base(_optional_base &&) = default;
-    constexpr _optional_base(const _optional_base &) = default;
-    constexpr _optional_base &operator=(const _optional_base &) = default;
-    constexpr _optional_base &operator=(_optional_base &&other) = default;
+    ALA_F4_EQ_DEFAULT(_optional_base)
 };
 
 template<class T>

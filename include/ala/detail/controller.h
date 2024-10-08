@@ -178,6 +178,12 @@ using _make_controller_t = _move_asgn_ctl_t<
     _copy_asgn_ctl_t<_move_ctor_ctl_t<_copy_ctor_ctl_t<Base, Ts...>, Ts...>, Ts...>,
     Ts...>;
 
+#define ALA_F4_EQ_DEFAULT(T) \
+    constexpr T(T &&) = default; \
+    constexpr T(const T &) = default; \
+    constexpr T &operator=(const T &) = default; \
+    constexpr T &operator=(T &&other) = default;
+
 } // namespace ala
 
 #endif
