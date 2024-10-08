@@ -28,28 +28,28 @@ struct _not_fn_t {
     constexpr _not_fn_t(const _not_fn_t &fn) = default;
 
     template<class... Args>
-    constexpr auto operator()(Args &&...args) &noexcept(
+    constexpr auto operator()(Args &&...args) & noexcept(
         noexcept(!ala::invoke(_fn, ala::forward<Args>(args)...)))
         -> decltype(!declval<invoke_result_t<_fn_t &, Args...>>()) {
         return !ala::invoke(_fn, ala::forward<Args>(args)...);
     }
 
     template<class... Args>
-    constexpr auto operator()(Args &&...args) const &noexcept(
+    constexpr auto operator()(Args &&...args) const & noexcept(
         noexcept(!ala::invoke(_fn, ala::forward<Args>(args)...)))
         -> decltype(!declval<invoke_result_t<_fn_t const &, Args...>>()) {
         return !ala::invoke(_fn, ala::forward<Args>(args)...);
     }
 
     template<class... Args>
-    constexpr auto operator()(Args &&...args) &&noexcept(
+    constexpr auto operator()(Args &&...args) && noexcept(
         noexcept(!ala::invoke(ala::move(_fn), ala::forward<Args>(args)...)))
         -> decltype(!declval<invoke_result_t<_fn_t, Args...>>()) {
         return !ala::invoke(ala::move(_fn), ala::forward<Args>(args)...);
     }
 
     template<class... Args>
-    constexpr auto operator()(Args &&...args) const &&noexcept(
+    constexpr auto operator()(Args &&...args) const && noexcept(
         noexcept(!ala::invoke(ala::move(_fn), ala::forward<Args>(args)...)))
         -> decltype(!declval<invoke_result_t<_fn_t const, Args...>>()) {
         return !ala::invoke(ala::move(_fn), ala::forward<Args>(args)...);
@@ -241,13 +241,17 @@ struct _bind_t: _function_base<R> {
     }
 };
 
-enum class FunctionOP { Copy, Move, Destroy, Local, Invoke, TypeInfo };
+enum class FunctionOP { Size, Copy, Move, Destroy, Local, Invoke, TypeInfo };
 
 template<class Function, class Functor>
 struct _function_handle;
 
 template<class R, class... Args, class Functor>
 struct _function_handle<R(Args...), Functor> {
+    static size_t size() {
+        return sizeof(Functor);
+    }
+
     static void copy(void *dst, const void *src) {
         ::new (dst) Functor(*reinterpret_cast<const Functor *>(src));
     }
@@ -278,6 +282,7 @@ struct _function_handle<R(Args...), Functor> {
 
     static void **get_vtable() {
         static void *vtable[] = {
+            reinterpret_cast<void *>(&_function_handle::size),
             reinterpret_cast<void *>(&_function_handle::copy),
             reinterpret_cast<void *>(&_function_handle::move),
             reinterpret_cast<void *>(&_function_handle::destroy),
@@ -296,6 +301,7 @@ struct _function_handle<R(Args...), Functor> {
     template<FunctionOP op>
     using _ft_table = type_pack_element_t<
         size_t(op),
+        decltype(&_function_handle::size),
         decltype(&_function_handle::copy),
         decltype(&_function_handle::move),
         decltype(&_function_handle::destroy),
@@ -322,39 +328,35 @@ struct function<R(Args...)>: _function_base<R> {
 private:
     static_assert(sizeof(void *) == sizeof(size_t), "Unsupported platform");
 
+    using _buf_t = aligned_storage_t<sizeof(void *) * 2>;
+
     void **_vptr = nullptr;
-    size_t _placehold[2] = {};
+
+    union {
+        void *_a_p = 0;
+        _buf_t _buf;
+    };
 
     const void *_address() const noexcept {
         if (is_local())
-            return reinterpret_cast<const void *>(&_placehold);
-        return reinterpret_cast<const void *>(_placehold[0]);
+            return reinterpret_cast<const void *>(&_buf);
+        return _a_p;
     }
 
     void *_address() noexcept {
         if (is_local())
-            return reinterpret_cast<void *>(&_placehold);
-        return reinterpret_cast<void *>(_placehold[0]);
-    }
-
-    size_t &_size() noexcept {
-        assert(!is_local());
-        return _placehold[1];
-    }
-
-    const size_t &_size() const noexcept {
-        assert(!is_local());
-        return _placehold[1];
+            return reinterpret_cast<void *>(&_buf);
+        return _a_p;
     }
 
     void *&_addref() noexcept {
         assert(!is_local());
-        return *reinterpret_cast<void **>(_placehold);
+        return _a_p;
     }
 
     template<FunctionOP op>
     typename _function_handle<R(Args...), int>::template _ft_table<op>
-    _any_op() const noexcept {
+    _any_call() const noexcept {
         return reinterpret_cast<
             typename _function_handle<R(Args...), int>::template _ft_table<op>>(
             _vptr[static_cast<size_t>(op)]);
@@ -363,13 +365,12 @@ private:
     bool is_local() const noexcept {
         if (_vptr == nullptr)
             return true;
-        return _any_op<FunctionOP::Local>()();
+        return _any_call<FunctionOP::Local>()();
     }
 
     void *_alloc(size_t sz) {
         void *p = ::operator new(sz);
         this->_addref() = p;
-        this->_size() = sz;
         return p;
     }
 
@@ -377,10 +378,10 @@ private:
         if (other) {
             _vptr = other._vptr;
             if (other.is_local()) {
-                _any_op<FunctionOP::Copy>()(this->_address(), other._address());
+                _any_call<FunctionOP::Copy>()(this->_address(), other._address());
             } else {
-                this->_alloc(other._size());
-                _any_op<FunctionOP::Copy>()(this->_address(), other._address());
+                this->_alloc(other._any_call<FunctionOP::Size>()());
+                _any_call<FunctionOP::Copy>()(this->_address(), other._address());
             }
         }
     }
@@ -389,13 +390,11 @@ private:
         if (other) {
             _vptr = other._vptr;
             if (other.is_local()) {
-                _any_op<FunctionOP::Move>()(this->_address(), other._address());
+                _any_call<FunctionOP::Move>()(this->_address(), other._address());
                 // other.reset();
             } else {
                 _addref() = other._addref();
-                _size() = other._size();
                 other._addref() = nullptr;
-                other._size() = 0;
                 other._vptr = nullptr;
             }
         }
@@ -461,11 +460,10 @@ public:
             return;
         using handle_t = _function_handle<R(Args...), Fn>;
         _vptr = handle_t::get_vtable();
-        if (sizeof(fn) > sizeof(_placehold) ||
-            !is_nothrow_move_constructible<Fn>::value)
+        if (sizeof(fn) > sizeof(_buf) || !is_nothrow_move_constructible<Fn>::value)
             this->_alloc(sizeof(Fn));
         void *src = reinterpret_cast<void *>(ala::addressof(fn));
-        _any_op<FunctionOP::Move>()(this->_address(), src);
+        _any_call<FunctionOP::Move>()(this->_address(), src);
     }
 
     function &operator=(const function &other) {
@@ -514,14 +512,14 @@ public:
     R operator()(Args... args) const {
         if (!(bool)*this)
             throw bad_function_call();
-        return _any_op<FunctionOP::Invoke>()(
+        return _any_call<FunctionOP::Invoke>()(
             const_cast<function *>(this)->_address(),
             ala::forward<Args>(args)...);
     }
 
     void reset() {
         if (*this)
-            _any_op<FunctionOP::Destroy>()(this->_address());
+            _any_call<FunctionOP::Destroy>()(this->_address());
         if (!is_local()) {
             void *p = this->_address();
             ::operator delete(p);
@@ -544,7 +542,7 @@ public:
 
     const type_info &target_type() const noexcept {
         if (*this)
-            return _any_op<FunctionOP::TypeInfo>()();
+            return _any_call<FunctionOP::TypeInfo>()();
         return typeid(void);
     }
 #endif

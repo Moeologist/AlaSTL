@@ -596,7 +596,6 @@ public:
             for (_hdle_t i = head; i != nullptr;)
                 i = destruct_node(i);
             throw;
-            throw;
         }
         return iterator(head);
     }
