@@ -2,7 +2,6 @@
 #define _ALA_DETAIL_HASH_H
 
 #include <ala/detail/memory_base.h>
-#include <ala/detail/impl/farmhash.h>
 #include <ala/detail/impl/city.h>
 
 ALA_BEGIN_NAMESPACE_STD
@@ -44,25 +43,6 @@ template<class T>
 struct _enum_hash<T, false>: _std_hash<T> {};
 
 template<class T>
-struct _farm_hash {
-    using argument_type = T;
-    using result_type = size_t;
-
-    size_t _call(true_type, const char *p) const noexcept {
-        return farmhash::Hash64(p, sizeof(T));
-    }
-
-    size_t _call(false_type, const char *p) const noexcept {
-        return farmhash::Hash32(p, sizeof(T));
-    }
-
-    size_t operator()(T v) const noexcept {
-        const char *p = reinterpret_cast<const char *>(ala::addressof(v));
-        return _farm_hash::_call(bool_constant<sizeof(size_t) == 8>{}, p);
-    }
-};
-
-template<class T>
 struct _city_hash {
     using argument_type = T;
     using result_type = size_t;
@@ -91,7 +71,7 @@ struct _identity_hash {
 };
 
 template<class T>
-struct _identity_hash<T, true>: _farm_hash<T> {};
+struct _identity_hash<T, true>: _city_hash<T> {};
 
 template<class T>
 struct _float_hash {
@@ -99,8 +79,8 @@ struct _float_hash {
     using result_type = size_t;
     constexpr size_t operator()(T v) const noexcept {
         if (v == static_cast<T>(0.))
-            return _farm_hash<T>{}(0.);
-        return _farm_hash<T>{}(v);
+            return _city_hash<T>{}(0.);
+        return _city_hash<T>{}(v);
     }
 };
 
@@ -111,7 +91,7 @@ template<class T> struct hash: _enum_hash<T> {};
 #if ALA_USE_IDENTITY_FOR_INTEGRAL
 template<class T> using _integral_hash = _identity_hash<T>;
 #else
-template<class T> using _integral_hash = _farm_hash<T>;
+template<class T> using _integral_hash = _city_hash<T>;
 #endif
 
 template<> struct hash<bool>:           _integral_hash<bool> {};
@@ -138,8 +118,8 @@ template<> struct hash<char8_t>: _identity_hash<char8_t> {};
 #endif
 
 #if _ALA_ENABLE_INT128T
-template<> struct hash<__int128_t>:  _farm_hash<__int128_t> {};
-template<> struct hash<__uint128_t>: _farm_hash<__uint128_t> {};
+template<> struct hash<__int128_t>:  _city_hash<__int128_t> {};
+template<> struct hash<__uint128_t>: _city_hash<__uint128_t> {};
 #endif
 
 template<> struct hash<float>:       _float_hash<float> {};

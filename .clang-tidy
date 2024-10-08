@@ -2,6 +2,7 @@ Checks: '
   bugprone-*,
   readability-*,
   -bugprone-easily-swappable-parameters,
+  -bugprone-reserved-identifier，
   -readability-convert-member-functions-to-static,
   -readability-implicit-bool-conversion,
   -readability-named-parameter,

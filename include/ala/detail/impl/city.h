@@ -122,19 +122,6 @@ inline uint64_t Hash128to64(const uint128_t &x) {
     return b;
 }
 
-#ifdef __SSE4_2__
-// Hash function for a byte array.
-inline uint128_t CityHashCrc128(const char *s, size_t len);
-
-// Hash function for a byte array.  For convenience, a 128-bit seed is also
-// hashed into the result.
-inline uint128_t CityHashCrc128WithSeed(const char *s, size_t len,
-                                        uint128_t seed);
-
-// Hash function for a byte array.  Sets result[0] ... result[3].
-inline void CityHashCrc256(const char *s, size_t len, uint64_t *result);
-#endif
-
 }
 }
 
