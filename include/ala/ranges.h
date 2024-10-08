@@ -30,20 +30,19 @@ concept __member_begin = __can_borrow<T> && __workaround_52970<T> &&
                              {
                                  static_cast<decay_t<decltype((t.begin()))>>(
                                      t.begin())
-                                 } -> input_or_output_iterator;
+                             } -> input_or_output_iterator;
                          };
 
 void begin(auto &) = delete;
 void begin(const auto &) = delete;
 
 template<class T>
-concept __adl_begin = !
-__member_begin<T> &&__can_borrow<T> &&__class_or_enum<remove_cvref_t<T>>
-    &&requires(T &&t) {
-          {
-              static_cast<decay_t<decltype((begin(t)))>>(begin(t))
-              } -> input_or_output_iterator;
-      };
+concept __adl_begin = !__member_begin<T> && __can_borrow<T> &&
+                      __class_or_enum<remove_cvref_t<T>> && requires(T &&t) {
+                          {
+                              static_cast<decay_t<decltype((begin(t)))>>(begin(t))
+                          } -> input_or_output_iterator;
+                      };
 
 struct _cpo_fn {
     template<class T>
@@ -92,21 +91,20 @@ concept __member_end = __can_borrow<T> && __workaround_52970<T> &&
                            typename iterator_t<T>;
                            {
                                static_cast<decay_t<decltype((t.end()))>>(t.end())
-                               } -> sentinel_for<iterator_t<T>>;
+                           } -> sentinel_for<iterator_t<T>>;
                        };
 
 void end(auto &) = delete;
 void end(const auto &) = delete;
 
 template<class T>
-concept __adl_end = !
-__member_end<T> &&__can_borrow<T> &&__class_or_enum<remove_cvref_t<T>>
-    &&requires(T &&t) {
-          typename iterator_t<T>;
-          {
-              static_cast<decay_t<decltype((end(t)))>>(end(t))
-              } -> sentinel_for<iterator_t<T>>;
-      };
+concept __adl_end = !__member_end<T> && __can_borrow<T> &&
+                    __class_or_enum<remove_cvref_t<T>> && requires(T &&t) {
+                        typename iterator_t<T>;
+                        {
+                            static_cast<decay_t<decltype((end(t)))>>(end(t))
+                        } -> sentinel_for<iterator_t<T>>;
+                    };
 
 class _cpo_fn {
 public:
@@ -195,8 +193,7 @@ void size(auto &) = delete;
 void size(const auto &) = delete;
 
 template<class T>
-concept __size_enabled = !
-disable_sized_range<remove_cvref_t<T>>;
+concept __size_enabled = !disable_sized_range<remove_cvref_t<T>>;
 
 template<class T>
 concept __member_size = __size_enabled<T> && __workaround_52970<T> &&
@@ -204,26 +201,25 @@ concept __member_size = __size_enabled<T> && __workaround_52970<T> &&
                             {
                                 static_cast<decay_t<decltype((t.size()))>>(
                                     t.size())
-                                } -> __integeral_arithmetic;
+                            } -> __integeral_arithmetic;
                         };
 
 template<class T>
-concept __adl_size = __size_enabled<T> && !
-__member_size<T> &&__class_or_enum<remove_cvref_t<T>>
-    &&requires(T &&t) {
-          {
-              static_cast<decay_t<decltype((size(t)))>>(size(t))
-              } -> __integeral_arithmetic;
-      };
+concept __adl_size = __size_enabled<T> && !__member_size<T> &&
+                     __class_or_enum<remove_cvref_t<T>> && requires(T &&t) {
+                         {
+                             static_cast<decay_t<decltype((size(t)))>>(size(t))
+                         } -> __integeral_arithmetic;
+                     };
 
 template<class T>
-concept __difference = !
-__member_size<T> && !__adl_size<T> && __class_or_enum<remove_cvref_t<T>> &&
-    requires(T && t) {
+concept __difference =
+    !__member_size<T> && !__adl_size<T> && __class_or_enum<remove_cvref_t<T>> &&
+    requires(T &&t) {
         { ranges::begin(t) } -> forward_iterator;
         {
             ranges::end(t)
-            } -> sized_sentinel_for<decltype(ranges::begin(declval<T>()))>;
+        } -> sized_sentinel_for<decltype(ranges::begin(declval<T>()))>;
     };
 
 struct _cpo_fn {
@@ -282,11 +278,52 @@ inline namespace _cpos {
 ALA_INLINE_CONSTEXPR_V auto ssize = _ssize::_cpo_fn{};
 } // namespace _cpos
 
+namespace _empty {
+template<class T>
+concept __member_empty = __workaround_52970<T> &&
+                         requires(T &&t) { bool(t.empty()); };
+
+template<class T>
+concept __can_invoke_size = !__member_empty<T> &&
+                            requires(T &&t) { ranges::size(t); };
+
+template<class T>
+concept __can_compare_begin_end = !__member_empty<T> && !__can_invoke_size<T> &&
+                                  requires(T &&t) {
+                                      bool(ranges::begin(t) == ranges::end(t));
+                                      { ranges::begin(t) } -> forward_iterator;
+                                  };
+
+struct _cpo_fn {
+    template<__member_empty T>
+    ALA_NODISCARD constexpr bool operator()(T &&t) const
+        noexcept(noexcept(bool(t.empty()))) {
+        return bool(t.empty());
+    }
+
+    template<__can_invoke_size T>
+    ALA_NODISCARD constexpr bool operator()(T &&t) const
+        noexcept(noexcept(ranges::size(t))) {
+        return ranges::size(t) == 0;
+    }
+
+    template<__can_compare_begin_end T>
+    ALA_NODISCARD constexpr bool operator()(T &&t) const
+        noexcept(noexcept(bool(ranges::begin(t) == ranges::end(t)))) {
+        return ranges::begin(t) == ranges::end(t);
+    }
+};
+} // namespace _empty
+
+inline namespace _cpos {
+ALA_INLINE_CONSTEXPR_V auto empty = _empty::_cpo_fn{};
+} // namespace _cpos
+
 template<class T>
 concept range = requires(T &t) {
-                    ranges::begin(t); // equality-preserving for forward iterators
-                    ranges::end(t);
-                };
+    ranges::begin(t); // equality-preserving for forward iterators
+    ranges::end(t);
+};
 
 template<class T>
 concept sized_range = ranges::range<T> && requires(T &t) { ranges::size(t); };
@@ -337,21 +374,17 @@ template<class T>
 concept __ptr_to_object = is_pointer_v<T> && is_object_v<remove_pointer_t<T>>;
 
 template<class T>
-concept __member_data = __can_borrow<T> && __workaround_52970<T> &&
-                        requires(T &&t) {
-                            {
-                                static_cast<decay_t<decltype((t.data()))>>(
-                                    t.data())
-                                } -> __ptr_to_object;
-                        };
+concept __member_data = __can_borrow<T> && __workaround_52970<T> && requires(T &&t) {
+    { static_cast<decay_t<decltype((t.data()))>>(t.data()) } -> __ptr_to_object;
+};
 
 template<class T>
-concept __ranges_begin_invocable = !
-__member_data<T> &&__can_borrow<T> &&requires(T &&t) {
-                                         {
-                                             ranges::begin(t)
-                                             } -> contiguous_iterator;
-                                     };
+concept __ranges_begin_invocable = !__member_data<T> && __can_borrow<T> &&
+                                   requires(T &&t) {
+                                       {
+                                           ranges::begin(t)
+                                       } -> contiguous_iterator;
+                                   };
 
 struct _cpo_fn {
     template<__member_data T>
@@ -400,12 +433,15 @@ ALA_INLINE_CONSTEXPR_V auto cdata = _cdata::_cpo_fn{};
 template<class T>
 concept contiguous_range =
     ranges::random_access_range<T> &&
-    contiguous_iterator<ranges::iterator_t<T>> &&
-    requires(T &t) {
+    contiguous_iterator<ranges::iterator_t<T>> && requires(T &t) {
         {
             ranges::data(t)
-            } -> same_as<add_pointer_t<ranges::range_reference_t<T>>>;
+        } -> same_as<add_pointer_t<ranges::range_reference_t<T>>>;
     };
+
+template<class T>
+concept common_range = ranges::range<T> &&
+                       same_as<ranges::iterator_t<T>, ranges::sentinel_t<T>>;
 
 } // namespace ranges
 } // namespace ala

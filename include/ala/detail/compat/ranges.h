@@ -349,6 +349,44 @@ inline namespace _cpos {
 ALA_INLINE_CONSTEXPR_V auto ssize = _ssize::_cpo_fn{};
 } // namespace _cpos
 
+namespace _empty {
+struct _cpo_fn {
+    template<typename T>
+    static constexpr auto _dispatch(T &&t, priority_tag<2>) noexcept(
+        noexcept((bool(ala::forward<T>(t).empty()))))
+        -> decltype((bool(ala::forward<T>(t).empty()))) {
+        return bool((ala::forward<T>(t).empty()));
+    }
+
+    template<typename T>
+    static constexpr auto _dispatch(T &&t, priority_tag<1>) noexcept(
+        noexcept(ranges::size(ala::forward<T>(t)) == 0))
+        -> decltype(ranges::size(ala::forward<T>(t)) == 0) {
+        return ranges::size(ala::forward<T>(t)) == 0;
+    }
+
+    template<typename T, typename I = decltype(ranges::begin(ala::declval<T>()))>
+    static constexpr auto
+    _dispatch(T &&t, priority_tag<0>) noexcept(noexcept(ranges::begin(t) ==
+                                                        ranges::end(t)))
+        -> ala::enable_if_t<forward_iterator<I>,
+                            decltype(ranges::begin(t) == ranges::end(t))> {
+        return ranges::begin(t) == ranges::end(t);
+    }
+
+    template<typename T>
+    constexpr auto operator()(T &&t) const noexcept(
+        noexcept(_cpo_fn::_dispatch(ala::forward<T>(t), priority_tag<2>{})))
+        -> decltype(_cpo_fn::_dispatch(ala::forward<T>(t), priority_tag<2>{})) {
+        return _cpo_fn::_dispatch(ala::forward<T>(t), priority_tag<2>{});
+    }
+};
+} // namespace _empty
+
+inline namespace _cpos {
+ALA_INLINE_CONSTEXPR_V auto empty = _empty::_cpo_fn{};
+} // namespace _cpos
+
 struct _range_c {
     template<class T>
     auto _requires(T &t)
@@ -496,6 +534,392 @@ template<class T>
 ALA_CONCEPT contiguous_range = ranges::random_access_range<T> &&
                                contiguous_iterator<ranges::iterator_t<T>> &&
                                _requires<_contiguous_range_c, T>;
+
+template<class T>
+ALA_CONCEPT common_range = ranges::range<T> &&
+                           same_as<ranges::iterator_t<T>, ranges::sentinel_t<T>>;
+
+namespace _advance {
+
+struct _cpo_fn {
+private:
+    template<typename T>
+    static constexpr T abs(T t) {
+        if (t < T{0}) {
+            return -t;
+        }
+        return t;
+    }
+
+    template<typename R>
+    static constexpr auto impl(R &r, iter_difference_t<R> n)
+        -> ala::enable_if_t<random_access_iterator<R>> {
+        r += n;
+    }
+
+    template<typename I>
+    static constexpr auto impl(I &i, iter_difference_t<I> n)
+        -> ala::enable_if_t<bidirectional_iterator<I> && !random_access_iterator<I>> {
+        constexpr auto zero = iter_difference_t<I>{0};
+
+        if (n > zero) {
+            while (n-- > zero) {
+                ++i;
+            }
+        } else {
+            while (n++ < zero) {
+                --i;
+            }
+        }
+    }
+
+    template<typename I>
+    static constexpr auto impl(I &i, iter_difference_t<I> n)
+        -> ala::enable_if_t<!bidirectional_iterator<I>> {
+        while (n-- > iter_difference_t<I>{0}) {
+            ++i;
+        }
+    }
+
+    template<typename I, typename S>
+    static constexpr auto impl(I &i, S bound, priority_tag<2>)
+        -> ala::enable_if_t<assignable_from<I &, S>> {
+        i = ala::move(bound);
+    }
+
+    template<typename I, typename S>
+    static constexpr auto impl(I &i, S bound, priority_tag<1>)
+        -> ala::enable_if_t<sized_sentinel_for<S, I>> {
+        _cpo_fn::impl(i, bound - i);
+    }
+
+    template<typename I, typename S>
+    static constexpr void impl(I &i, S bound, priority_tag<0>) {
+        while (i != bound) {
+            ++i;
+        }
+    }
+
+    template<typename I, typename S>
+    static constexpr auto impl(I &i, iter_difference_t<I> n, S bound)
+        -> ala::enable_if_t<sized_sentinel_for<S, I>, iter_difference_t<I>> {
+        if (_cpo_fn::abs(n) >= _cpo_fn::abs(bound - i)) {
+            auto dist = bound - i;
+            _cpo_fn::impl(i, bound, priority_tag<2>{});
+            return dist;
+        } else {
+            _cpo_fn::impl(i, n);
+            return n;
+        }
+    }
+
+    template<typename I, typename S>
+    static constexpr auto impl(I &i, iter_difference_t<I> n, S bound)
+        -> ala::enable_if_t<bidirectional_iterator<I> && !sized_sentinel_for<S, I>,
+                            iter_difference_t<I>> {
+        constexpr iter_difference_t<I> zero{0};
+        iter_difference_t<I> counter{0};
+
+        if (n < zero) {
+            do {
+                --i;
+                --counter; // Yes, really
+            } while (++n < zero && i != bound);
+        } else {
+            while (n-- > zero && i != bound) {
+                ++i;
+                ++counter;
+            }
+        }
+
+        return counter;
+    }
+
+    template<typename I, typename S>
+    static constexpr auto impl(I &i, iter_difference_t<I> n, S bound)
+        -> ala::enable_if_t<!bidirectional_iterator<I> && !sized_sentinel_for<S, I>,
+                            iter_difference_t<I>> {
+        constexpr iter_difference_t<I> zero{0};
+        iter_difference_t<I> counter{0};
+
+        while (n-- > zero && i != bound) {
+            ++i;
+            ++counter;
+        }
+
+        return counter;
+    }
+
+public:
+    template<typename I>
+    constexpr auto operator()(I &i, iter_difference_t<I> n) const
+        -> ala::enable_if_t<input_or_output_iterator<I>> {
+        _cpo_fn::impl(i, n);
+    }
+
+    template<typename I, typename S>
+    constexpr auto operator()(I &i, S bound) const
+        -> ala::enable_if_t<input_or_output_iterator<I> && sentinel_for<S, I>> {
+        _cpo_fn::impl(i, bound, priority_tag<2>{});
+    }
+
+    template<typename I, typename S>
+    constexpr auto operator()(I &i, iter_difference_t<I> n, S bound) const
+        -> ala::enable_if_t<input_or_output_iterator<I> && sentinel_for<S, I>,
+                            iter_difference_t<I>> {
+        return n - _cpo_fn::impl(i, n, bound);
+    }
+};
+
+} // namespace _advance
+
+inline namespace _cpos {
+ALA_INLINE_CONSTEXPR_V auto advance = _advance::_cpo_fn{};
+} // namespace _cpos
+
+namespace _distance {
+
+struct _cpo_fn {
+private:
+    template<typename I, typename S>
+    static constexpr auto impl(I i, S s)
+        -> ala::enable_if_t<sized_sentinel_for<S, I>, iter_difference_t<I>> {
+        return s - i;
+    }
+
+    template<typename I, typename S>
+    static constexpr auto impl(I i, S s)
+        -> ala::enable_if_t<!sized_sentinel_for<S, I>, iter_difference_t<I>> {
+        iter_difference_t<I> counter{0};
+        while (i != s) {
+            ++i;
+            ++counter;
+        }
+        return counter;
+    }
+
+    template<typename R>
+    static constexpr auto impl(R &&r)
+        -> ala::enable_if_t<sized_range<R>, iter_difference_t<iterator_t<R>>> {
+        return static_cast<iter_difference_t<iterator_t<R>>>(ranges::size(r));
+    }
+
+    template<typename R>
+    static constexpr auto impl(R &&r)
+        -> ala::enable_if_t<!sized_range<R>, iter_difference_t<iterator_t<R>>> {
+        return _cpo_fn::impl(ranges::begin(r), ranges::end(r));
+    }
+
+public:
+    template<typename I, typename S>
+    constexpr auto operator()(I first, S last) const
+        -> ala::enable_if_t<input_or_output_iterator<I> && sentinel_for<S, I>,
+                            iter_difference_t<I>> {
+        return _cpo_fn::impl(ala::move(first), ala::move(last));
+    }
+
+    template<typename R>
+    constexpr auto operator()(R &&r) const
+        -> ala::enable_if_t<range<R>, iter_difference_t<iterator_t<R>>> {
+        return _cpo_fn::impl(ala::forward<R>(r));
+    }
+};
+
+} // namespace _distance
+
+inline namespace _cpos {
+ALA_INLINE_CONSTEXPR_V auto distance = _distance::_cpo_fn{};
+} // namespace _cpos
+
+namespace _next {
+
+struct _cpo_fn {
+    template<typename I>
+    constexpr auto operator()(I x) const
+        -> ala::enable_if_t<input_or_output_iterator<I>, I> {
+        ++x;
+        return x;
+    }
+
+    template<typename I>
+    constexpr auto operator()(I x, iter_difference_t<I> n) const
+        -> ala::enable_if_t<input_or_output_iterator<I>, I> {
+        ranges::advance(x, n);
+        return x;
+    }
+
+    template<typename I, typename S>
+    constexpr auto operator()(I x, S bound) const
+        -> ala::enable_if_t<input_or_output_iterator<I> && sentinel_for<S, I>, I> {
+        ranges::advance(x, bound);
+        return x;
+    }
+
+    template<typename I, typename S>
+    constexpr auto operator()(I x, iter_difference_t<I> n, S bound) const
+        -> ala::enable_if_t<input_or_output_iterator<I> && sentinel_for<S, I>, I> {
+        ranges::advance(x, n, bound);
+        return x;
+    }
+};
+
+} // namespace _next
+
+inline namespace _cpos {
+ALA_INLINE_CONSTEXPR_V auto next = _next::_cpo_fn{};
+} // namespace _cpos
+
+namespace _prev {
+
+struct _cpo_fn {
+    template<typename I>
+    constexpr auto operator()(I x) const
+        -> ala::enable_if_t<bidirectional_iterator<I>, I> {
+        --x;
+        return x;
+    }
+
+    template<typename I>
+    constexpr auto operator()(I x, iter_difference_t<I> n) const
+        -> ala::enable_if_t<bidirectional_iterator<I>, I> {
+        ranges::advance(x, -n);
+        return x;
+    }
+
+    template<typename I, typename S>
+    constexpr auto operator()(I x, iter_difference_t<I> n, S bound) const
+        -> ala::enable_if_t<bidirectional_iterator<I> && sentinel_for<S, I>, I> {
+        ranges::advance(x, -n, bound);
+        return x;
+    }
+};
+
+} // namespace _prev
+
+inline namespace _cpos {
+ALA_INLINE_CONSTEXPR_V auto prev = _prev::_cpo_fn{};
+} // namespace _cpos
+
+template<typename D>
+class view_interface {
+    static_assert(is_class<D>::value && same_as<D, remove_cv_t<D>>,
+                  "view_interface requirement not satisfied");
+
+private:
+    constexpr D &derived() noexcept {
+        return static_cast<D &>(*this);
+    }
+
+    constexpr const D &derived() const noexcept {
+        return static_cast<const D &>(*this);
+    }
+
+public:
+    template<typename R = D>
+    ALA_NODISCARD constexpr auto empty() -> enable_if_t<forward_range<R>, bool> {
+        return ranges::begin(derived()) == ranges::end(derived());
+    }
+
+    template<typename R = D>
+    ALA_NODISCARD constexpr auto empty() const
+        -> enable_if_t<forward_range<const R>, bool> {
+        return ranges::begin(derived()) == ranges::end(derived());
+    }
+
+    template<typename R = D, typename = decltype(ranges::empty(ala::declval<R &>()))>
+    constexpr explicit operator bool() {
+        return !ranges::empty(derived());
+    }
+
+    template<typename R = D,
+             typename = decltype(ranges::empty(ala::declval<const R &>()))>
+    constexpr explicit operator bool() const {
+        return !ranges::empty(derived());
+    }
+
+    template<typename R = D,
+             typename = enable_if_t<contiguous_iterator<iterator_t<R>>>>
+    constexpr auto data() {
+        return ranges::empty(derived()) ? nullptr :
+                                          addressof(*ranges::begin(derived()));
+    }
+
+    template<typename R = D,
+             typename = enable_if_t<range<const R> &&
+                                    contiguous_iterator<iterator_t<const R>>>>
+    constexpr auto data() const {
+        return ranges::empty(derived()) ? nullptr :
+                                          addressof(*ranges::begin(derived()));
+    }
+
+    template<typename R = D,
+             typename = enable_if_t<forward_range<R> &&
+                                    sized_sentinel_for<sentinel_t<R>, iterator_t<R>>>>
+    constexpr auto size() {
+        return ranges::end(derived()) - ranges::begin(derived());
+    }
+
+    template<typename R = D,
+             typename = enable_if_t<
+                 forward_range<const R> &&
+                 sized_sentinel_for<sentinel_t<const R>, iterator_t<const R>>>>
+    constexpr auto size() const {
+        return ranges::end(derived()) - ranges::begin(derived());
+    }
+
+    template<typename R = D, typename = enable_if_t<forward_range<R>>>
+    constexpr decltype(auto) front() {
+        return *ranges::begin(derived());
+    }
+
+    template<typename R = D, typename = enable_if_t<forward_range<const R>>>
+    constexpr decltype(auto) front() const {
+        return *ranges::begin(derived());
+    }
+
+    template<typename R = D,
+             typename = enable_if_t<bidirectional_range<R> && common_range<R>>>
+    constexpr decltype(auto) back() {
+        return *ranges::prev(ranges::end(derived()));
+    }
+
+    template<typename R = D, typename = enable_if_t<bidirectional_range<const R> &&
+                                                    common_range<const R>>>
+    constexpr decltype(auto) back() const {
+        return *ranges::prev(ranges::end(derived()));
+    }
+
+    template<typename R = D, typename = enable_if_t<random_access_range<R>>>
+    constexpr decltype(auto) operator[](iter_difference_t<iterator_t<R>> n) {
+        return ranges::begin(derived())[n];
+    }
+
+    template<typename R = D, typename = enable_if_t<random_access_range<const R>>>
+    constexpr decltype(auto)
+    operator[](iter_difference_t<iterator_t<const R>> n) const {
+        return ranges::begin(derived())[n];
+    }
+
+    template<typename R = D>
+    constexpr auto cbegin() {
+        return ranges::cbegin(derived());
+    }
+
+    template<typename R = D, typename = enable_if_t<ranges::range<const R>>>
+    constexpr auto cbegin() const {
+        return ranges::cbegin(derived());
+    }
+
+    template<typename R = D>
+    constexpr auto cend() {
+        return ranges::cend(derived());
+    }
+
+    template<typename R = D, typename = enable_if_t<ranges::range<const R>>>
+    constexpr auto cend() const {
+        return ranges::cend(derived());
+    }
+};
 
 } // namespace ranges
 } // namespace ala
