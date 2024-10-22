@@ -137,8 +137,10 @@
 #if !defined(ALA_EXPECT)
     #if ALA_HAS_BUILTIN(__builtin_expect)
         #define ALA_EXPECT(x) __builtin_expect(!!(x), 1)
+        #define ALA_UNEXPECT(x) __builtin_expect(!!(x), 0)
     #else
         #define ALA_EXPECT(x) (x)
+        #define ALA_UNEXPECT(x) (x)
     #endif
 #endif
 
@@ -191,12 +193,42 @@
 
 #define ALA_CONCEPT ALA_INLINE_CONSTEXPR_V bool
 
+#if defined(__cpp_rtti) || defined(__GXX_RTTI) || defined(_CPPRTTI)
+    #define ALA_ENABLE_RTTI 1
+#else
+    #define ALA_ENABLE_RTTI 0
+#endif
+
 #ifndef ALA_USE_RTTI
-    #define ALA_USE_RTTI 1
+    #ifdef ALA_ENABLE_RTTI
+        #define ALA_USE_RTTI 1
+    #else
+        #define ALA_USE_RTTI 0
+    #endif
+#else
+    #if ALA_USE_RTTI && !defined(ALA_ENABLE_RTTI)
+        #warning your compiler or cflags not support rtti
+        #define ALA_USE_RTTI 0
+    #endif
+#endif
+
+#if defined(__cpp_exceptions) || defined(__EXCEPTIONS) || defined(_CPPUNWIND)
+    #define ALA_ENABLE_EXCEPTION 1
+#else
+    #define ALA_ENABLE_EXCEPTION 0
 #endif
 
 #ifndef ALA_USE_EXCEPTION
-    #define ALA_USE_EXCEPTION 1
+    #ifdef ALA_ENABLE_EXCEPTION
+        #define ALA_USE_EXCEPTION 1
+    #else
+        #define ALA_USE_EXCEPTION 0
+    #endif
+#else
+    #if ALA_USE_EXCEPTION && !defined(ALA_ENABLE_EXCEPTION)
+        #warning your compiler or cflags not support exception
+        #define ALA_USE_EXCEPTION 0
+    #endif
 #endif
 
 #ifndef ALA_USE_STD_ITER_TAG

@@ -295,7 +295,7 @@ public:
         ala::make_heap(c.begin(), c.end(), comp);
     }
 
-    [[nodiscard]] bool empty() const {
+    ALA_NODISCARD bool empty() const {
         return c.empty();
     }
     size_type size() const {

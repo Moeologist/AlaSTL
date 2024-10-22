@@ -48,8 +48,8 @@ else:
         '-fexceptions',
         '-stdlib=libc++',
         '-fuse-ld=lld',
-        '-fsanitize=address',
-        '-fsanitize=undefined',
+        # '-fsanitize=address',
+        # '-fsanitize=undefined',
         # '-fsanitize=thread',
         # '-fsanitize=memory',
         '-ferror-limit=1',
@@ -76,14 +76,14 @@ srcs = [
     # 'std/containers/container.adaptors/stack',
     # 'std/containers/container.adaptors/queue',
     # 'std/containers/container.adaptors/priority.queue',
-    'std/containers/views',
+    # 'std/containers/views',
     # 'std/utilities/meta',
-    # 'std/utilities/function.objects',
+    'std/utilities/function.objects',
     # 'std/utilities/utility',
     # 'std/utilities/tuple',
-    # 'std/utilities/any',
-    # 'std/utilities/variant',
-    # 'std/utilities/optional',
+    'std/utilities/any',
+    'std/utilities/variant',
+    'std/utilities/optional',
     # 'std/utilities/smartptr',
     # 'std/utilities/memory/util.smartptr',
     # 'std/concepts',
@@ -250,7 +250,8 @@ def patch(str):
         '#include <map>', '#include <ala/map.h>').replace(
         '#include <set>', '#include <ala/set.h>').replace(
         '#include <utility>', '#include <ala/utility.h>').replace(
-        '#include <tuple>', '#include <ala/tuple.h>').replace(
+        '#include <tuple>', '#include <ala/tuple.h>\n#include <tuple>').replace(
+        #tuple_size_structured_bindings.pass.cpp need <tuple>
         '#include <type_traits>', '#include <ala/type_traits.h>').replace(
         '#include <memory>', '#include <memory>\n#include <ala/memory.h>').replace(
         '#include <forward_list>', '#include <ala/forward_list.h>').replace(

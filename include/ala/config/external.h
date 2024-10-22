@@ -14,11 +14,13 @@
 namespace ala {
 using ::std::exception;
 using ::std::out_of_range;
+using ::std::overflow_error;
 
 using ::std::initializer_list;
 
 using ::std::memmove;
 using ::std::memcpy;
+using ::std::memset;
 
 using ::std::nullptr_t;
 
